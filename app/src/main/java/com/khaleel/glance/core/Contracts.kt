@@ -32,7 +32,7 @@ data class Reading(
 
 enum class SourceErrorKind {
     INVALID_CREDENTIALS, AUTH_EXPIRED, TERMS_REQUIRED, RATE_LIMITED,
-    NETWORK, SERVER, CONNECTION_REMOVED, PROTOCOL, NO_READING,
+    NETWORK, SERVER, CONNECTION_REMOVED, PROTOCOL, NO_READING, STORAGE,
 }
 
 data class SourceError(val kind: SourceErrorKind, val retryAfter: Instant? = null)
@@ -55,7 +55,7 @@ interface Clock {
 
 enum class ReadingFreshness { ABSENT, FRESH, DELAYED, STALE, INVALID_TIME }
 enum class RuntimeState { STOPPED, STARTING, RUNNING, UNABLE_TO_START }
-enum class ConnectionState { READY, FETCHING, OFFLINE, BACKING_OFF, SIGN_IN_REQUIRED, TERMS_REQUIRED, CONNECTION_REMOVED, PROTOCOL_ERROR }
+enum class ConnectionState { READY, FETCHING, OFFLINE, BACKING_OFF, SIGN_IN_REQUIRED, TERMS_REQUIRED, CONNECTION_REMOVED, PROTOCOL_ERROR, LOCAL_ERROR }
 
 data class DisplayState(
     val monitoringEnabled: Boolean,

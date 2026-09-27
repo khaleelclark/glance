@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
             controller.display.value.runtime != RuntimeState.RUNNING
         ) {
             if (setupState.notificationPermission == PermissionStatus.GRANTED) {
-                startMonitoring()
+                startMonitoring(restoreNotification = false)
             } else {
                 controller.setRuntime(RuntimeState.UNABLE_TO_START)
                 setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
@@ -220,11 +220,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startMonitoring() {
+    private fun startMonitoring(restoreNotification: Boolean = true) {
         refreshSystemState()
         if (setupState.notificationPermission != PermissionStatus.GRANTED) return
         setupState = setupState.copy(startingMonitoring = true, startFailed = false)
-        if (!MonitoringService.start(this)) {
+        if (!MonitoringService.start(this, restoreNotification)) {
             setupState = setupState.copy(startingMonitoring = false, startFailed = true)
         }
     }
@@ -292,7 +292,9 @@ class MainActivity : ComponentActivity() {
                 if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
             }
         },
-        onRestoreNotification = { if (controller.display.value.monitoringEnabled) app.showCurrentNotification() },
+        onRestoreNotification = {
+            if (controller.display.value.monitoringEnabled) app.showCurrentNotification(restore = true)
+        },
         onUnitChanged = { controller.settings.unit = it; renderSettingsChange() },
         onLockScreenVisibilityChanged = { controller.settings.showOnLockScreen = it; renderSettingsChange() },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },

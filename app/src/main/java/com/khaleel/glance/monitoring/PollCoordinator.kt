@@ -159,7 +159,7 @@ class PollCoordinator(
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                controller.updateFreshness()
+                controller.recordPollFailure(com.khaleel.glance.core.SourceErrorKind.PROTOCOL)
             }
 
             if (schedulerGeneration != null && schedulerGeneration != actionGeneration) {
@@ -193,6 +193,7 @@ private fun ConnectionState.blocksAutomaticPolling(): Boolean = when (this) {
     ConnectionState.TERMS_REQUIRED,
     ConnectionState.CONNECTION_REMOVED,
     ConnectionState.PROTOCOL_ERROR,
+    ConnectionState.LOCAL_ERROR,
     -> true
     else -> false
 }

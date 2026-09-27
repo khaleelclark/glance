@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sign the already built personal release APK without putting secrets in Git."""
+"""Build, verify, and sign a clean personal release without putting secrets in Git."""
 
 import hashlib
 import json
@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = Path(os.environ.get("ANDROID_HOME", Path.home() / "Android" / "Sdk"))
@@ -28,7 +29,7 @@ def run(*args: str, env: dict[str, str] | None = None) -> str:
 
 
 def main() -> int:
-    for required in (APK_SIGNER, APT, KEYSTORE, PASSWORD_FILE, UNSIGNED):
+    for required in (APK_SIGNER, APT, KEYSTORE, PASSWORD_FILE, ROOT / "gradlew"):
         if not required.is_file():
             print("Missing required signing input: " + str(required), file=sys.stderr)
             return 1
@@ -38,6 +39,38 @@ def main() -> int:
     if run("git", "status", "--porcelain").strip():
         print("Commit all source and documentation before signing.", file=sys.stderr)
         return 1
+
+    source_commit = run("git", "rev-parse", "HEAD").strip()
+    build_env = os.environ.copy()
+    build_env.setdefault("ANDROID_HOME", str(SDK))
+    run(
+        str(ROOT / "gradlew"), ":app:clean", ":app:testDebugUnitTest",
+        ":app:lintDebug", ":app:lintRelease", ":app:assembleRelease",
+        "--no-daemon", "--no-build-cache", env=build_env,
+    )
+    if run("git", "status", "--porcelain").strip() or run("git", "rev-parse", "HEAD").strip() != source_commit:
+        print("Source changed during the release build.", file=sys.stderr)
+        return 1
+    if not UNSIGNED.is_file():
+        print("Release build did not produce an unsigned APK.", file=sys.stderr)
+        return 1
+
+    result_files = sorted((ROOT / "app" / "build" / "test-results" / "testDebugUnitTest").glob("TEST-*.xml"))
+    test_rows = [ET.parse(path).getroot() for path in result_files]
+    test_count = sum(int(row.get("tests", "0")) for row in test_rows)
+    failures = sum(int(row.get("failures", "0")) + int(row.get("errors", "0")) +
+                   int(row.get("skipped", "0")) for row in test_rows)
+    if test_count == 0 or failures:
+        print("Unit test evidence is missing or incomplete.", file=sys.stderr)
+        return 1
+    lint_warnings = 0
+    for variant in ("debug", "release"):
+        lint_path = ROOT / "app" / "build" / "reports" / f"lint-results-{variant}.xml"
+        issues = ET.parse(lint_path).getroot().findall("issue")
+        if any(issue.get("severity") in ("Error", "Fatal") for issue in issues):
+            print(f"{variant} lint contains errors.", file=sys.stderr)
+            return 1
+        lint_warnings += sum(issue.get("severity") == "Warning" for issue in issues)
 
     password = PASSWORD_FILE.read_text(encoding="utf-8").strip()
     if not password:
@@ -69,7 +102,6 @@ def main() -> int:
             raise RuntimeError("apksigner did not report a certificate SHA-256 fingerprint")
         temporary.replace(out_apk)
         sha256 = hashlib.sha256(out_apk.read_bytes()).hexdigest()
-        source_commit = run("git", "rev-parse", "HEAD").strip()
         manifest = {
             "applicationId": "com.khaleel.glance",
             "versionCode": version_code,
@@ -79,9 +111,9 @@ def main() -> int:
             "certificateSha256": fingerprint_match.group(1).upper(),
             "sourceCommit": source_commit,
             "tested": {
-                "unitTests": "passed",
-                "lintDebugRelease": "passed with warnings",
-                "emulator": "Android API 36; synthetic notification, sign-in UI, foreground service start/pause",
+                "unitTests": f"passed: {test_count} tests, 0 failures/errors/skips",
+                "lintDebugRelease": f"passed: 0 errors, {lint_warnings} total warnings",
+                "emulator": "not run for this exact source commit; see docs/device-validation.md for prior evidence",
                 "liveLibreLinkUpAccount": "not tested",
                 "GalaxyS25Ultra": "not tested",
             },
@@ -91,6 +123,7 @@ def main() -> int:
         print("APK SHA-256: " + sha256)
         print("Certificate SHA-256: " + manifest["certificateSha256"])
         print("Source commit: " + source_commit)
+        print(f"Verification: {test_count} tests; 0 lint errors")
         return 0
     finally:
         temporary.unlink(missing_ok=True)

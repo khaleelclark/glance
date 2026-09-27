@@ -14,6 +14,7 @@ import com.khaleel.glance.monitoring.MonitoringNotifications
 import com.khaleel.glance.monitoring.MonitoringPresentation
 import com.khaleel.glance.monitoring.MonitoringService
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
+import com.khaleel.glance.notification.NotificationVisibility
 import android.app.Notification
 import android.app.Service
 import android.app.ActivityManager
@@ -70,7 +71,8 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
 
     override fun monitoringDependencies() = MonitoringDependencies(controller, notifications, DeviceClock)
 
-    fun showCurrentNotification() {
+    fun showCurrentNotification(restore: Boolean = false) {
+        if (restore) NotificationVisibility.restore(this)
         notifications.render(MonitoringPresentation(controller.display.value, MonitoringService.currentActionGeneration ?: 0L))
     }
 

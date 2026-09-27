@@ -13,6 +13,7 @@ import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
+import com.khaleel.glance.notification.NotificationVisibility
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -179,8 +180,9 @@ class MonitoringService : Service() {
             private set
 
         /** Call only from a visible, explicit user Start/Resume action. */
-        fun start(context: Context): Boolean {
+        fun start(context: Context, restoreNotification: Boolean = true): Boolean {
             val deps = resolveDependencies(context) ?: return false
+            if (restoreNotification) NotificationVisibility.restore(context)
             deps.controller.setMonitoringEnabled(true)
             deps.controller.setRuntime(RuntimeState.STARTING)
             val actionGeneration = nextActionGeneration()

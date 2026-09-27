@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `2`, and versionName
-`0.2.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `3`, and versionName
+`0.3.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -38,21 +38,22 @@ belongs in Git, an APK, a screenshot, or a support log.
 
 On another build machine, copy both files securely to the same directory and
 keep them mode 0600. Alternatively, point `GLANCE_SIGNING_DIR` at the directory
-containing the two files. After building the unsigned release, run:
+containing the two files. From a clean checkout, run:
 
 ```sh
 python3 scripts/sign_release.py
 ```
 
-The script refuses dirty source, signs with the existing private key, verifies
-the APK signature, and writes the signed APK and metadata under the ignored
+The script refuses dirty source, cleans and rebuilds the APK, runs unit tests
+and both lint variants, signs with the existing private key, verifies the APK
+signature, and writes the signed APK and metadata under the ignored
 `release/` directory. The exact APK SHA-256, certificate SHA-256, source commit,
 and verification status are in `release/manifest.json`. Keep the same
 application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.2.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.3.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.

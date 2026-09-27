@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
@@ -74,6 +75,8 @@ class GlucoseNotificationRenderer(
 
         state.reading?.let { builder.setWhen(it.measuredAt.toEpochMilli()) }
 
+        actionGeneration?.let { builder.setDeleteIntent(dismissIntent(it)) }
+
         if (state.monitoringEnabled && actionGeneration != null) {
             builder
                 .addAction(
@@ -109,6 +112,7 @@ class GlucoseNotificationRenderer(
     }
 
     fun post() {
+        if (NotificationVisibility.isDismissed(appContext)) return
         createChannel()
         notificationManager.notify(NOTIFICATION_ID, build())
     }
@@ -124,6 +128,19 @@ class GlucoseNotificationRenderer(
         return PendingIntent.getActivity(
             appContext,
             REQUEST_OPEN,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun dismissIntent(generation: Long): PendingIntent {
+        val intent = Intent(appContext, NotificationDismissReceiver::class.java)
+            .setAction(NotificationDismissReceiver.ACTION_DISMISSED)
+            .setData(Uri.parse("glance://notification-dismissed/$generation"))
+            .putExtra(NotificationDismissReceiver.EXTRA_GENERATION, generation)
+        return PendingIntent.getBroadcast(
+            appContext,
+            REQUEST_DISMISS,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -175,5 +192,6 @@ class GlucoseNotificationRenderer(
         private const val CHANNEL_NAME = "Glucose monitoring"
         private const val MAIN_ACTIVITY_CLASS = "com.khaleel.glance.MainActivity"
         private const val REQUEST_OPEN = 1000
+        private const val REQUEST_DISMISS = 1003
     }
 }

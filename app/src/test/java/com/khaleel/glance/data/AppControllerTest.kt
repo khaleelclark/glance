@@ -4,6 +4,7 @@ import com.khaleel.glance.auth.AuthPersistence
 import com.khaleel.glance.auth.SavedAuth
 import com.khaleel.glance.core.Clock
 import com.khaleel.glance.core.Connection
+import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.GlucoseSource
 import com.khaleel.glance.core.GlucoseUnit
@@ -143,6 +144,22 @@ class AppControllerTest {
         assertTrue(controller.hasAccount)
     }
 
+    @Test fun failedReadingPersistenceDoesNotPublishNewValueOrStayFetching() = runBlocking {
+        val patient = MemoryPatient()
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = controller(source, patient)
+        controller.selectPerson(patrick)
+        patient.failSave = true
+
+        val result = controller.poll()
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertNull(controller.display.value.reading)
+        assertNull(patient.state.lastReading)
+        assertEquals(1, source.latestCalls)
+    }
+
     private fun controller(
         source: FakeSource,
         patient: MemoryPatient,
@@ -161,8 +178,12 @@ class AppControllerTest {
     }
     private class MemoryPatient : PatientPersistence {
         var state = StoredPatientState(null, null)
+        var failSave = false
         override fun load() = state
-        override fun save(state: StoredPatientState) { this.state = state }
+        override fun save(state: StoredPatientState) {
+            if (failSave) throw IllegalStateException("synthetic storage failure")
+            this.state = state
+        }
         override fun clear() { state = StoredPatientState(null, null) }
     }
     private class MemorySettings : SettingsPersistence {

@@ -29,6 +29,6 @@ class BootReceiver : BroadcastReceiver() {
             controller.setRuntime(RuntimeState.UNABLE_TO_START)
             return
         }
-        MonitoringService.start(context)
+        MonitoringService.start(context, restoreNotification = false)
     }
 }

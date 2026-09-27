@@ -69,6 +69,7 @@ class GlanceUiText(
         ConnectionState.TERMS_REQUIRED -> "Open LibreLinkUp to review its terms, then reconnect."
         ConnectionState.CONNECTION_REMOVED -> "The selected shared person is no longer available."
         ConnectionState.PROTOCOL_ERROR -> lastReadingSuffix(state, "LibreLinkUp returned an unexpected response")
+        ConnectionState.LOCAL_ERROR -> lastReadingSuffix(state, "Glance could not save the latest reading. Reopen the app or review local storage")
     }
 
     fun notificationPreview(state: DisplayState, settings: UserSettingsUi, now: Instant): Pair<String, String> {

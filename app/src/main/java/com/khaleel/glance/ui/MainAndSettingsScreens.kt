@@ -101,6 +101,11 @@ internal fun MainReadingScreen(
                 Text("Reconnect LibreLinkUp")
             }
         }
+        if (displayState.connection == ConnectionState.LOCAL_ERROR) {
+            OutlinedButton(onClick = callbacks.onOpenDiagnostics, modifier = Modifier.fillMaxWidth()) {
+                Text("Review diagnostics")
+            }
+        }
 
         Button(
             onClick = if (displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING) {
@@ -123,7 +128,8 @@ internal fun MainReadingScreen(
                 displayState.connection != ConnectionState.SIGN_IN_REQUIRED &&
                 displayState.connection != ConnectionState.TERMS_REQUIRED &&
                 displayState.connection != ConnectionState.CONNECTION_REMOVED &&
-                displayState.connection != ConnectionState.PROTOCOL_ERROR,
+                displayState.connection != ConnectionState.PROTOCOL_ERROR &&
+                displayState.connection != ConnectionState.LOCAL_ERROR,
         ) {
             Text("Refresh now")
         }

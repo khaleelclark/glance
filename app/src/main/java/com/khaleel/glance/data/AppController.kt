@@ -194,12 +194,17 @@ class AppController(
 
     /** Abort a timed-out source call and invalidate any late response before publishing failure. */
     suspend fun recordPollTimeout() {
+        recordPollFailure(SourceErrorKind.SERVER)
+    }
+
+    /** Stop an unexpected request and publish a non-fetching state for all callers. */
+    suspend fun recordPollFailure(kind: SourceErrorKind) {
         gate.withLock {
             inFlight?.cancel()
             inFlight = null
             synchronized(this) {
                 generation++
-                updateFailure(SourceError(SourceErrorKind.SERVER), generation)
+                updateFailure(SourceError(kind), generation)
             }
         }
     }
@@ -233,8 +238,17 @@ class AppController(
             when (result) {
                 is SourceResult.Success -> {
                     val candidate = result.value
-                    patient = patient.copy(lastReading = ReadingPolicy.selectCurrent(patient.lastReading, candidate, selected.id))
-                    patientStore.save(patient)
+                    val next = patient.copy(
+                        lastReading = ReadingPolicy.selectCurrent(patient.lastReading, candidate, selected.id),
+                    )
+                    try {
+                        patientStore.save(next)
+                    } catch (_: Exception) {
+                        val error = SourceError(SourceErrorKind.STORAGE)
+                        updateFailure(error, capturedGeneration)
+                        return SourceResult.Failure(error)
+                    }
+                    patient = next
                     consecutiveFailures = 0
                     settings.nextAllowedFetch = null
                     mutableDisplay.value = snapshot(ConnectionState.READY).copy(lastSuccessfulFetch = clock.now())
@@ -267,6 +281,7 @@ class AppController(
             }
             SourceErrorKind.CONNECTION_REMOVED -> ConnectionState.CONNECTION_REMOVED
             SourceErrorKind.PROTOCOL -> ConnectionState.PROTOCOL_ERROR
+            SourceErrorKind.STORAGE -> ConnectionState.LOCAL_ERROR
             else -> ConnectionState.BACKING_OFF
         }
         if (error.kind == SourceErrorKind.RATE_LIMITED) {

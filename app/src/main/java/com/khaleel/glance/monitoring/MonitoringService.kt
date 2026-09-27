@@ -70,6 +70,7 @@ class MonitoringService : Service() {
         // Stopping the session makes the persisted monitoring state truthful.
         if (!foreground && NotificationVisibility.isDismissed(this)) {
             deps.controller.setMonitoringEnabled(false)
+            runCatching { deps.notifications.hide() }
             stopSelf(startId)
             return START_NOT_STICKY
         }

@@ -12,6 +12,7 @@ data class DiagnosticsSnapshot(
     val lastError: SourceErrorKind?,
     val largestObservedGapMillis: Long?,
     val eventCount: Int,
+    val lastAlertIssue: Instant? = null,
 )
 
 /** Only timing and enum categories are stored. No account, person, reading, or HTTP data. */
@@ -20,6 +21,7 @@ interface DiagnosticsRecorder {
     fun pollSuccess(at: Instant)
     fun pollFailure(at: Instant, kind: SourceErrorKind)
     fun runtime(at: Instant, state: String)
+    fun alertIssue(at: Instant) = Unit
     fun snapshot(): DiagnosticsSnapshot
     fun clear()
 }
@@ -67,12 +69,19 @@ class DiagnosticsStore(context: Context) : DiagnosticsRecorder {
     }
 
     @Synchronized
+    override fun alertIssue(at: Instant) {
+        prefs.edit().putLong("last_alert_issue", at.toEpochMilli()).apply()
+        append(at, "ALERT_DELIVERY_ISSUE")
+    }
+
+    @Synchronized
     override fun snapshot(): DiagnosticsSnapshot = DiagnosticsSnapshot(
         lastAttempt = prefs.getLong("last_attempt", 0L).takeIf { it > 0L }?.let(Instant::ofEpochMilli),
         lastSuccess = prefs.getLong("last_success", 0L).takeIf { it > 0L }?.let(Instant::ofEpochMilli),
         lastError = prefs.getString("last_error", null)?.let { runCatching { SourceErrorKind.valueOf(it) }.getOrNull() },
         largestObservedGapMillis = prefs.getLong("max_gap", 0L).takeIf { it > 0L },
         eventCount = events().length(),
+        lastAlertIssue = prefs.getLong("last_alert_issue", 0L).takeIf { it > 0L }?.let(Instant::ofEpochMilli),
     )
 
     @Synchronized

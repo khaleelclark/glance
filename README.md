@@ -14,6 +14,11 @@ Stop monitoring and a choice of app colors are available in Settings. Custom
 colors can be chosen on a color wheel with a brightness slider or entered as
 six-digit hex values.
 
+Optional Low, Urgent Low, High, and Urgent High alerts can be enabled separately
+in Settings. Each has a threshold and a repeat cooldown (five minutes by
+default). Glance checks newly received readings during its existing monitoring
+polls; Android's channel settings control each alert's sound and interruption.
+
 ## Open in Android Studio on another machine
 
 1. Clone the private repository: `git clone git@github.com:khaleelclark/glance.git` (or use the GitHub HTTPS clone URL), then open that directory in Android Studio.

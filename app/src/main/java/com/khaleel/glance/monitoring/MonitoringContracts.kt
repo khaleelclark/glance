@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.Service
 import com.khaleel.glance.core.Clock
 import com.khaleel.glance.core.DisplayState
+import com.khaleel.glance.core.Reading
 import com.khaleel.glance.data.AppController
 
 /**
@@ -17,7 +18,12 @@ data class MonitoringDependencies(
     val controller: AppController,
     val notifications: MonitoringNotifications,
     val clock: Clock,
+    val alerts: MonitoringAlerts = MonitoringAlerts { _, _ -> },
 )
+
+fun interface MonitoringAlerts {
+    fun onSuccessfulPoll(reading: Reading, display: DisplayState)
+}
 
 fun interface MonitoringDependencyProvider {
     fun monitoringDependencies(): MonitoringDependencies
@@ -43,4 +49,3 @@ enum class StartFailure {
     DEPENDENCIES_UNAVAILABLE,
     UNKNOWN,
 }
-

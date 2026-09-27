@@ -3,12 +3,16 @@ package com.khaleel.glance
 import android.app.Application
 import com.khaleel.glance.auth.AuthStore
 import com.khaleel.glance.auth.SecureFileStore
+import com.khaleel.glance.alerts.AlertEngine
+import com.khaleel.glance.alerts.AlertPreferences
+import com.khaleel.glance.alerts.GlucoseAlertNotifier
 import com.khaleel.glance.data.AppController
 import com.khaleel.glance.data.DeviceClock
 import com.khaleel.glance.data.DiagnosticsStore
 import com.khaleel.glance.data.LocalStateStore
 import com.khaleel.glance.data.UserSettings
 import com.khaleel.glance.monitoring.MonitoringDependencies
+import com.khaleel.glance.monitoring.MonitoringAlerts
 import com.khaleel.glance.monitoring.MonitoringDependencyProvider
 import com.khaleel.glance.monitoring.MonitoringNotifications
 import com.khaleel.glance.monitoring.MonitoringPresentation
@@ -20,10 +24,21 @@ import android.app.Service
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import okhttp3.OkHttpClient
+import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.SourceResult
 import java.util.concurrent.TimeUnit
 
 class GlanceApplication : Application(), MonitoringDependencyProvider {
     private val diagnosticStore by lazy { DiagnosticsStore(this) }
+    val alertPreferences by lazy { AlertPreferences(this) }
+    val alertNotifier by lazy { GlucoseAlertNotifier(this) }
+    val alertEngine by lazy {
+        AlertEngine(
+            alertPreferences, alertNotifier, DeviceClock,
+            currentDisplay = { controller.display.value },
+            currentPrivacy = { controller.settings.showOnLockScreen },
+        )
+    }
     val controller: AppController by lazy {
         val encrypted = SecureFileStore(this)
         val http = OkHttpClient.Builder()
@@ -66,10 +81,26 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                 controller.settings.unit,
                 controller.settings.showOnLockScreen,
             ).hide()
+            alertEngine.clearNotifications()
         }
     }
 
-    override fun monitoringDependencies() = MonitoringDependencies(controller, notifications, DeviceClock)
+    override fun monitoringDependencies() = MonitoringDependencies(
+        controller, notifications, DeviceClock,
+        MonitoringAlerts { reading, display ->
+            alertEngine.onPollResult(
+                SourceResult.Success(reading), display,
+                controller.settings.unit, controller.settings.showOnLockScreen,
+            )
+        },
+    )
+
+    fun onPollResult(result: SourceResult<Reading>) {
+        alertEngine.onPollResult(
+            result, controller.display.value,
+            controller.settings.unit, controller.settings.showOnLockScreen,
+        )
+    }
 
     fun showCurrentNotification(restore: Boolean = false) {
         if (restore) NotificationVisibility.restore(this)
@@ -88,5 +119,6 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         if (latest.timestamp <= prefs.getLong("last_handled_user_stop", 0L)) return
         prefs.edit().putLong("last_handled_user_stop", latest.timestamp).apply()
         controller.setMonitoringEnabled(false)
+        alertEngine.clearNotifications()
     }
 }

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import com.khaleel.glance.core.Connection
+import com.khaleel.glance.alerts.AlertKind
+import com.khaleel.glance.alerts.GlucoseAlertNotifier
 import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
@@ -50,6 +52,43 @@ class DebugNotificationActivity : Activity() {
             app.hideCurrentNotification()
             app.controller.signOut()
             context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit().clear().commit()
+            return
+        }
+        if (mode == "alert-demo") {
+            val kind = runCatching {
+                AlertKind.valueOf(intent.getStringExtra("kind") ?: "URGENT_HIGH")
+            }.getOrNull() ?: return
+            val value = intent.getIntExtra("value", 305).coerceIn(40, 400).toDouble()
+            val now = Instant.now()
+            val reading = Reading(
+                connectionId = "synthetic-alert-person",
+                measuredAt = now,
+                valueMgDl = value,
+                sourceValue = value,
+                sourceUnit = GlucoseUnit.MG_DL,
+                specialValue = null,
+                trend = Trend.STEADY,
+                sourceRecordId = "synthetic-alert",
+                receivedAt = now,
+            )
+            val state = DisplayState(
+                monitoringEnabled = true,
+                runtime = RuntimeState.RUNNING,
+                connection = ConnectionState.READY,
+                person = Connection("synthetic-alert-person", "DEMO · Patrick Example"),
+                reading = reading,
+                freshness = ReadingFreshness.FRESH,
+                lastSuccessfulFetch = now,
+                nextAllowedFetch = null,
+            )
+            GlucoseAlertNotifier(context).apply {
+                ensureChannels()
+                post(kind, state, GlucoseUnit.MG_DL, intent.getBooleanExtra("lock_visible", false))
+            }
+            return
+        }
+        if (mode == "alert-clear") {
+            GlucoseAlertNotifier(context).clear()
             return
         }
         if (mode == "service-start") {

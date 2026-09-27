@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `13`, and versionName
-`0.12.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `14`, and versionName
+`0.13.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.12.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.13.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -73,6 +73,17 @@ application ID and signer for every upgrade; increment versionCode.
    follow the phone. Use Refresh in the app, and Stop
    monitoring in Settings to end the session. Test screen-off
    behavior before relying on the chosen polling interval.
+
+Optional threshold alerts start **off**. In Settings, enable each desired level,
+choose its value with the slider or step buttons, and set a cooldown from one to
+60 minutes (five minutes initially). Urgent Low and Urgent High take precedence
+over their ordinary level. A new, fresh numeric reading can sound at most once
+per category per cooldown; repeated source responses never sound again. Each
+category's sound is chosen in its Android notification-channel settings.
+Urgent channels request high importance and an alarm sound; Android and the
+phone owner still control notification permission, Do Not Disturb, sound,
+heads-up display, and delivery. Alerts share the existing polling schedule and
+are not a substitute for LibreLink's own alerts.
 
 To upgrade, build a higher versionCode APK signed with the same keystore and
 install it over the existing app. Verify account/settings retention. An APK

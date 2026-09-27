@@ -1,5 +1,8 @@
 package com.khaleel.glance.ui
 
+import com.khaleel.glance.alerts.AlertConfig
+import com.khaleel.glance.alerts.AlertKind
+import com.khaleel.glance.alerts.AlertRule
 import com.khaleel.glance.core.Connection
 import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.GlucoseUnit
@@ -50,6 +53,7 @@ data class UserSettingsUi(
     val enhancedNotification: Boolean,
     val resumeAfterBoot: Boolean,
     val accentHex: String = ThemeAccent.DEFAULT,
+    val alerts: AlertConfig = AlertConfig.defaults(),
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -75,6 +79,8 @@ data class GlanceCallbacks(
     val onIntervalChanged: (Int) -> Unit,
     val onEnhancedNotificationChanged: (Boolean) -> Unit,
     val onAccentHexChanged: (String) -> Unit,
+    val onAlertRuleChanged: (AlertKind, AlertRule) -> Unit,
+    val onAlertSoundChanged: (AlertKind) -> Unit,
     val onResumeAfterBootChanged: (Boolean) -> Unit,
     val onChangePerson: () -> Unit,
     val onReconnect: () -> Unit,

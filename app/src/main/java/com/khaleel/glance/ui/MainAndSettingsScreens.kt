@@ -233,6 +233,15 @@ internal fun SettingsScreen(
             )
         }
 
+        SettingsSection("Glucose alerts") {
+            AlertSettings(
+                settings.alerts,
+                settings.unit,
+                callbacks.onAlertRuleChanged,
+                callbacks.onAlertSoundChanged,
+            )
+        }
+
         SettingsSection("Monitoring") {
             Text("Refresh cadence", style = MaterialTheme.typography.titleMedium)
             IntervalChoice(1, settings.intervalMinutes, callbacks.onIntervalChanged)

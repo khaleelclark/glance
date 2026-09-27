@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.WindowInsetsController
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -145,6 +146,7 @@ class MainActivity : ComponentActivity() {
                     "Last attempt: " + (diagnostic.lastAttempt ?: "none") + "\n" +
                     "Last success: " + (diagnostic.lastSuccess ?: "none") + "\n" +
                     "Last error: " + (diagnostic.lastError ?: "none") + "\n" +
+                    "Last alert delivery issue: " + (diagnostic.lastAlertIssue ?: "none") + "\n" +
                     "Largest poll gap: " +
                     (diagnostic.largestObservedGapMillis?.let { it / 1000L } ?: "none") + " seconds\n" +
                     "Events retained: " + diagnostic.eventCount + "\n" +
@@ -196,6 +198,7 @@ class MainActivity : ComponentActivity() {
             settings.enhancedNotification,
             settings.resumeAfterBoot,
             settings.accentHex,
+            app.alertPreferences.config(),
         )
     }
 
@@ -241,6 +244,7 @@ class MainActivity : ComponentActivity() {
         controller.setMonitoringEnabled(false)
         stopService(Intent(this, MonitoringService::class.java))
         app.hideCurrentNotification()
+        app.alertEngine.clearNotifications()
         setupState = setupState.copy(startingMonitoring = false)
     }
 
@@ -300,8 +304,10 @@ class MainActivity : ComponentActivity() {
         onResumeMonitoring = { startMonitoring() },
         onRefresh = {
             scope.launch {
-                controller.poll(manual = true)
+                val result = controller.poll(manual = true)
                 controller.updateFreshness()
+                runCatching { app.onPollResult(result) }
+                    .onFailure { controller.diagnostics.alertIssue(Instant.now()) }
                 if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
             }
         },
@@ -309,10 +315,24 @@ class MainActivity : ComponentActivity() {
             if (controller.display.value.monitoringEnabled) app.showCurrentNotification(restore = true)
         },
         onUnitChanged = { controller.settings.unit = it; renderSettingsChange() },
-        onLockScreenVisibilityChanged = { controller.settings.showOnLockScreen = it; renderSettingsChange() },
+        onLockScreenVisibilityChanged = {
+            controller.settings.showOnLockScreen = it
+            if (!it) app.alertEngine.clearNotifications()
+            renderSettingsChange()
+        },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },
         onEnhancedNotificationChanged = { controller.settings.enhancedNotification = it; renderSettingsChange() },
         onAccentHexChanged = { controller.settings.accentHex = it; refreshSettings() },
+        onAlertRuleChanged = { kind, rule ->
+            runCatching { app.alertPreferences.setRule(kind, rule) }
+                .onFailure {
+                    Toast.makeText(this, "Could not save alert setting", Toast.LENGTH_LONG).show()
+                }
+            refreshSettings()
+        },
+        onAlertSoundChanged = { kind ->
+            startActivity(app.alertNotifier.channelSettingsIntent(kind))
+        },
         onResumeAfterBootChanged = { controller.settings.resumeAfterBoot = it; refreshSettings() },
         onChangePerson = {
             stopMonitoring()
@@ -341,6 +361,8 @@ class MainActivity : ComponentActivity() {
         onOpenDiagnostics = { showDiagnostics = true },
         onDeleteLocalData = {
             controller.clearLocalData()
+            app.alertPreferences.clearSnapshot()
+            app.alertEngine.clearNotifications()
             if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
         },
         onSignOut = { signOut() },
@@ -349,6 +371,7 @@ class MainActivity : ComponentActivity() {
     private fun signOut() {
         stopMonitoring()
         controller.signOut()
+        app.alertPreferences.clear()
         refreshSettings()
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)

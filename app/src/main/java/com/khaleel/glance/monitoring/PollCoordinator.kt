@@ -1,6 +1,7 @@
 package com.khaleel.glance.monitoring
 
 import com.khaleel.glance.core.ConnectionState
+import com.khaleel.glance.core.SourceResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
@@ -148,7 +149,7 @@ class PollCoordinator(
                 return PollDecision.COOLDOWN
             }
 
-            try {
+            val result = try {
                 withTimeout(policy.requestTimeoutMillis) {
                     controller.poll(manual = trigger == PollTrigger.MANUAL)
                 }
@@ -160,12 +161,18 @@ class PollCoordinator(
                 throw cancelled
             } catch (_: Exception) {
                 controller.recordPollFailure(com.khaleel.glance.core.SourceErrorKind.PROTOCOL)
+                render(actionGeneration)
+                return PollDecision.COMPLETED
             }
 
             if (schedulerGeneration != null && schedulerGeneration != actionGeneration) {
                 return PollDecision.STALE_GENERATION
             }
             controller.updateFreshness()
+            if (result is SourceResult.Success) {
+                runCatching { dependencies.alerts.onSuccessfulPoll(result.value, controller.display.value) }
+                    .onFailure { controller.diagnostics.alertIssue(dependencies.clock.now()) }
+            }
             render(actionGeneration)
             return PollDecision.COMPLETED
         } finally {

@@ -1,8 +1,10 @@
 # Background monitoring strategy
 
-Status: proposed platform decision and test plan, researched 2026-09-27. No
-Glance service has been implemented or run yet, and no physical-phone behavior
-is verified by this document.
+Status: platform decision, initial service implementation, and test plan,
+researched and updated 2026-09-27. The service/poller unit tests have run and
+the debug APK has installed/launched on an API 36 emulator, but the service has
+not yet been exercised there because app/notification wiring is not integrated.
+No screen-off or physical-phone behavior is verified by this document.
 
 ## Decision
 
@@ -18,7 +20,7 @@ The manifest declaration for API 34+ must include:
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
 <service
-    android:name=".monitoring.GlucoseMonitoringService"
+    android:name=".monitoring.MonitoringService"
     android:exported="false"
     android:foregroundServiceType="specialUse">
     <property
@@ -236,17 +238,35 @@ not count as battery evidence.
 | JDK | OpenJDK 17.0.20.1 |
 | Android SDK root | `/home/phoenix/Android/Sdk` exists |
 | Command-line tools | `sdkmanager` 22.0 and `avdmanager` present |
-| Required runtime packages | no installed platform-tools, emulator, platform, build-tools, or system image reported |
-| AVDs | none |
-| Acceleration | `/dev/kvm` exists as `root:kvm` mode `0660`, but `phoenix` is not in group `kvm`; read/write check failed |
+| Required runtime packages | build-tools 36.0.0, emulator 37.1.11, platform-tools 37.0.1, platform 37.0, and API 36 Google APIs x86_64 system image revision 7 installed |
+| AVDs | `Glance_API36`, Pixel 9 Pro XL profile, Android 16 / API 36 Google APIs x86_64 |
+| Acceleration | `/dev/kvm` exists as `root:kvm` mode `0660`; `sg kvm -c 'emulator -accel-check'` reports KVM version 12 installed and usable |
+| Current emulator state | `Glance_API36` is booted with KVM and visible to ADB as `emulator-5554`; direct launcher invocation from this worktree shell still fails because host `libpulse.so.0` is missing, so restart reproducibility needs correction |
 | Disk | approximately 1.1 TiB available on the workspace filesystem |
 
-Pine is not currently able to run the emulator plan: there is no emulator/ADB
-or system image, no AVD, and the current user cannot access KVM. Hardware and
-disk make it feasible after an administrator grants KVM access (with a fresh
-login) and the lead installs/pins the SDK packages and accepts the applicable
-licenses. Software-only emulation is not proposed as evidence for long
-screen-off timing. No SDK or host configuration was changed during this review.
+Pine now has the required API 36 SDK image, ADB, AVD, and working KVM access
+through `sg kvm`. The lead booted the AVD, and this worktree observed it through
+ADB. Directly invoking the emulator launcher from this shell still fails to
+load because `libpulse.so.0` is absent, so a future cold restart must use the
+lead's working launch environment or fix that host dependency. Software-only
+emulation is not proposed as evidence for long screen-off timing. This worktree
+did not change SDK, AVD, KVM, or host package configuration.
+
+### API 36 evidence from this implementation
+
+On the booted `Glance_API36` AVD, ADB reported Android 16 / API 36 and the
+`sdk_gphone64_x86_64` model. The debug APK installed successfully and
+`MainActivity` completed a cold launch. The packaged manifest was inspected
+with `aapt2`: it contains `MonitoringService`, `foregroundServiceType` value
+`0x40000000` (`specialUse`), both foreground-service permissions, and the
+declared special-use subtype. Android reported both foreground-service
+permissions granted to the installed debug package.
+
+The actual foreground start, notification actions, screen-off scheduler, and
+forced-Doze recovery remain **not run** in this branch. The current application
+does not yet install the `MonitoringDependencyProvider`/notification renderer,
+so attempting to treat an immediate service stop as a runtime pass would be
+misleading. Run items 1–7 below after the lead integrates those adapters.
 
 ### Test matrix after pine is enabled
 

@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,7 +41,11 @@ fun GlanceRoot(
         if (setupState.step != SetupStep.COMPLETE) settingsVisible = false
     }
 
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+    val darkTheme = isSystemInDarkTheme()
+    val colorScheme = remember(settings.accentHex, darkTheme) {
+        ThemeAccent.scheme(settings.accentHex, darkTheme)
+    }
+    MaterialTheme(colorScheme = colorScheme) {
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Box(Modifier.fillMaxSize()) {
                 when (setupState.step) {

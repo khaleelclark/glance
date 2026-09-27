@@ -49,6 +49,7 @@ data class UserSettingsUi(
     val intervalMinutes: Int,
     val enhancedNotification: Boolean,
     val resumeAfterBoot: Boolean,
+    val accentHex: String = ThemeAccent.DEFAULT,
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -73,6 +74,7 @@ data class GlanceCallbacks(
     val onLockScreenVisibilityChanged: (Boolean) -> Unit,
     val onIntervalChanged: (Int) -> Unit,
     val onEnhancedNotificationChanged: (Boolean) -> Unit,
+    val onAccentHexChanged: (String) -> Unit,
     val onResumeAfterBootChanged: (Boolean) -> Unit,
     val onChangePerson: () -> Unit,
     val onReconnect: () -> Unit,

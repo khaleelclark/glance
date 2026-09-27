@@ -4,6 +4,7 @@ import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.Trend
 import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -32,6 +33,14 @@ class ReadingHistoryChartTest {
         assertEquals(0, nearestChartPointIndex(points, now, 240f, 62f))
         assertEquals(1, nearestChartPointIndex(points, now, 240f, 122f))
         assertEquals(2, nearestChartPointIndex(points, now, 240f, 178f))
+    }
+
+    @Test fun timeTicksUseRoundLocalClockHoursWithinOneDay() {
+        val ticks = chartTimeTicks(Instant.parse("2026-09-27T21:47:00Z"), ZoneId.of("America/Chicago"))
+
+        assertEquals(Instant.parse("2026-09-27T21:00:00Z"), ticks.last())
+        assertEquals(0, ticks.last().atZone(ZoneId.of("America/Chicago")).minute)
+        assertEquals(true, ticks.all { it >= Instant.parse("2026-09-26T21:47:00Z") })
     }
 
     private fun reading(person: String, hoursAgo: Long, value: Double) = Reading(

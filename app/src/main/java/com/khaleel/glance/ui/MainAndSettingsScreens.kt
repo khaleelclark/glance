@@ -2,6 +2,7 @@ package com.khaleel.glance.ui
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +17,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,6 +38,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.ConnectionState
@@ -128,7 +134,10 @@ private fun MainReadingSummary(
                                 modifier = Modifier.semantics {
                                     contentDescription = "Trend ${reading.trendDescription}"
                                 },
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.displayMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                ),
                             )
                         } else {
                             Text(reading.trendDescription, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -207,6 +216,8 @@ internal fun SettingsScreen(
             Text("Units", style = MaterialTheme.typography.titleMedium)
             UnitChoice(GlucoseUnit.MG_DL, settings.unit, callbacks.onUnitChanged)
             UnitChoice(GlucoseUnit.MMOL_L, settings.unit, callbacks.onUnitChanged)
+            HorizontalDivider()
+            AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
             HorizontalDivider()
             SettingSwitch(
                 title = "Lock-screen values",
@@ -297,6 +308,49 @@ internal fun SettingsScreen(
             },
         )
     }
+}
+
+@Composable
+private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
+    var draft by rememberSaveable(selectedHex) { mutableStateOf(selectedHex) }
+    val normalized = ThemeAccent.normalize(draft)
+    Text("App color", style = MaterialTheme.typography.titleMedium)
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ThemeAccent.presets.forEach { preset ->
+            FilterChip(
+                selected = selectedHex.equals(preset.hex, ignoreCase = true),
+                onClick = { onSelect(preset.hex) },
+                label = { Text(preset.name) },
+                leadingIcon = { Text("●", color = ThemeAccent.color(preset.hex)) },
+            )
+        }
+    }
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { if (it.length <= 7) draft = it },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text("Custom hex color") },
+        placeholder = { Text("#087E82") },
+        singleLine = true,
+        isError = draft.isNotBlank() && normalized == null,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+        supportingText = {
+            Text(if (draft.isNotBlank() && normalized == null) "Enter six hex digits, such as #087E82." else "Preview updates when you apply the color.")
+        },
+    )
+    Button(
+        onClick = { normalized?.let(onSelect) },
+        enabled = normalized != null && normalized != selectedHex,
+    ) { Text("Apply color") }
+    Text(
+        "Very light or dark colors are adjusted to keep text and the graph readable.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

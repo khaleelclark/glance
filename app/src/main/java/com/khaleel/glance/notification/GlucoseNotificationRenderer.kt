@@ -6,13 +6,18 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.StyleSpan
 import android.view.View
 import android.widget.RemoteViews
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
 import java.time.ZoneId
 import java.util.Locale
@@ -67,7 +72,7 @@ class GlucoseNotificationRenderer(
         val builder = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle(content.title)
-            .setContentText(content.text)
+            .setContentText(if (promoted) emphasizedReading(content.text) else content.text)
             .setContentIntent(contentIntent())
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(state.monitoringEnabled)
@@ -87,7 +92,7 @@ class GlucoseNotificationRenderer(
         }
 
         if (promoted) {
-            builder.setStyle(Notification.BigTextStyle().bigText(content.bigText))
+            builder.setStyle(Notification.BigTextStyle().bigText(emphasizedReading(content.bigText)))
             // The promoted status chip can show a short current value without opening the shade.
             // Delayed or stale readings use a label instead of an apparently current number.
             builder.setShortCriticalText(content.statusChipText ?: "")
@@ -161,6 +166,14 @@ class GlucoseNotificationRenderer(
                 if (expanded) content.expandedDetail else content.compactDetail,
             )
         }
+
+    private fun emphasizedReading(text: String): CharSequence {
+        if (state.freshness != ReadingFreshness.FRESH || state.reading == null) return text
+        val firstLineEnd = text.indexOf('\n').takeIf { it >= 0 } ?: text.length
+        return SpannableString(text).apply {
+            setSpan(StyleSpan(Typeface.BOLD), 0, firstLineEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
 
     private fun buildRedactedPublicVersion(): Notification {
         val builder = Notification.Builder(appContext, CHANNEL_ID)

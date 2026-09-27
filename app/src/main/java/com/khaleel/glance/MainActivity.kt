@@ -195,6 +195,7 @@ class MainActivity : ComponentActivity() {
             settings.intervalMinutes,
             settings.enhancedNotification,
             settings.resumeAfterBoot,
+            settings.accentHex,
         )
     }
 
@@ -311,6 +312,7 @@ class MainActivity : ComponentActivity() {
         onLockScreenVisibilityChanged = { controller.settings.showOnLockScreen = it; renderSettingsChange() },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },
         onEnhancedNotificationChanged = { controller.settings.enhancedNotification = it; renderSettingsChange() },
+        onAccentHexChanged = { controller.settings.accentHex = it; refreshSettings() },
         onResumeAfterBootChanged = { controller.settings.resumeAfterBoot = it; refreshSettings() },
         onChangePerson = {
             stopMonitoring()
@@ -347,6 +349,7 @@ class MainActivity : ComponentActivity() {
     private fun signOut() {
         stopMonitoring()
         controller.signOut()
+        refreshSettings()
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)
         setupState = setupState.copy(step = SetupStep.SIGN_IN)

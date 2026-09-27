@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -39,11 +41,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 internal val chartWindow: Duration = Duration.ofHours(24)
 private val gapLimit = Duration.ofMinutes(20)
-private val chartWidth = 1440.dp
+// Ten dp between five-minute observations keeps the trace readable without dropping data.
+private val chartWidth = 2880.dp
 private val chartHeight = 220.dp
 
 internal fun chartPoints(history: List<Reading>, connectionId: String?, now: Instant): List<Reading> =
@@ -60,6 +64,19 @@ internal fun nearestChartPointIndex(points: List<Reading>, now: Instant, widthPx
     points.indices.minByOrNull { index ->
         kotlin.math.abs(widthPx * timeFraction(points[index].measuredAt, now) - x)
     }
+
+/** Round local clock hours make the long timeline easier to scan. */
+internal fun chartTimeTicks(now: Instant, zoneId: ZoneId): List<Instant> {
+    val start = now.minus(chartWindow)
+    var local = now.atZone(zoneId).truncatedTo(ChronoUnit.HOURS)
+    if (local.hour % 2 != 0) local = local.minusHours(1)
+    val result = mutableListOf<Instant>()
+    while (!local.toInstant().isBefore(start)) {
+        result += local.toInstant()
+        local = local.minusHours(2)
+    }
+    return result.asReversed()
+}
 
 @Composable
 internal fun ReadingHistoryChart(
@@ -98,6 +115,7 @@ internal fun ReadingHistoryChart(
                 val gridColor = MaterialTheme.colorScheme.outlineVariant
                 val selectedColor = MaterialTheme.colorScheme.tertiary
                 val scrollState = rememberScrollState()
+                val timeTicks = chartTimeTicks(now, zoneId)
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
                     "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. Drag across the graph for reading details."
@@ -164,21 +182,14 @@ internal fun ReadingHistoryChart(
                                     val y = inset + (size.height - 2 * inset) * fraction
                                     drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
                                 }
-                                for (fraction in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
-                                    val x = size.width * fraction
+                                for (tick in timeTicks) {
+                                    val x = size.width * timeFraction(tick, now)
                                     drawLine(gridColor, Offset(x, inset), Offset(x, size.height - inset), strokeWidth = 1.dp.toPx())
                                 }
                                 offsets.zipWithNext().forEachIndexed { index, (left, right) ->
                                     if (Duration.between(points[index].measuredAt, points[index + 1].measuredAt) <= gapLimit) {
                                         drawLine(lineColor, left, right, strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
                                     }
-                                }
-                                offsets.forEachIndexed { index, offset ->
-                                    drawCircle(
-                                        if (index == selectedIndex) selectedColor else lineColor,
-                                        radius = if (index == selectedIndex) 6.dp.toPx() else 3.dp.toPx(),
-                                        center = offset,
-                                    )
                                 }
                                 offsets.getOrNull(selectedIndex)?.let { offset ->
                                     drawLine(
@@ -187,12 +198,31 @@ internal fun ReadingHistoryChart(
                                         Offset(offset.x, size.height - inset),
                                         strokeWidth = 1.dp.toPx(),
                                     )
+                                    drawCircle(selectedColor, radius = 6.dp.toPx(), center = offset)
                                 }
                             }
-                            Row(Modifier.width(chartWidth), horizontalArrangement = Arrangement.SpaceBetween) {
-                                listOf("24h ago", "18h", "12h", "6h", "Now").forEach {
-                                    Text(it, style = MaterialTheme.typography.labelSmall)
+                            val axisTimeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                                .withLocale(locale).withZone(zoneId)
+                            Box(Modifier.width(chartWidth).height(22.dp)) {
+                                for (tick in timeTicks) {
+                                    if (Duration.between(tick, now) < Duration.ofMinutes(45)) continue
+                                    val labelWidth = 80.dp
+                                    val x = (chartWidth * timeFraction(tick, now) - labelWidth / 2)
+                                        .coerceIn(0.dp, chartWidth - labelWidth)
+                                    Text(
+                                        axisTimeFormat.format(tick),
+                                        Modifier.offset(x = x).width(labelWidth),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                    )
                                 }
+                                Text(
+                                    "Now",
+                                    Modifier.offset(x = chartWidth - 80.dp).width(80.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    textAlign = TextAlign.End,
+                                )
                             }
                         }
                     }

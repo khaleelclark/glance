@@ -23,7 +23,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textSize="26sp"
+                android:textSize="32sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -32,7 +32,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:textSize="26sp"
+                android:textSize="32sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
-                android:textSize="20sp"
+                android:textSize="23sp"
                 android:textStyle="bold" />
 
             <TextView

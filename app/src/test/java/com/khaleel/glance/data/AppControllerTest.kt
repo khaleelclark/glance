@@ -280,6 +280,7 @@ class AppControllerTest {
         override var unit = GlucoseUnit.MG_DL
         override var showOnLockScreen = false
         override var enhancedNotification = true
+        override var accentHex = "#087E82"
         override var intervalMinutes = 1
         override var resumeAfterBoot = true
         override var monitoringEnabled = false

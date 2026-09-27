@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
+import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
 import java.time.ZoneId
@@ -55,7 +56,7 @@ class GlucoseNotificationRenderer(
 
     fun build(): Notification {
         val builder = Notification.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
+            .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle(content.title)
             .setContentText(content.text)
             .setStyle(Notification.BigTextStyle().bigText(content.bigText))
@@ -149,7 +150,7 @@ class GlucoseNotificationRenderer(
 
     private fun buildRedactedPublicVersion(): Notification =
         Notification.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
+            .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle("Glance · Monitoring")
             .setContentText("Reading hidden on lock screen")
             .setContentIntent(contentIntent())

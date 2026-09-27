@@ -6,6 +6,6 @@ local.properties
 *.iml
 *.jks
 *.keystore
-release/
+/release/
 captures/
 *.hprof

@@ -14,6 +14,10 @@ import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Trend
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import com.khaleel.glance.monitoring.MonitoringService
+import com.khaleel.glance.SourceFactory
+import com.khaleel.glance.core.Credentials
+import com.khaleel.glance.core.SourceResult
+import kotlinx.coroutines.runBlocking
 import java.time.Instant
 
 /** Debug-build-only synthetic visual fixture. Release builds cannot receive this action. */
@@ -26,6 +30,28 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode == "service-demo") {
+            context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit()
+                .putBoolean("enabled", true).putInt("poll_count", 0).commit()
+            val controller = (context.applicationContext as com.khaleel.glance.GlanceApplication).controller
+            val signedIn = runBlocking {
+                controller.signIn(Credentials(SourceFactory.DEMO_EMAIL, SourceFactory.DEMO_PASSWORD))
+            }
+            if (signedIn is SourceResult.Success) {
+                controller.selectPerson(signedIn.value.single())
+                MonitoringService.start(context)
+            }
+            return
+        }
+        if (mode == "demo-clear") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            app.controller.setMonitoringEnabled(false)
+            context.stopService(Intent(context, MonitoringService::class.java))
+            app.hideCurrentNotification()
+            app.controller.signOut()
+            context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit().clear().commit()
+            return
+        }
         if (mode == "service-start") {
             GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).hide()
             MonitoringService.start(context)

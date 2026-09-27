@@ -9,6 +9,7 @@ import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
 import org.json.JSONObject
 import java.time.Instant
+import java.time.Duration
 
 data class StoredPatientState(val selected: Connection?, val lastReading: Reading?)
 
@@ -34,7 +35,13 @@ class LocalStateStore(private val encrypted: SecureFileStore) : PatientPersisten
                 sourceRecordId = it.optString("sourceRecordId").takeIf(String::isNotBlank),
                 receivedAt = Instant.parse(it.getString("receivedAt")),
             )
-        }?.takeIf { it.connectionId == selected?.id }
+        }?.takeIf {
+            it.connectionId == selected?.id &&
+                Duration.between(it.measuredAt, Instant.now()) < Duration.ofHours(24)
+        }
+        if (reading == null && value.has("reading")) {
+            save(StoredPatientState(selected, null))
+        }
         return StoredPatientState(selected, reading)
     }
 

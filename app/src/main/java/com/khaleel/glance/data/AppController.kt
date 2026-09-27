@@ -39,6 +39,7 @@ class AppController(
     private val patientStore: PatientPersistence,
     val settings: SettingsPersistence,
     private val clock: Clock = DeviceClock,
+    val diagnostics: DiagnosticsRecorder = NoDiagnostics,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val gate = Mutex()
@@ -87,6 +88,7 @@ class AppController(
 
     @Synchronized
     fun setRuntime(runtime: RuntimeState) {
+        if (mutableDisplay.value.runtime != runtime) diagnostics.runtime(clock.now(), runtime.name)
         mutableDisplay.value = snapshot(mutableDisplay.value.connection, runtime)
     }
 
@@ -192,6 +194,7 @@ class AppController(
         }
         if (manual) lastManualRefreshAt = now
         synchronized(this) { if (generation == capturedGeneration) mutableDisplay.value = snapshot(ConnectionState.FETCHING) }
+        diagnostics.pollAttempt(now)
         val session = sessionOrRecover() ?: return failure(currentAuthError(), capturedGeneration)
         var result = source.latest(session, selected.id)
         if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.AUTH_EXPIRED) {
@@ -212,6 +215,7 @@ class AppController(
                     consecutiveFailures = 0
                     settings.nextAllowedFetch = null
                     mutableDisplay.value = snapshot(ConnectionState.READY).copy(lastSuccessfulFetch = clock.now())
+                    diagnostics.pollSuccess(clock.now())
                 }
                 is SourceResult.Failure -> updateFailure(result.error, capturedGeneration)
             }
@@ -227,6 +231,7 @@ class AppController(
     @Synchronized
     private fun updateFailure(error: SourceError, capturedGeneration: Long) {
         if (generation != capturedGeneration) return
+        diagnostics.pollFailure(clock.now(), error.kind)
         val state = when (error.kind) {
             SourceErrorKind.NETWORK -> ConnectionState.OFFLINE
             SourceErrorKind.INVALID_CREDENTIALS, SourceErrorKind.AUTH_EXPIRED -> {
@@ -296,5 +301,6 @@ class AppController(
         auth = null
         patient = StoredPatientState(null, null)
         mutableDisplay.value = snapshot(ConnectionState.SIGN_IN_REQUIRED, RuntimeState.STOPPED)
+        diagnostics.clear()
     }
 }

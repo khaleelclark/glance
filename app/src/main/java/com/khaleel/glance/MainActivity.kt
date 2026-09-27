@@ -21,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
-import com.khaleel.glance.core.Connection
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceErrorKind
@@ -128,20 +127,34 @@ class MainActivity : ComponentActivity() {
                 now = now,
             )
             if (showDiagnostics) {
+                val diagnostic = controller.diagnostics.snapshot()
+                val report = "Glance " + BuildConfig.VERSION_NAME + " · Android " + Build.VERSION.RELEASE +
+                    " (API " + Build.VERSION.SDK_INT + ")\n" +
+                    "Monitoring: " + display.runtime + "\n" +
+                    "Connection: " + display.connection + "\n" +
+                    "Reading: " + display.freshness + "\n" +
+                    "Last attempt: " + (diagnostic.lastAttempt ?: "none") + "\n" +
+                    "Last success: " + (diagnostic.lastSuccess ?: "none") + "\n" +
+                    "Last error: " + (diagnostic.lastError ?: "none") + "\n" +
+                    "Largest poll gap: " +
+                    (diagnostic.largestObservedGapMillis?.let { it / 1000L } ?: "none") + " seconds\n" +
+                    "Events retained: " + diagnostic.eventCount + "\n" +
+                    "Next allowed fetch: " + (display.nextAllowedFetch ?: "now") + "\n" +
+                    "Notification permission: " + setupState.notificationPermission
                 AlertDialog(
                     onDismissRequest = { showDiagnostics = false },
                     title = { Text("Diagnostics") },
-                    text = {
-                        Text(
-                            "Monitoring: " + display.runtime + "\n" +
-                                "Connection: " + display.connection + "\n" +
-                                "Reading: " + display.freshness + "\n" +
-                                "Last fetch: " + (display.lastSuccessfulFetch ?: "none") + "\n" +
-                                "Next allowed fetch: " + (display.nextAllowedFetch ?: "now") + "\n" +
-                                "Notification permission: " + setupState.notificationPermission,
-                        )
-                    },
+                    text = { Text(report) },
                     confirmButton = { TextButton(onClick = { showDiagnostics = false }) { Text("Close") } },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, report)
+                            }
+                            startActivity(Intent.createChooser(send, "Export redacted diagnostics"))
+                        }) { Text("Export") }
+                    },
                 )
             }
         }
@@ -150,6 +163,12 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshSystemState()
+        if (setupState.notificationPermission == PermissionStatus.DENIED &&
+            controller.display.value.monitoringEnabled
+        ) {
+            pauseMonitoring()
+            setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
+        }
     }
 
     override fun onDestroy() {
@@ -282,7 +301,15 @@ class MainActivity : ComponentActivity() {
             setupState = setupState.copy(step = SetupStep.CONNECTION)
             loadConnections()
         },
-        onReconnect = { loadConnections() },
+        onReconnect = {
+            scope.launch {
+                val result = runCatching { controller.connections() }.getOrNull()
+                if (result is SourceResult.Success && controller.display.value.person != null) {
+                    controller.poll(manual = true)
+                }
+                showDiagnostics = true
+            }
+        },
         onOpenDiagnostics = { showDiagnostics = true },
         onDeleteLocalData = { signOut() },
         onSignOut = { signOut() },

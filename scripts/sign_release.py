@@ -12,12 +12,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 SDK = Path(os.environ.get("ANDROID_HOME", Path.home() / "Android" / "Sdk"))
 APK_SIGNER = SDK / "build-tools" / "36.0.0" / "apksigner"
+APT = SDK / "build-tools" / "36.0.0" / "aapt"
 KEY_DIR = Path(os.environ.get("GLANCE_SIGNING_DIR", Path.home() / ".local" / "share" / "glance"))
 KEYSTORE = KEY_DIR / "personal-release.jks"
 PASSWORD_FILE = KEY_DIR / "signing-password.txt"
 UNSIGNED = ROOT / "app" / "build" / "outputs" / "apk" / "release" / "app-release-unsigned.apk"
 OUT_DIR = ROOT / "release"
-OUT_APK = OUT_DIR / "glance-0.1.0-personal.apk"
 
 
 def run(*args: str, env: dict[str, str] | None = None) -> str:
@@ -28,7 +28,7 @@ def run(*args: str, env: dict[str, str] | None = None) -> str:
 
 
 def main() -> int:
-    for required in (APK_SIGNER, KEYSTORE, PASSWORD_FILE, UNSIGNED):
+    for required in (APK_SIGNER, APT, KEYSTORE, PASSWORD_FILE, UNSIGNED):
         if not required.is_file():
             print("Missing required signing input: " + str(required), file=sys.stderr)
             return 1
@@ -45,8 +45,15 @@ def main() -> int:
         return 1
     env = os.environ.copy()
     env["GLANCE_SIGNING_PASSWORD"] = password
+    badging = run(str(APT), "dump", "badging", str(UNSIGNED))
+    package = re.search(r"^package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'", badging, re.M)
+    if not package or package.group(1) != "com.khaleel.glance":
+        print("Unexpected APK package metadata.", file=sys.stderr)
+        return 1
+    version_code, version_name = int(package.group(2)), package.group(3)
+    out_apk = OUT_DIR / ("glance-" + version_name + "-personal.apk")
     OUT_DIR.mkdir(exist_ok=True)
-    temporary = OUT_DIR / (OUT_APK.name + ".tmp")
+    temporary = OUT_DIR / (out_apk.name + ".tmp")
     temporary.unlink(missing_ok=True)
     try:
         run(
@@ -60,14 +67,14 @@ def main() -> int:
         fingerprint_match = re.search(r"Signer #1 certificate SHA-256 digest: ([0-9a-f]+)", verification)
         if not fingerprint_match:
             raise RuntimeError("apksigner did not report a certificate SHA-256 fingerprint")
-        temporary.replace(OUT_APK)
-        sha256 = hashlib.sha256(OUT_APK.read_bytes()).hexdigest()
+        temporary.replace(out_apk)
+        sha256 = hashlib.sha256(out_apk.read_bytes()).hexdigest()
         source_commit = run("git", "rev-parse", "HEAD").strip()
         manifest = {
             "applicationId": "com.khaleel.glance",
-            "versionCode": 1,
-            "versionName": "0.1.0",
-            "apk": OUT_APK.name,
+            "versionCode": version_code,
+            "versionName": version_name,
+            "apk": out_apk.name,
             "apkSha256": sha256,
             "certificateSha256": fingerprint_match.group(1).upper(),
             "sourceCommit": source_commit,
@@ -80,7 +87,7 @@ def main() -> int:
             },
         }
         (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-        print("Signed and verified: " + str(OUT_APK))
+        print("Signed and verified: " + str(out_apk))
         print("APK SHA-256: " + sha256)
         print("Certificate SHA-256: " + manifest["certificateSha256"])
         print("Source commit: " + source_commit)

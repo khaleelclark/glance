@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.khaleel.glance.core.RuntimeState
+import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -38,7 +39,13 @@ class MonitoringService : Service() {
         val expectedGeneration = intent?.generationExtra()
 
         if (action == ACTION_PAUSE) {
-            if (activeGeneration == null || expectedGeneration == activeGeneration) {
+            // The current renderer publishes no generation extra. Explicit
+            // helper-built actions do, and stale non-null generations remain rejected.
+            if (
+                expectedGeneration == null ||
+                activeGeneration == null ||
+                expectedGeneration == activeGeneration
+            ) {
                 coordinator?.stop()
                 deps.controller.setMonitoringEnabled(false)
                 runCatching { deps.notifications.hide() }
@@ -153,10 +160,10 @@ class MonitoringService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
-        const val NOTIFICATION_ID = 4101
+        const val NOTIFICATION_ID = GlucoseNotificationRenderer.NOTIFICATION_ID
         const val ACTION_START = "com.khaleel.glance.monitoring.START"
-        const val ACTION_REFRESH = "com.khaleel.glance.monitoring.REFRESH"
-        const val ACTION_PAUSE = "com.khaleel.glance.monitoring.PAUSE"
+        const val ACTION_REFRESH = GlucoseNotificationRenderer.ACTION_REFRESH
+        const val ACTION_PAUSE = GlucoseNotificationRenderer.ACTION_PAUSE
         const val EXTRA_GENERATION = "com.khaleel.glance.monitoring.GENERATION"
 
         private val generationCounter = AtomicLong(SystemClock.elapsedRealtimeNanos())

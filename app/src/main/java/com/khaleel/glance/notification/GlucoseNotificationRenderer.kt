@@ -79,21 +79,7 @@ class GlucoseNotificationRenderer(
         actionGeneration?.let { builder.setDeleteIntent(dismissIntent(it)) }
 
         if (state.monitoringEnabled && actionGeneration != null) {
-            builder
-                .addAction(
-                    action(
-                        "Refresh",
-                        ACTION_REFRESH,
-                        android.R.drawable.ic_popup_sync,
-                    ),
-                )
-                .addAction(
-                    action(
-                        "Pause",
-                        ACTION_PAUSE,
-                        android.R.drawable.ic_media_pause,
-                    ),
-                )
+            builder.addAction(refreshAction())
         }
 
         if (!lockScreenVisible) {
@@ -151,19 +137,14 @@ class GlucoseNotificationRenderer(
         )
     }
 
-    private fun action(
-        label: String,
-        intentAction: String,
-        iconResource: Int,
-    ): Notification.Action {
+    private fun refreshAction(): Notification.Action {
         val generation = requireNotNull(actionGeneration)
-        val pendingIntent = if (intentAction == ACTION_REFRESH) {
-            MonitoringService.refreshPendingIntent(appContext, generation)
-        } else {
-            MonitoringService.pausePendingIntent(appContext, generation)
-        }
-        val icon = Icon.createWithResource(appContext, iconResource)
-        return Notification.Action.Builder(icon, label, pendingIntent).build()
+        val icon = Icon.createWithResource(appContext, android.R.drawable.ic_popup_sync)
+        return Notification.Action.Builder(
+            icon,
+            "Refresh",
+            MonitoringService.refreshPendingIntent(appContext, generation),
+        ).build()
     }
 
     private fun buildRedactedPublicVersion(): Notification {

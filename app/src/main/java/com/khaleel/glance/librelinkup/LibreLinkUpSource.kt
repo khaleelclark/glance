@@ -6,6 +6,7 @@ import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.GlucoseSource
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.SourceSnapshot
 import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
@@ -91,7 +92,13 @@ class LibreLinkUpSource private constructor(
         }
     }
 
-    override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> {
+    override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> =
+        when (val result = snapshot(session, connectionId)) {
+            is SourceResult.Success -> SourceResult.Success(result.value.current)
+            is SourceResult.Failure -> result
+        }
+
+    override suspend fun snapshot(session: Session, connectionId: String): SourceResult<SourceSnapshot> {
         val baseUrl = validateSession(session) ?: return failure(SourceErrorKind.AUTH_EXPIRED)
         if (!isValidConnectionId(connectionId)) return failure(SourceErrorKind.PROTOCOL)
         val url = baseUrl.newBuilder()
@@ -105,7 +112,7 @@ class LibreLinkUpSource private constructor(
             request = { version -> authenticatedRequest(url, session, version).get().build() },
         )) {
             is HttpResult.Failure -> SourceResult.Failure(result.error)
-            is HttpResult.Success -> parseReading(result.root, connectionId)
+            is HttpResult.Success -> parseSnapshot(result.root, connectionId)
         }
     }
 
@@ -247,7 +254,7 @@ class LibreLinkUpSource private constructor(
         return SourceResult.Success(connections)
     }
 
-    private fun parseReading(root: JsonValue.Object, connectionId: String): SourceResult<Reading> {
+    private fun parseSnapshot(root: JsonValue.Object, connectionId: String): SourceResult<SourceSnapshot> {
         val data = root.values["data"]?.asObject() ?: return failure(SourceErrorKind.PROTOCOL)
         val connection = data.values["connection"]?.asObject()
             ?: return failure(SourceErrorKind.CONNECTION_REMOVED)
@@ -256,22 +263,35 @@ class LibreLinkUpSource private constructor(
         if (measurementValue === JsonValue.NullValue) return failure(SourceErrorKind.NO_READING)
         val measurement = measurementValue.asObject() ?: return failure(SourceErrorKind.PROTOCOL)
 
-        val measuredAt = parseFactoryTimestamp(measurement.values["FactoryTimestamp"]?.asString())
+        val current = parseMeasurement(measurement, connectionId)
             ?: return failure(SourceErrorKind.PROTOCOL)
+        val history = data.values["graphData"]?.asArray()?.values.orEmpty()
+            .mapNotNull { it.asObject()?.let { item -> parseMeasurement(item, connectionId) } }
+            .filter { it.measuredAt.isBefore(current.measuredAt) }
+            .associateBy { it.measuredAt }
+            .values
+            .sortedBy { it.measuredAt }
+            .takeLast(300)
+        return SourceResult.Success(SourceSnapshot(current, history))
+    }
+
+    private fun parseMeasurement(measurement: JsonValue.Object, connectionId: String): Reading? {
+        val measuredAt = parseFactoryTimestamp(measurement.values["FactoryTimestamp"]?.asString())
+            ?: return null
         if (measuredAt.isAfter(clock.now().plus(MAX_FUTURE_SKEW))) {
-            return failure(SourceErrorKind.PROTOCOL)
+            return null
         }
         val canonical = measurement.values["ValueInMgPerDl"]?.asNumber()?.toFiniteDouble()
             ?.takeIf { it > 0.0 && it <= MAX_GLUCOSE_MG_DL && it == Math.rint(it) }
-            ?: return failure(SourceErrorKind.PROTOCOL)
+            ?: return null
         val unit = when (measurement.values["GlucoseUnits"]?.asNumber()?.toIntExactOrNull()) {
             0 -> GlucoseUnit.MMOL_L
             1 -> GlucoseUnit.MG_DL
-            else -> return failure(SourceErrorKind.PROTOCOL)
+            else -> return null
         }
         val source = measurement.values["Value"]?.asNumber()?.toFiniteDouble()
             ?.takeIf { it > 0.0 && it <= MAX_SOURCE_VALUE }
-            ?: return failure(SourceErrorKind.PROTOCOL)
+            ?: return null
         val trend = when (measurement.values["TrendArrow"]?.asNumber()?.toIntExactOrNull()) {
             1 -> Trend.FALLING_QUICKLY
             2 -> Trend.FALLING
@@ -280,18 +300,16 @@ class LibreLinkUpSource private constructor(
             5 -> Trend.RISING_QUICKLY
             else -> Trend.UNKNOWN
         }
-        return SourceResult.Success(
-            Reading(
-                connectionId = connectionId,
-                measuredAt = measuredAt,
-                valueMgDl = canonical,
-                sourceValue = source,
-                sourceUnit = unit,
-                specialValue = null,
-                trend = trend,
-                sourceRecordId = null,
-                receivedAt = clock.now(),
-            ),
+        return Reading(
+            connectionId = connectionId,
+            measuredAt = measuredAt,
+            valueMgDl = canonical,
+            sourceValue = source,
+            sourceUnit = unit,
+            specialValue = null,
+            trend = trend,
+            sourceRecordId = null,
+            receivedAt = clock.now(),
         )
     }
 

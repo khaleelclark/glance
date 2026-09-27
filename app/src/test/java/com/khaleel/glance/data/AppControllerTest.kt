@@ -14,6 +14,7 @@ import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.SourceSnapshot
 import com.khaleel.glance.core.Trend
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -139,6 +140,7 @@ class AppControllerTest {
 
         assertNull(patient.state.lastReading)
         assertNull(controller.display.value.reading)
+        assertTrue(controller.display.value.history.isEmpty())
         assertEquals(patrick, controller.display.value.person)
         assertEquals(GlucoseUnit.MMOL_L, settings.unit)
         assertTrue(controller.hasAccount)
@@ -206,6 +208,44 @@ class AppControllerTest {
         assertEquals(patrick, patient.state.selected)
     }
 
+    @Test fun successfulPollsBuildPersonScopedHistoryAndSelectionClearsIt() = runBlocking {
+        var calls = 0
+        val source = FakeSource { _, _ ->
+            calls++
+            SourceResult.Success(reading(patrick, start.minusSeconds(if (calls == 1) 300 else 60)))
+        }
+        val patient = MemoryPatient()
+        val controller = controller(source, patient)
+        controller.selectPerson(patrick)
+
+        controller.poll()
+        controller.poll()
+
+        assertEquals(2, controller.display.value.history.size)
+        assertEquals(2, patient.state.history.size)
+        controller.selectPerson(other)
+        assertTrue(controller.display.value.history.isEmpty())
+        assertTrue(patient.state.history.isEmpty())
+    }
+
+    @Test fun sourceGraphSamplesAreSavedWithCurrentReading() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }.apply {
+            snapshotHistory = listOf(
+                reading(patrick, start.minusSeconds(660)),
+                reading(patrick, start.minusSeconds(360)),
+            )
+        }
+        val patient = MemoryPatient()
+        val controller = controller(source, patient)
+        controller.selectPerson(patrick)
+
+        controller.poll()
+
+        assertEquals(3, controller.display.value.history.size)
+        assertEquals(3, patient.state.history.size)
+        assertEquals(start.minusSeconds(660), controller.display.value.history.first().measuredAt)
+    }
+
     private fun controller(
         source: FakeSource,
         patient: MemoryPatient,
@@ -250,6 +290,7 @@ class AppControllerTest {
         val onConnections: suspend (Session) -> SourceResult<List<Connection>> = { SourceResult.Success(emptyList()) },
         val onLatest: suspend (Session, String) -> SourceResult<Reading>,
     ) : GlucoseSource {
+        var snapshotHistory: List<Reading> = emptyList()
         @Volatile
         var latestCalls = 0
         override suspend fun signIn(credentials: Credentials) = SourceResult.Success(
@@ -260,5 +301,10 @@ class AppControllerTest {
             latestCalls++
             return onLatest(session, connectionId)
         }
+        override suspend fun snapshot(session: Session, connectionId: String): SourceResult<SourceSnapshot> =
+            when (val result = latest(session, connectionId)) {
+                is SourceResult.Success -> SourceResult.Success(SourceSnapshot(result.value, snapshotHistory))
+                is SourceResult.Failure -> result
+            }
     }
 }

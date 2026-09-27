@@ -31,7 +31,7 @@ internal class NotificationContentFormatter(
 
     fun format(state: DisplayState, unit: GlucoseUnit): NotificationContent {
         val person = state.person?.displayName ?: "Glance"
-        if (!state.monitoringEnabled) return pausedContent(person, state.reading, unit)
+        if (!state.monitoringEnabled) return stoppedContent(person, state.reading, unit)
         if (state.runtime == RuntimeState.UNABLE_TO_START) {
             val last = state.reading?.let {
                 "Last: ${formatValue(it, unit)} at ${timeFormatter.format(it.measuredAt)}"
@@ -115,7 +115,7 @@ internal class NotificationContentFormatter(
         }
     }
 
-    private fun pausedContent(
+    private fun stoppedContent(
         person: String,
         reading: Reading?,
         unit: GlucoseUnit,
@@ -124,9 +124,9 @@ internal class NotificationContentFormatter(
             "Last: ${formatValue(it, unit)} at ${timeFormatter.format(it.measuredAt)}"
         } ?: "No reading available"
         return NotificationContent(
-            title = "$person · Monitoring paused",
+            title = "$person · Monitoring stopped",
             text = last,
-            bigText = "$last\nOpen Glance to resume monitoring.",
+            bigText = "$last\nOpen Glance to start monitoring.",
         )
     }
 

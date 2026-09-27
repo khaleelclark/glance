@@ -7,6 +7,9 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
+The main screen includes a 12-hour graph of validated source samples. The
+notification keeps Refresh; Stop monitoring is available in Settings.
+
 ## Open in Android Studio on another machine
 
 1. Clone the private repository: `git clone git@github.com:khaleelclark/glance.git` (or use the GitHub HTTPS clone URL), then open that directory in Android Studio.

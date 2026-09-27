@@ -53,7 +53,7 @@ class GlanceUiText(
     }
 
     fun monitoring(state: DisplayState): String = when {
-        !state.monitoringEnabled -> "Monitoring paused"
+        !state.monitoringEnabled -> "Monitoring stopped"
         state.runtime == RuntimeState.STARTING -> "Starting monitoring…"
         state.runtime == RuntimeState.RUNNING -> "Monitoring is running"
         state.runtime == RuntimeState.UNABLE_TO_START -> "Monitoring could not start"

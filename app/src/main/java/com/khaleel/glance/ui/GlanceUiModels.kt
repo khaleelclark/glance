@@ -65,7 +65,7 @@ data class GlanceCallbacks(
     val onOpenNotificationSettings: () -> Unit,
     val onOpenBatterySettings: () -> Unit,
     val onStartMonitoring: () -> Unit,
-    val onPauseMonitoring: () -> Unit,
+    val onStopMonitoring: () -> Unit,
     val onResumeMonitoring: () -> Unit,
     val onRefresh: () -> Unit,
     val onRestoreNotification: () -> Unit,

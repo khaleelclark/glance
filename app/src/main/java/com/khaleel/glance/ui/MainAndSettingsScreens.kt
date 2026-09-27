@@ -32,6 +32,8 @@ import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.GlucoseUnit
 import java.time.Instant
+import java.time.ZoneId
+import java.util.Locale
 
 @Composable
 internal fun MainReadingScreen(
@@ -40,6 +42,8 @@ internal fun MainReadingScreen(
     callbacks: GlanceCallbacks,
     text: GlanceUiText,
     now: Instant,
+    zoneId: ZoneId,
+    locale: Locale,
     onOpenSettings: () -> Unit,
 ) {
     val reading = text.reading(displayState, settings.unit, now)
@@ -107,19 +111,10 @@ internal fun MainReadingScreen(
             }
         }
 
-        Button(
-            onClick = if (displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING) {
-                callbacks.onPauseMonitoring
-            } else {
-                callbacks.onResumeMonitoring
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(if (displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING) {
-                "Pause monitoring"
-            } else {
-                "Resume monitoring"
-            })
+        if (displayState.runtime != RuntimeState.RUNNING) {
+            Button(onClick = callbacks.onResumeMonitoring, modifier = Modifier.fillMaxWidth()) {
+                Text(if (displayState.monitoringEnabled) "Try to start monitoring" else "Start monitoring")
+            }
         }
         OutlinedButton(
             onClick = callbacks.onRefresh,
@@ -136,11 +131,20 @@ internal fun MainReadingScreen(
         TextButton(onClick = callbacks.onRestoreNotification, modifier = Modifier.fillMaxWidth()) {
             Text("Show notification again")
         }
+        ReadingHistoryChart(
+            history = displayState.history,
+            connectionId = displayState.person?.id,
+            unit = settings.unit,
+            now = now,
+            zoneId = zoneId,
+            locale = locale,
+        )
     }
 }
 
 @Composable
 internal fun SettingsScreen(
+    displayState: DisplayState,
     setupState: SetupUiState,
     settings: UserSettingsUi,
     callbacks: GlanceCallbacks,
@@ -202,6 +206,11 @@ internal fun SettingsScreen(
             PermissionSettingsRow(setupState.notificationPermission, callbacks.onOpenNotificationSettings)
             OutlinedButton(onClick = callbacks.onOpenBatterySettings, modifier = Modifier.fillMaxWidth()) {
                 Text("Battery settings · ${batteryStatusShort(setupState.batteryStatus)}")
+            }
+            if (displayState.monitoringEnabled) {
+                TextButton(onClick = callbacks.onStopMonitoring, modifier = Modifier.fillMaxWidth()) {
+                    Text("Stop monitoring")
+                }
             }
         }
 

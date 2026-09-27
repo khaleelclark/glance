@@ -7,11 +7,16 @@ import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
+import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
 import java.time.Duration
 
-data class StoredPatientState(val selected: Connection?, val lastReading: Reading?)
+data class StoredPatientState(
+    val selected: Connection?,
+    val lastReading: Reading?,
+    val history: List<Reading> = emptyList(),
+)
 
 interface PatientPersistence {
     fun load(): StoredPatientState
@@ -23,45 +28,59 @@ class LocalStateStore(private val encrypted: SecureFileStore) : PatientPersisten
     override fun load(): StoredPatientState {
         val value = encrypted.read("patient") ?: return StoredPatientState(null, null)
         val selected = value.optJSONObject("selected")?.let { Connection(it.getString("id"), it.getString("name")) }
-        val reading = value.optJSONObject("reading")?.let {
-            Reading(
-                connectionId = it.getString("connectionId"),
-                measuredAt = Instant.parse(it.getString("measuredAt")),
-                valueMgDl = it.optDouble("valueMgDl").takeUnless(Double::isNaN),
-                sourceValue = it.optDouble("sourceValue").takeUnless(Double::isNaN),
-                sourceUnit = GlucoseUnit.valueOf(it.getString("sourceUnit")),
-                specialValue = it.optString("specialValue").takeIf(String::isNotBlank)?.let(SpecialValue::valueOf),
-                trend = Trend.valueOf(it.getString("trend")),
-                sourceRecordId = it.optString("sourceRecordId").takeIf(String::isNotBlank),
-                receivedAt = Instant.parse(it.getString("receivedAt")),
-            )
-        }?.takeIf {
+        val reading = value.optJSONObject("reading")?.let(::readingFromJson)?.takeIf {
             it.connectionId == selected?.id &&
                 Duration.between(it.measuredAt, Instant.now()) < Duration.ofHours(24)
         }
+        val storedHistory = value.optJSONArray("history")?.let { items ->
+            (0 until minOf(items.length(), 500)).mapNotNull { index ->
+                items.optJSONObject(index)?.let { runCatching { readingFromJson(it) }.getOrNull() }
+            }
+        }.orEmpty()
+        val history = selected?.let {
+            ReadingHistory.merge(emptyList(), storedHistory + listOfNotNull(reading), it.id, Instant.now())
+        }.orEmpty()
         if (reading == null && value.has("reading")) {
-            save(StoredPatientState(selected, null))
+            save(StoredPatientState(selected, null, history))
         }
-        return StoredPatientState(selected, reading)
+        return StoredPatientState(selected, reading, history)
     }
 
     override fun save(state: StoredPatientState) {
         encrypted.write("patient", JSONObject().apply {
             state.selected?.let { put("selected", JSONObject().apply { put("id", it.id); put("name", it.displayName) }) }
-            state.lastReading?.takeIf { it.connectionId == state.selected?.id }?.let { reading ->
-                put("reading", JSONObject().apply {
-                    put("connectionId", reading.connectionId)
-                    put("measuredAt", reading.measuredAt.toString())
-                    put("valueMgDl", reading.valueMgDl)
-                    put("sourceValue", reading.sourceValue)
-                    put("sourceUnit", reading.sourceUnit.name)
-                    put("specialValue", reading.specialValue?.name)
-                    put("trend", reading.trend.name)
-                    put("sourceRecordId", reading.sourceRecordId)
-                    put("receivedAt", reading.receivedAt.toString())
+            state.lastReading?.takeIf { it.connectionId == state.selected?.id }?.let { put("reading", readingToJson(it)) }
+            state.selected?.let { selected ->
+                put("history", JSONArray().apply {
+                    ReadingHistory.merge(emptyList(), state.history, selected.id, Instant.now())
+                        .forEach { put(readingToJson(it)) }
                 })
             }
         })
+    }
+
+    private fun readingFromJson(it: JSONObject) = Reading(
+        connectionId = it.getString("connectionId"),
+        measuredAt = Instant.parse(it.getString("measuredAt")),
+        valueMgDl = it.optDouble("valueMgDl").takeUnless(Double::isNaN),
+        sourceValue = it.optDouble("sourceValue").takeUnless(Double::isNaN),
+        sourceUnit = GlucoseUnit.valueOf(it.getString("sourceUnit")),
+        specialValue = it.optString("specialValue").takeIf(String::isNotBlank)?.let(SpecialValue::valueOf),
+        trend = Trend.valueOf(it.getString("trend")),
+        sourceRecordId = it.optString("sourceRecordId").takeIf(String::isNotBlank),
+        receivedAt = Instant.parse(it.getString("receivedAt")),
+    )
+
+    private fun readingToJson(reading: Reading) = JSONObject().apply {
+        put("connectionId", reading.connectionId)
+        put("measuredAt", reading.measuredAt.toString())
+        put("valueMgDl", reading.valueMgDl)
+        put("sourceValue", reading.sourceValue)
+        put("sourceUnit", reading.sourceUnit.name)
+        put("specialValue", reading.specialValue?.name)
+        put("trend", reading.trend.name)
+        put("sourceRecordId", reading.sourceRecordId)
+        put("receivedAt", reading.receivedAt.toString())
     }
 
     override fun clear() { encrypted.delete("patient") }

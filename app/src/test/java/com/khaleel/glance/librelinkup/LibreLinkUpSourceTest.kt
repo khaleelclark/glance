@@ -6,6 +6,7 @@ import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.SourceSnapshot
 import com.khaleel.glance.core.Trend
 import java.time.Instant
 import kotlinx.coroutines.runBlocking
@@ -33,6 +34,20 @@ class LibreLinkUpSourceTest {
     @After
     fun tearDown() {
         bootstrap.shutdown()
+    }
+
+    @Test
+    fun `graph samples are validated sorted and deduplicated without replacing current`() = runBlocking {
+        bootstrap.enqueue(jsonResponse(fixture("graph_with_history.json")))
+
+        val snapshot = source().snapshot(session(), "synthetic-patient-1").successValue<SourceSnapshot>()
+
+        assertEquals(112.0, snapshot.current.valueMgDl!!, 0.0)
+        assertEquals(listOf(104.0, 109.0), snapshot.history.map { it.valueMgDl })
+        assertEquals(
+            listOf("2026-09-27T04:32:00Z", "2026-09-27T04:37:00Z"),
+            snapshot.history.map { it.measuredAt.toString() },
+        )
     }
 
     @Test

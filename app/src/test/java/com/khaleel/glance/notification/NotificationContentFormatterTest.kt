@@ -57,12 +57,12 @@ class NotificationContentFormatterTest {
     }
 
     @Test
-    fun `paused state wins and preserves absolute last-reading time`() {
+    fun `stopped state wins and preserves absolute last-reading time`() {
         val content = formatter.format(state(monitoringEnabled = false), GlucoseUnit.MG_DL)
 
-        assertEquals("Patrick · Monitoring paused", content.title)
+        assertEquals("Patrick · Monitoring stopped", content.title)
         assertEquals("Last: 112 mg/dL at 10:42 AM", content.text)
-        assertTrue(content.bigText.contains("Open Glance to resume"))
+        assertTrue(content.bigText.contains("Open Glance to start"))
     }
 
     @Test

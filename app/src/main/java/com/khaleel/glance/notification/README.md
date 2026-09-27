@@ -2,9 +2,11 @@
 
 The standard renderer is the baseline. It uses one stable notification ID, an
 `IMPORTANCE_LOW` channel with sound/vibration disabled, platform `BigTextStyle`, and explicit
-immutable `PendingIntent`s. Refresh and Pause target `MonitoringService`; that service must
+immutable `PendingIntent`s. Refresh targets `MonitoringService`; that service must
 coalesce Refresh through its single-flight/rate-limited poller and re-check the current
 monitoring generation before acting. The intents contain no patient or account identifiers.
+The prior Pause action is no longer posted. `MonitoringService` still accepts an old
+generation-checked Pause intent from a card created before upgrade.
 
 After the standard renderer compiled and its formatting tests passed, the optional enhancement
 was added. `enhanced = true` requests promoted-ongoing presentation only on Android API 36 or
@@ -25,7 +27,7 @@ On eligible promoted notifications, `setShortCriticalText` puts a fresh glucose
 value in Android's status chip beside the required small icon. A delayed reading
 shows `OLD`, a stale reading shows `STALE`, and an invalid time shows `TIME?`;
 the chip never presents those historical values as current. The normal card
-keeps its measurement time and Refresh/Pause actions. The public lock-screen
+keeps its measurement time and Refresh action. The public lock-screen
 version explicitly supplies empty chip text when values are hidden. Android
 can still shorten or omit chip text depending on available space and device
 policy, so this presentation requires emulator and phone checks.

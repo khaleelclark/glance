@@ -221,14 +221,6 @@ class MonitoringService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
-        fun pausePendingIntent(context: Context, actionGeneration: Long): PendingIntent =
-            PendingIntent.getService(
-                context,
-                REQUEST_PAUSE,
-                serviceIntent(context, ACTION_PAUSE, actionGeneration),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-
         private fun serviceIntent(context: Context, action: String, actionGeneration: Long) =
             Intent(context, MonitoringService::class.java)
                 .setAction(action)
@@ -238,7 +230,6 @@ class MonitoringService : Service() {
         private fun nextActionGeneration(): Long = generationCounter.incrementAndGet()
 
         private const val REQUEST_REFRESH = 4102
-        private const val REQUEST_PAUSE = 4103
     }
 }
 

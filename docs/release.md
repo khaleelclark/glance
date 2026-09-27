@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `5`, and versionName
-`0.5.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `6`, and versionName
+`0.6.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.5.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.6.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -62,8 +62,9 @@ application ID and signer for every upgrade; increment versionCode.
 4. Allow notifications, choose whether the lock screen may reveal the value,
    review battery settings, then tap **Start monitoring**.
 5. Confirm one silent card appears, its time is the measurement time, and
-   Refresh and Pause work. Test screen-off behavior before relying on the
-   chosen polling interval.
+   Refresh works. The main screen shows a 12-hour graph from validated source
+   samples. Use Stop monitoring in Settings to end the session. Test screen-off
+   behavior before relying on the chosen polling interval.
 
 To upgrade, build a higher versionCode APK signed with the same keystore and
 install it over the existing app. Verify account/settings retention. An APK
@@ -72,7 +73,7 @@ which removes local Glance data.
 
 ## Recovery
 
-Use Pause/Resume and the in-app Diagnostics view first. If a reading is old,
+Use Refresh and the in-app Diagnostics view first. If a reading is old,
 check its measurement time, connection state, notification permission, battery
 limits, and next retry time. If terms or policy acceptance is required, complete
 that in the official LibreLinkUp app, then reconnect in Glance. After a

@@ -16,3 +16,9 @@ The source adapter's `Session` is an in-memory model; the lead's auth store will
 - `AppController` is the source-of-truth for selected person and `DisplayState`. It increments a generation before account/person changes and rejects late results from previous generations. A single deferred network operation coalesces timer and manual refresh; a persisted retry deadline cannot be bypassed by restart or Refresh.
 - Freshness is computed from `Reading.measuredAt`, not response receipt. Out-of-order readings never replace current data; a duplicate preserves the first receipt; a changed same-timestamp sample may replace it as a source correction.
 - The Android background and notification specialists own their packages in isolated branches. Integration into `AppController` and root manifest/build files remains lead-owned.
+
+## Graph and monitoring controls, 2026-09-27
+
+- The user asked to remove Pause from the notification and main screen. The notification keeps Refresh; Settings provides Stop monitoring so an explicit foreground session can still be ended. The old Pause intent remains recognized for notifications posted before an upgrade.
+- The LibreLinkUp graph response supplies both the current measurement and historical samples. Glance validates, sorts, and deduplicates historical samples without letting them replace the current reading. The selected person's bounded history is encrypted in no-backup storage and erased on person change, local-data deletion, and sign-out.
+- The main screen draws the last 12 hours of actual observations. Gaps longer than 20 minutes remain disconnected; the graph uses no inferred or demo values in release builds. Existing installations seed the graph with their last saved reading until source history arrives.

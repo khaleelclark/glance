@@ -236,7 +236,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun pauseMonitoring() {
+    private fun stopMonitoring() {
         controller.setMonitoringEnabled(false)
         stopService(Intent(this, MonitoringService::class.java))
         app.hideCurrentNotification()
@@ -250,7 +250,7 @@ class MainActivity : ComponentActivity() {
 
     private val callbacks = GlanceCallbacks(
         onSignIn = { credentials ->
-            pauseMonitoring()
+            stopMonitoring()
             accountState = AccountUiState(AccountStatus.SIGNING_IN)
             scope.launch {
                 val result = runCatching { controller.signIn(credentials) }.getOrNull()
@@ -295,7 +295,7 @@ class MainActivity : ComponentActivity() {
         },
         onOpenBatterySettings = { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
         onStartMonitoring = { startMonitoring() },
-        onPauseMonitoring = { pauseMonitoring() },
+        onStopMonitoring = { stopMonitoring() },
         onResumeMonitoring = { startMonitoring() },
         onRefresh = {
             scope.launch {
@@ -313,7 +313,7 @@ class MainActivity : ComponentActivity() {
         onEnhancedNotificationChanged = { controller.settings.enhancedNotification = it; renderSettingsChange() },
         onResumeAfterBootChanged = { controller.settings.resumeAfterBoot = it; refreshSettings() },
         onChangePerson = {
-            pauseMonitoring()
+            stopMonitoring()
             controller.clearSelectedPerson()
             connectionState = ConnectionSetupUiState()
             setupState = setupState.copy(step = SetupStep.CONNECTION)
@@ -321,14 +321,14 @@ class MainActivity : ComponentActivity() {
         },
         onReconnect = {
             if (controller.display.value.connection == ConnectionState.CONNECTION_REMOVED) {
-                pauseMonitoring()
+                stopMonitoring()
                 controller.clearSelectedPerson()
                 setupState = setupState.copy(step = SetupStep.CONNECTION)
                 loadConnections()
             } else if (controller.display.value.connection == ConnectionState.SIGN_IN_REQUIRED ||
                 controller.display.value.connection == ConnectionState.TERMS_REQUIRED
             ) {
-                pauseMonitoring()
+                stopMonitoring()
                 accountState = AccountUiState(AccountStatus.SIGNED_OUT)
                 setupState = setupState.copy(step = SetupStep.SIGN_IN)
             } else {
@@ -345,7 +345,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private fun signOut() {
-        pauseMonitoring()
+        stopMonitoring()
         controller.signOut()
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)

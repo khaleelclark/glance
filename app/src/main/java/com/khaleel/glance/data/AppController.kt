@@ -14,6 +14,7 @@ import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.SourceSnapshot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,7 @@ class AppController(
             freshness = ReadingPolicy.freshness(patient.lastReading, clock.now()),
             lastSuccessfulFetch = null,
             nextAllowedFetch = settings.nextAllowedFetch,
+            history = patient.history,
         ),
     )
     val display: StateFlow<DisplayState> = mutableDisplay
@@ -85,6 +87,7 @@ class AppController(
         freshness = ReadingPolicy.freshness(patient.lastReading, clock.now()),
         lastSuccessfulFetch = mutableDisplay.value.lastSuccessfulFetch,
         nextAllowedFetch = settings.nextAllowedFetch,
+        history = patient.history,
     )
 
     @Synchronized
@@ -242,22 +245,28 @@ class AppController(
         synchronized(this) { if (generation == capturedGeneration) mutableDisplay.value = snapshot(ConnectionState.FETCHING) }
         diagnostics.pollAttempt(now)
         val session = sessionOrRecover() ?: return failure(currentAuthError(), capturedGeneration)
-        var result = source.latest(session, selected.id)
+        var result = source.snapshot(session, selected.id)
         if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.AUTH_EXPIRED) {
             val recovered = recoverSession(session.token)
-            result = if (recovered != null) source.latest(recovered, selected.id)
+            result = if (recovered != null) source.snapshot(recovered, selected.id)
             else SourceResult.Failure(currentAuthError())
         }
-        if (result is SourceResult.Success && result.value.connectionId != selected.id) {
+        if (result is SourceResult.Success && result.value.current.connectionId != selected.id) {
             result = SourceResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
         }
         synchronized(this) {
-            if (generation != capturedGeneration || patient.selected?.id != selected.id) return result
+            if (generation != capturedGeneration || patient.selected?.id != selected.id) return result.toReadingResult()
             when (result) {
                 is SourceResult.Success -> {
-                    val candidate = result.value
+                    val candidate = result.value.current
                     val next = patient.copy(
                         lastReading = ReadingPolicy.selectCurrent(patient.lastReading, candidate, selected.id),
+                        history = ReadingHistory.merge(
+                            patient.history,
+                            result.value.history + candidate,
+                            selected.id,
+                            clock.now(),
+                        ),
                     )
                     try {
                         patientStore.save(next)
@@ -275,7 +284,12 @@ class AppController(
                 is SourceResult.Failure -> updateFailure(result.error, capturedGeneration)
             }
         }
-        return result
+        return result.toReadingResult()
+    }
+
+    private fun SourceResult<SourceSnapshot>.toReadingResult(): SourceResult<Reading> = when (this) {
+        is SourceResult.Success -> SourceResult.Success(value.current)
+        is SourceResult.Failure -> this
     }
 
     private fun failure(error: SourceError, capturedGeneration: Long): SourceResult.Failure {
@@ -376,7 +390,7 @@ class AppController(
     @Synchronized
     fun clearLocalData() {
         generation++
-        patient = patient.copy(lastReading = null)
+        patient = patient.copy(lastReading = null, history = emptyList())
         patientStore.save(patient)
         diagnostics.clear()
         mutableDisplay.value = snapshot(mutableDisplay.value.connection)

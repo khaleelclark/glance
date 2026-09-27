@@ -30,6 +30,8 @@ data class Reading(
     val receivedAt: Instant,
 )
 
+data class SourceSnapshot(val current: Reading, val history: List<Reading> = emptyList())
+
 enum class SourceErrorKind {
     INVALID_CREDENTIALS, AUTH_EXPIRED, TERMS_REQUIRED, RATE_LIMITED,
     NETWORK, SERVER, CONNECTION_REMOVED, PROTOCOL, NO_READING, STORAGE,
@@ -46,6 +48,11 @@ interface GlucoseSource {
     suspend fun signIn(credentials: Credentials): SourceResult<Session>
     suspend fun connections(session: Session): SourceResult<List<Connection>>
     suspend fun latest(session: Session, connectionId: String): SourceResult<Reading>
+    suspend fun snapshot(session: Session, connectionId: String): SourceResult<SourceSnapshot> =
+        when (val result = latest(session, connectionId)) {
+            is SourceResult.Success -> SourceResult.Success(SourceSnapshot(result.value))
+            is SourceResult.Failure -> result
+        }
 }
 
 interface Clock {
@@ -66,4 +73,5 @@ data class DisplayState(
     val freshness: ReadingFreshness,
     val lastSuccessfulFetch: Instant?,
     val nextAllowedFetch: Instant?,
+    val history: List<Reading> = emptyList(),
 )

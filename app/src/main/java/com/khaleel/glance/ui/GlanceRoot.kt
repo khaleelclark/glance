@@ -59,6 +59,7 @@ fun GlanceRoot(
                     )
                     SetupStep.COMPLETE -> if (settingsVisible) {
                         SettingsScreen(
+                            displayState = displayState,
                             setupState = setupState,
                             settings = settings,
                             callbacks = callbacks,
@@ -71,6 +72,8 @@ fun GlanceRoot(
                             callbacks = callbacks,
                             text = text,
                             now = now,
+                            zoneId = zoneId,
+                            locale = locale,
                             onOpenSettings = { settingsVisible = true },
                         )
                     }

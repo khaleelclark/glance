@@ -159,7 +159,8 @@ class NotificationContentFormatterTest {
         )
 
         assertEquals("Patrick · Monitoring unavailable", content.title)
-        assertTrue(content.text.contains("Open Glance"))
+        assertEquals("Last: 112 mg/dL at 10:42 AM", content.text)
+        assertTrue(content.bigText.contains("Open Glance"))
     }
 
     private fun state(

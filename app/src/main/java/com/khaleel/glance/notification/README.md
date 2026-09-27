@@ -6,8 +6,11 @@ immutable `PendingIntent`s. Refresh and Pause target `MonitoringService`; that s
 coalesce Refresh through its single-flight/rate-limited poller and re-check the current
 monitoring generation before acting. The intents contain no patient or account identifiers.
 
-The public constructor reserves `enhanced` as an optional input, but the baseline milestone
-does not request promotion. Android's primary documentation (checked
+After the standard renderer compiled and its formatting tests passed, the optional enhancement
+was added. `enhanced = true` requests promoted-ongoing presentation only on Android API 36 or
+newer with the API 36.1 promoted-notification methods available, and only when
+`NotificationManager.canPostPromotedNotifications()` is true. Android still decides whether to
+promote it. Android's primary documentation (checked
 2026-09-27) says an eligible Live Update must use a standard supported style (including
 `BigTextStyle`), be ongoing, have a title, avoid custom `RemoteViews`, group-summary and
 colorized presentation, use a channel above `IMPORTANCE_MIN`, request the non-runtime

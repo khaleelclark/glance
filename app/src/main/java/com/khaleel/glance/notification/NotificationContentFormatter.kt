@@ -33,10 +33,16 @@ internal class NotificationContentFormatter(
         val person = state.person?.displayName ?: "Glance"
         if (!state.monitoringEnabled) return pausedContent(person, state.reading, unit)
         if (state.runtime == RuntimeState.UNABLE_TO_START) {
+            val last = state.reading?.let {
+                "Last: ${formatValue(it, unit)} at ${timeFormatter.format(it.measuredAt)}"
+            }
             return NotificationContent(
                 title = "$person · Monitoring unavailable",
-                text = "Open Glance to resume monitoring.",
-                bigText = "Monitoring could not start. Open Glance to review notification and background access.",
+                text = last ?: "Open Glance to resume monitoring.",
+                bigText = listOfNotNull(
+                    last,
+                    "Monitoring could not start. Open Glance to review notification and background access.",
+                ).joinToString("\n"),
             )
         }
 

@@ -1,0 +1,7 @@
+{
+  "status": 0,
+  "data": [
+    { "patientId": "synthetic-patient-1", "firstName": "Pat", "lastName": "Example" },
+    { "patientId": "synthetic-patient-2", "firstName": "Alex", "lastName": "Fixture", "extra": true }
+  ]
+}

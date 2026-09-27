@@ -1,0 +1,7 @@
+{
+  "status": 4,
+  "data": {
+    "step": { "type": "pp" },
+    "authTicket": { "token": "discard-this-synthetic-ticket" }
+  }
+}

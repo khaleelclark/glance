@@ -27,7 +27,9 @@ Status: work in progress; no live follower account or Galaxy S25 Ultra has been 
 | Compose sign-in screen on API 36 | **Pass for launch and visual check** — integrated `MainActivity` rendered the follower-account onboarding screen with empty fields; [screenshot](evidence/api36-sign-in.png). No credentials were entered. |
 | Integrated main/Pause UI on API 36 | **Pass with synthetic source** — [running screen](evidence/api36-main-demo.png) displayed a DEMO-labeled 112 mg/dL reading, source time, trend, and monitoring status. Tapping Pause stopped the service, removed its notification, and changed the app to [paused status](evidence/api36-paused-demo.png) with Resume available. |
 | Notification small icon | **Pass for standard fallback** — the monochrome Glance drop icon rendered in the status bar and shade on API 36; [shade screenshot](evidence/api36-notification-fresh-demo.png). A numeric status-bar icon remains unqualified and is not used. |
-| Integrated build and lint | **Pass** — `./gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease :app:lintDebug :app:lintRelease`; 0 lint errors, 19 warnings in each variant. Release APK is unsigned at this stage. |
+| Integrated build and lint | **Pass** — `ANDROID_HOME=/home/phoenix/Android/Sdk ./gradlew :app:testDebugUnitTest :app:assembleRelease :app:lintDebug :app:lintRelease --no-daemon` on source `0bb12bf`; 60 synthetic unit tests, 0 failures/errors, and lint passed with warnings. |
+| Versioned signed personal APK | **Pass for build/signature only** — source `0bb12bf3236d04cd646fec1f1e586054daf5f48a` produced `release/glance-0.2.0-personal.apk` (versionCode 2). APK SHA-256 `58cb45dcb0fa9f326877ae6751ddeb03f777ab3fe50c4b65aee1d388a299c82b`; signer certificate SHA-256 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`. The private signing files remain off-repository and still need an operator-controlled backup. |
+| Same-signer in-place upgrade, API 36 | **Pass for install and package data continuity** — removed the prior debug-signed synthetic emulator app, installed signed 0.1.0/versionCode 1, added a synthetic marker under its private files directory, then `adb install -r release/glance-0.2.0-personal.apk` succeeded and versionCode 2 retained the marker. No live account/settings migration was exercised. |
 
 The integrated APK contains the real source adapter, encrypted state, Compose screens, and foreground service. It does not satisfy product acceptance until a live follower account and the target phone are verified.
 
@@ -44,6 +46,6 @@ The integrated APK contains the real source adapter, encrypted state, Compose sc
 | Screen-off overnight / 24-hour cadence | Not run | Requires integrated app and long device run. |
 | Battery comparison | Not run | Requires matched baseline and monitoring on Galaxy S25 Ultra. |
 | Samsung One UI and lock-screen behavior | Not run | Requires target phone and Android/One UI version. |
-| In-place signed APK upgrade | Not run | Requires release signing and two versioned APKs. |
+| In-place signed APK upgrade | Partial | API 36 accepted 0.1.0 to 0.2.0 with the same certificate and retained a synthetic private-file marker. Saved account/settings migration and phone behavior remain unverified. |
 
 Emulator observations will be recorded with API level, system image, commands, elapsed gaps, and screenshots where useful. Emulator battery percentages do not qualify the phone battery target.

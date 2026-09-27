@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.khaleel.glance.core.DisplayState
+import com.khaleel.glance.core.ConnectionState
+import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.GlucoseUnit
 import java.time.Instant
 
@@ -90,16 +92,38 @@ internal fun MainReadingScreen(
         StatusMessage(text.monitoring(displayState))
         text.connection(displayState)?.let { StatusMessage(it, isError = true) }
 
+        if (displayState.connection == ConnectionState.SIGN_IN_REQUIRED ||
+            displayState.connection == ConnectionState.TERMS_REQUIRED ||
+            displayState.connection == ConnectionState.CONNECTION_REMOVED ||
+            displayState.connection == ConnectionState.PROTOCOL_ERROR
+        ) {
+            OutlinedButton(onClick = callbacks.onReconnect, modifier = Modifier.fillMaxWidth()) {
+                Text("Reconnect LibreLinkUp")
+            }
+        }
+
         Button(
-            onClick = if (displayState.monitoringEnabled) callbacks.onPauseMonitoring else callbacks.onResumeMonitoring,
+            onClick = if (displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING) {
+                callbacks.onPauseMonitoring
+            } else {
+                callbacks.onResumeMonitoring
+            },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (displayState.monitoringEnabled) "Pause monitoring" else "Resume monitoring")
+            Text(if (displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING) {
+                "Pause monitoring"
+            } else {
+                "Resume monitoring"
+            })
         }
         OutlinedButton(
             onClick = callbacks.onRefresh,
             modifier = Modifier.fillMaxWidth(),
-            enabled = displayState.monitoringEnabled,
+            enabled = displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING &&
+                displayState.connection != ConnectionState.SIGN_IN_REQUIRED &&
+                displayState.connection != ConnectionState.TERMS_REQUIRED &&
+                displayState.connection != ConnectionState.CONNECTION_REMOVED &&
+                displayState.connection != ConnectionState.PROTOCOL_ERROR,
         ) {
             Text("Refresh now")
         }

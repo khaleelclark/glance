@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
             if (setupState.notificationPermission == PermissionStatus.GRANTED) {
                 startMonitoring()
             } else {
-                controller.setMonitoringEnabled(false)
+                controller.setRuntime(RuntimeState.UNABLE_TO_START)
                 setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
             }
         }
@@ -168,7 +168,9 @@ class MainActivity : ComponentActivity() {
         if (setupState.notificationPermission == PermissionStatus.DENIED &&
             controller.display.value.monitoringEnabled
         ) {
-            pauseMonitoring()
+            controller.setRuntime(RuntimeState.UNABLE_TO_START)
+            stopService(Intent(this, MonitoringService::class.java))
+            app.hideCurrentNotification()
             setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
         }
     }
@@ -304,7 +306,12 @@ class MainActivity : ComponentActivity() {
             loadConnections()
         },
         onReconnect = {
-            if (controller.display.value.connection == ConnectionState.SIGN_IN_REQUIRED ||
+            if (controller.display.value.connection == ConnectionState.CONNECTION_REMOVED) {
+                pauseMonitoring()
+                controller.clearSelectedPerson()
+                setupState = setupState.copy(step = SetupStep.CONNECTION)
+                loadConnections()
+            } else if (controller.display.value.connection == ConnectionState.SIGN_IN_REQUIRED ||
                 controller.display.value.connection == ConnectionState.TERMS_REQUIRED
             ) {
                 pauseMonitoring()

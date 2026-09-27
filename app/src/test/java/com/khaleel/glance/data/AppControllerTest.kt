@@ -126,6 +126,23 @@ class AppControllerTest {
         assertTrue(settings.nextAllowedFetch!! <= start.plusSeconds(75))
     }
 
+    @Test fun deletingLocalDataKeepsAccountPersonAndSettings() = runBlocking {
+        val patient = MemoryPatient()
+        val settings = MemorySettings().apply { unit = GlucoseUnit.MMOL_L }
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = controller(source, patient, settings)
+        controller.selectPerson(patrick)
+        controller.poll()
+
+        controller.clearLocalData()
+
+        assertNull(patient.state.lastReading)
+        assertNull(controller.display.value.reading)
+        assertEquals(patrick, controller.display.value.person)
+        assertEquals(GlucoseUnit.MMOL_L, settings.unit)
+        assertTrue(controller.hasAccount)
+    }
+
     private fun controller(
         source: FakeSource,
         patient: MemoryPatient,

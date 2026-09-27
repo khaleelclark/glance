@@ -29,6 +29,12 @@ import com.khaleel.glance.core.SourceResult
 import java.util.concurrent.TimeUnit
 
 class GlanceApplication : Application(), MonitoringDependencyProvider {
+    override fun onCreate() {
+        super.onCreate()
+        // Register all four categories before the user opens Android notification settings.
+        alertNotifier.ensureChannels()
+    }
+
     private val diagnosticStore by lazy { DiagnosticsStore(this) }
     val alertPreferences by lazy { AlertPreferences(this) }
     val alertNotifier by lazy { GlucoseAlertNotifier(this) }

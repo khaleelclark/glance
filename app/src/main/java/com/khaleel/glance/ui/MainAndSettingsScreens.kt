@@ -245,6 +245,7 @@ internal fun SettingsScreen(
                 settings.unit,
                 callbacks.onAlertRuleChanged,
                 callbacks.onAlertSoundChanged,
+                callbacks.onOpenNotificationSettings,
             )
         }
 

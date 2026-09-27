@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `14`, and versionName
-`0.13.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `15`, and versionName
+`0.14.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.13.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.14.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -76,11 +76,16 @@ application ID and signer for every upgrade; increment versionCode.
    behavior before relying on the chosen polling interval.
 
 Optional threshold alerts start **off**. In Settings, enable each desired level,
-choose its value with the slider or step buttons, and set a cooldown from one to
-60 minutes (five minutes initially). Urgent Low and Urgent High take precedence
+scroll the value wheel to choose its threshold, and scroll the repeat wheel to
+set a cooldown from one to 60 minutes (five minutes initially). Urgent Low and Urgent High take precedence
 over their ordinary level. A new, fresh numeric reading can sound at most once
 per category per cooldown; repeated source responses never sound again. Each
-category's sound is chosen in its Android notification-channel settings.
+category's sound and priority are chosen in its own Android notification-channel settings.
+Glance registers all four categories when opened and links to each category
+from the alert list. Samsung may require enabling **Manage notification
+categories for each app** under Advanced notification settings to show them.
+On Android 16, expand **Show unused categories** to see alert categories before
+their first notification.
 Urgent channels request high importance and an alarm sound; Android and the
 phone owner still control notification permission, Do Not Disturb, sound,
 heads-up display, and delivery. Alerts share the existing polling schedule and

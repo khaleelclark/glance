@@ -4,8 +4,10 @@ Glance offers four optional categories: Low, Urgent Low, High, and Urgent High.
 They all start disabled. The initial threshold values (70, 55, 240, and 300
 mg/dL respectively) are editable examples, not a recommendation for the owner.
 Each rule has a one-to-60-minute repeat cooldown, initially five minutes.
-The UI displays thresholds in the selected unit, while preferences store the
-underlying mg/dL boundary so changing display units does not move an alert.
+The UI has scrolling wheels for each threshold and repeat cooldown. The
+threshold wheel shows whole mg/dL values or 0.1 mmol/L steps next to the unit;
+preferences store the underlying mg/dL boundary so changing display units does
+not move an alert. The wheel is constrained by adjacent urgent/ordinary levels.
 
 ## Decision and delivery
 
@@ -28,11 +30,18 @@ ongoing silent monitoring card. Only one threshold card remains at a time;
 it includes the value, unit, and actual measurement time. If lock-screen
 values are hidden, the public version says only that Glance has an alert.
 
-Each category has its own Android notification channel. Low and High request
+Each category has its own Android notification channel, registered at app
+startup so all four appear in Android's app notification settings before an
+alert has fired. Low and High request
 default importance; Urgent Low and Urgent High request high importance and an
 alarm sound. The app's Settings button opens that category's Android channel
-settings so the owner can choose its sound and interruption behavior. Android
-lets users change channel behavior after creation; the app cannot enforce it.
+settings so the owner can choose its sound and interruption behavior. The alert
+list links directly to each category's settings and to the app's full
+notification settings. On Samsung, the category list may be hidden until
+**Settings > Notifications > Advanced settings > Manage notification categories
+for each app** is enabled. On Android 16, expand **Show unused categories** to
+see categories that have not fired yet. Android lets users change channel behavior after
+creation; the app cannot enforce it.
 Android 13+ also requires the user's notification permission, and Do Not
 Disturb can silence channels unless the system/user grants an exception.
 Glance does not request Do Not Disturb policy access or a full-screen intent.

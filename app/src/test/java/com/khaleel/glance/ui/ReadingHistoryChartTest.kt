@@ -24,6 +24,16 @@ class ReadingHistoryChartTest {
         assertEquals(included, chartPoints(history, "patrick", now))
     }
 
+    @Test fun draggingSelectsNearestObservedPointByTimeEvenAwayFromDotHeight() {
+        val points = chartPoints(
+            listOf(reading("patrick", 18, 100.0), reading("patrick", 12, 120.0), reading("patrick", 6, 90.0)),
+            "patrick", now,
+        )
+        assertEquals(0, nearestChartPointIndex(points, now, 240f, 62f))
+        assertEquals(1, nearestChartPointIndex(points, now, 240f, 122f))
+        assertEquals(2, nearestChartPointIndex(points, now, 240f, 178f))
+    }
+
     private fun reading(person: String, hoursAgo: Long, value: Double) = Reading(
         person, now.minusSeconds(hoursAgo * 3600), value, value, GlucoseUnit.MG_DL,
         null, Trend.STEADY, null, now,

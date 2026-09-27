@@ -21,14 +21,6 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/notification_unit"
-            style="@style/TextAppearance.Compat.Notification.Info"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:textSize="14sp" />
-
-        <TextView
             android:id="@+id/notification_arrow"
             style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="wrap_content"
@@ -36,6 +28,23 @@
             android:layout_marginStart="12dp"
             android:textSize="42sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notification_delta"
+            style="@style/TextAppearance.Compat.Notification.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="7dp"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notification_unit"
+            style="@style/TextAppearance.Compat.Notification.Info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:textSize="12sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -53,16 +62,5 @@
             android:maxLines="2"
             android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/notification_refresh"
-            style="@style/TextAppearance.Compat.Notification.Info"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:contentDescription="@string/notification_refresh"
-            android:gravity="center"
-            android:minWidth="48dp"
-            android:paddingStart="8dp"
-            android:text="↻ Refresh"
-            android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>

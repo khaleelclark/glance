@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `8`, and versionName
-`0.8.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `9`, and versionName
+`0.9.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.8.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.9.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -61,12 +61,14 @@ application ID and signer for every upgrade; increment versionCode.
    Patrick explicitly, and compare the reading and timestamp with LibreLinkUp.
 4. Allow notifications, choose whether the lock screen may reveal the value,
    review battery settings, then tap **Start monitoring**.
-5. Confirm one silent card appears with the measurement time and Refresh. Glance
+5. Confirm one silent card appears with the measurement time, glucose value,
+   trend arrow, and recent change when an earlier reading is available. Glance
    requests the status chip Live Update by default where Android supports it;
    promoted cards stay expanded. Turn that switch off in Settings for the large,
    collapsible card. The main screen has a 24-hour timeline of validated source
-   samples: swipe the graph sideways, then tap a dot for its exact time and
-   reading. Landscape places the graph beside the current reading. Use Stop
+   samples: drag across the graph to inspect exact readings; swipe the time
+   labels sideways to browse the full day. Landscape places the graph beside
+   the current reading. Use Refresh in the app, and Stop
    monitoring in Settings to end the session. Test screen-off
    behavior before relying on the chosen polling interval.
 

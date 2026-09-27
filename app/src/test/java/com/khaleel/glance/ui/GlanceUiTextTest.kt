@@ -51,7 +51,7 @@ class GlanceUiTextTest {
             val state = state(reading = reading().copy(valueMgDl = mgDl, sourceValue = mgDl))
             val ui = formatter.reading(state, GlucoseUnit.MMOL_L, now)!!
             val card = notification.format(state, GlucoseUnit.MMOL_L)
-            assertEquals("Patrick · ${ui.value} ${ui.unit} →", card.title)
+            assertEquals("${ui.value} ${ui.unit} →", card.text)
         }
     }
 

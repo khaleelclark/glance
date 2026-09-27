@@ -1,10 +1,11 @@
 package com.khaleel.glance.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,16 +16,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -52,6 +55,12 @@ internal fun chartPoints(history: List<Reading>, connectionId: String?, now: Ins
             !it.measuredAt.isAfter(now)
     }.sortedBy { it.measuredAt }
 
+/** Select only a real observation; never interpolate a value through a gap. */
+internal fun nearestChartPointIndex(points: List<Reading>, now: Instant, widthPx: Float, x: Float): Int? =
+    points.indices.minByOrNull { index ->
+        kotlin.math.abs(widthPx * timeFraction(points[index].measuredAt, now) - x)
+    }
+
 @Composable
 internal fun ReadingHistoryChart(
     history: List<Reading>,
@@ -67,6 +76,7 @@ internal fun ReadingHistoryChart(
     val selectedIndex = points.indexOfFirst { it.measuredAt.toEpochMilli() == selectedTime }
         .takeIf { it >= 0 } ?: points.lastIndex
     val selected = points.getOrNull(selectedIndex)
+    val latestOnSelect by rememberUpdatedState(onSelectedTimeChange)
     val timeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(locale).withZone(zoneId)
 
@@ -87,14 +97,13 @@ internal fun ReadingHistoryChart(
                 val lineColor = MaterialTheme.colorScheme.primary
                 val gridColor = MaterialTheme.colorScheme.outlineVariant
                 val selectedColor = MaterialTheme.colorScheme.tertiary
-                val density = LocalDensity.current
                 val scrollState = rememberScrollState()
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
-                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. Swipe to browse and tap a dot for details."
+                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. Drag across the graph for reading details."
 
                 Text(
-                    "Swipe sideways to browse; tap a dot for its time and reading.",
+                    "Drag across the graph to see each reading. Swipe the time labels to browse 24 hours.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -107,42 +116,47 @@ internal fun ReadingHistoryChart(
                         Text(axisValue((top + bottom) / 2, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
                         Text(axisValue(bottom, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
                     }
-                    BoxWithConstraints(Modifier.weight(1f)) {
-                        val viewportWidthPx = constraints.maxWidth
-                        LaunchedEffect(selectedIndex, scrollState.maxValue, viewportWidthPx) {
-                            if (selectedIndex < 0 || scrollState.maxValue == 0) return@LaunchedEffect
-                            val x = with(density) {
-                                chartWidth.toPx() * timeFraction(points[selectedIndex].measuredAt, now)
+                    Box(Modifier.weight(1f)) {
+                        LaunchedEffect(scrollState.maxValue) {
+                            if (scrollState.value == 0 && scrollState.maxValue > 0) {
+                                scrollState.scrollTo(scrollState.maxValue)
                             }
-                            scrollState.animateScrollTo(
-                                (x - viewportWidthPx / 2f).toInt().coerceIn(0, scrollState.maxValue),
-                            )
                         }
                         Column(Modifier.horizontalScroll(scrollState)) {
                             Canvas(
                                 Modifier.width(chartWidth).height(chartHeight)
-                                    .pointerInput(points, now, bottom, top) {
-                                        detectTapGestures { tap ->
-                                            val plotSize = Size(size.width.toFloat(), size.height.toFloat())
-                                            val offsets = points.map { point ->
-                                                plotOffset(point, now, plotSize, bottom, top, 16.dp.toPx())
+                                    .pointerInput(points, now) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(requireUnconsumed = false)
+                                            fun select(x: Float) {
+                                                nearestChartPointIndex(points, now, size.width.toFloat(), x)
+                                                    ?.let { latestOnSelect(points[it].measuredAt.toEpochMilli()) }
                                             }
-                                            val radius = 28.dp.toPx()
-                                            val nearest = offsets.indices.minByOrNull { index ->
-                                                val dx = offsets[index].x - tap.x
-                                                val dy = offsets[index].y - tap.y
-                                                dx * dx + dy * dy
-                                            }
-                                            if (nearest != null) {
-                                                val dx = offsets[nearest].x - tap.x
-                                                val dy = offsets[nearest].y - tap.y
-                                                if (dx * dx + dy * dy <= radius * radius) {
-                                                    onSelectedTimeChange(points[nearest].measuredAt.toEpochMilli())
-                                                }
-                                            }
+                                            select(down.position.x)
+                                            do {
+                                                val change = awaitPointerEvent().changes
+                                                    .firstOrNull { it.id == down.id }
+                                                if (change?.pressed == true) select(change.position.x)
+                                            } while (change?.pressed == true)
                                         }
                                     }
-                                    .semantics { contentDescription = chartDescription },
+                                    .semantics {
+                                        contentDescription = chartDescription
+                                        customActions = listOf(
+                                            CustomAccessibilityAction("Earlier reading") {
+                                                if (selectedIndex <= 0) false else {
+                                                    latestOnSelect(points[selectedIndex - 1].measuredAt.toEpochMilli())
+                                                    true
+                                                }
+                                            },
+                                            CustomAccessibilityAction("Later reading") {
+                                                if (selectedIndex >= points.lastIndex) false else {
+                                                    latestOnSelect(points[selectedIndex + 1].measuredAt.toEpochMilli())
+                                                    true
+                                                }
+                                            },
+                                        )
+                                    },
                             ) {
                                 val inset = 16.dp.toPx()
                                 val offsets = points.map { plotOffset(it, now, size, bottom, top, inset) }
@@ -189,16 +203,6 @@ internal fun ReadingHistoryChart(
                             Text("Selected reading", style = MaterialTheme.typography.labelMedium)
                             Text(GlucoseFormat.withUnit(reading, unit, locale), style = MaterialTheme.typography.headlineSmall)
                             Text(timeFormat.format(reading.measuredAt), style = MaterialTheme.typography.bodyMedium)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                TextButton(
-                                    onClick = { onSelectedTimeChange(points[selectedIndex - 1].measuredAt.toEpochMilli()) },
-                                    enabled = selectedIndex > 0,
-                                ) { Text("Earlier point") }
-                                TextButton(
-                                    onClick = { onSelectedTimeChange(points[selectedIndex + 1].measuredAt.toEpochMilli()) },
-                                    enabled = selectedIndex < points.lastIndex,
-                                ) { Text("Later point") }
-                            }
                         }
                     }
                 }

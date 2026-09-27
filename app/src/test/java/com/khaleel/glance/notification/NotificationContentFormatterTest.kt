@@ -24,15 +24,15 @@ class NotificationContentFormatterTest {
     fun `fresh reading is prominent and always has absolute measurement time`() {
         val content = formatter.format(state(), GlucoseUnit.MG_DL)
 
-        assertEquals("Patrick · 112 mg/dL →", content.title)
-        assertEquals("Reading 10:42 AM", content.text)
+        assertEquals("Patrick · 10:42 AM", content.title)
+        assertEquals("112 mg/dL →", content.text)
         assertEquals("112", content.statusChipText)
-        assertTrue(content.bigText.contains("Trend: steady"))
+        assertFalse(content.bigText.contains("Trend:"))
         assertEquals("112", content.prominent)
         assertEquals("mg/dL", content.prominentUnit)
         assertEquals("→", content.prominentArrow)
-        assertEquals("Reading 10:42 AM · Patrick", content.compactDetail)
-        assertTrue(content.expandedDetail.contains("Trend: steady"))
+        assertEquals("Patrick · 10:42 AM", content.compactDetail)
+        assertFalse(content.expandedDetail.contains("Trend:"))
     }
 
     @Test
@@ -121,7 +121,7 @@ class NotificationContentFormatterTest {
             GlucoseUnit.MG_DL,
         )
 
-        assertEquals("Reading 10:42 AM", content.text)
+        assertEquals("112 mg/dL →", content.text)
         assertTrue(content.bigText.contains("No internet. Showing the last reading."))
     }
 
@@ -129,7 +129,8 @@ class NotificationContentFormatterTest {
     fun `chosen mmol unit converts canonical value to one decimal`() {
         val content = formatter.format(state(valueMgDl = 112.0), GlucoseUnit.MMOL_L)
 
-        assertEquals("Patrick · 6.2 mmol/L →", content.title)
+        assertEquals("Patrick · 10:42 AM", content.title)
+        assertEquals("6.2 mmol/L →", content.text)
         assertEquals("6.2", content.statusChipText)
         assertEquals("6.2", content.prominent)
         assertEquals("mmol/L", content.prominentUnit)
@@ -146,7 +147,7 @@ class NotificationContentFormatterTest {
             GlucoseUnit.MMOL_L,
         )
 
-        assertEquals("Patrick · 6.3 mmol/L →", content.title)
+        assertEquals("6.3 mmol/L →", content.text)
         assertEquals("6.3", content.statusChipText)
     }
 
@@ -157,7 +158,7 @@ class NotificationContentFormatterTest {
             GlucoseUnit.MG_DL,
         )
 
-        assertEquals("Patrick · LOW mg/dL →", content.title)
+        assertEquals("LOW mg/dL →", content.text)
         assertEquals("LOW", content.statusChipText)
     }
 
@@ -165,8 +166,42 @@ class NotificationContentFormatterTest {
     fun `unknown trend does not invent an arrow or trend description`() {
         val content = formatter.format(state(trend = Trend.UNKNOWN), GlucoseUnit.MG_DL)
 
-        assertEquals("Patrick · 112 mg/dL", content.title)
+        assertEquals("112 mg/dL", content.text)
         assertFalse(content.bigText.contains("Trend"))
+    }
+
+    @Test
+    fun `delta uses the nearest earlier same-person reading and displayed unit`() {
+        val current = reading().copy(valueMgDl = 78.0, sourceValue = 78.0)
+        val previous = reading().copy(
+            measuredAt = current.measuredAt.minusSeconds(60), valueMgDl = 86.0,
+            sourceValue = 86.0, sourceRecordId = "previous",
+        )
+        val history = listOf(
+            previous,
+            previous.copy(connectionId = "another", measuredAt = current.measuredAt.minusSeconds(30), valueMgDl = 200.0),
+            previous.copy(measuredAt = current.measuredAt, valueMgDl = 120.0),
+        )
+
+        val currentState = state(reading = current, history = history, valueMgDl = 78.0, sourceValue = 78.0)
+        val mg = formatter.format(currentState, GlucoseUnit.MG_DL)
+        assertEquals("78 mg/dL → (-8)", mg.text)
+        assertEquals("(-8)", mg.prominentDelta)
+        val mmol = formatter.format(currentState, GlucoseUnit.MMOL_L)
+        assertEquals("(-0.5)", mmol.prominentDelta)
+    }
+
+    @Test
+    fun `delta is omitted when prior reading is too old or current value is special`() {
+        val old = reading().copy(measuredAt = reading().measuredAt.minusSeconds(20 * 60))
+        assertEquals(null, formatter.format(state(history = listOf(old)), GlucoseUnit.MG_DL).prominentDelta)
+        assertEquals(
+            null,
+            formatter.format(
+                state(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.LOW, history = listOf(old)),
+                GlucoseUnit.MG_DL,
+            ).prominentDelta,
+        )
     }
 
     @Test
@@ -192,6 +227,7 @@ class NotificationContentFormatterTest {
         sourceValue: Double? = 112.0,
         sourceUnit: GlucoseUnit = GlucoseUnit.MG_DL,
         specialValue: SpecialValue? = null,
+        history: List<Reading> = emptyList(),
     ): DisplayState {
         val adjustedReading = reading?.copy(
             trend = trend,
@@ -209,6 +245,7 @@ class NotificationContentFormatterTest {
             freshness = freshness,
             lastSuccessfulFetch = Instant.parse("2026-09-27T15:43:00Z"),
             nextAllowedFetch = null,
+            history = history,
         )
     }
 

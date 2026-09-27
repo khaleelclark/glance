@@ -6,9 +6,8 @@
     android:orientation="horizontal">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:orientation="vertical">
 
         <LinearLayout
@@ -28,14 +27,6 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/notification_unit"
-                style="@style/TextAppearance.Compat.Notification.Info"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textSize="12sp" />
-
-            <TextView
                 android:id="@+id/notification_arrow"
                 style="@style/TextAppearance.Compat.Notification.Title"
                 android:layout_width="wrap_content"
@@ -43,6 +34,23 @@
                 android:layout_marginStart="8dp"
                 android:textSize="26sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/notification_delta"
+                style="@style/TextAppearance.Compat.Notification.Title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/notification_unit"
+                style="@style/TextAppearance.Compat.Notification.Info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <TextView
@@ -55,14 +63,4 @@
             android:textSize="11sp" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/notification_refresh"
-        style="@style/TextAppearance.Compat.Notification.Info"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:contentDescription="@string/notification_refresh"
-        android:gravity="center"
-        android:minWidth="40dp"
-        android:text="↻"
-        android:textSize="20sp" />
 </LinearLayout>

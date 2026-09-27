@@ -19,7 +19,7 @@ The source adapter's `Session` is an in-memory model; the lead's auth store will
 
 ## Graph and monitoring controls, 2026-09-27
 
-- The user asked to remove Pause from the notification and main screen. The notification keeps Refresh; Settings provides Stop monitoring so an explicit foreground session can still be ended. The old Pause intent remains recognized for notifications posted before an upgrade.
+- The user asked to remove Pause and then Refresh from the notification. Refresh stays in the app; Settings provides Stop monitoring so an explicit foreground session can still be ended. Old generation-checked notification intents remain recognized for cards posted before an upgrade.
 - The LibreLinkUp graph response supplies both the current measurement and historical samples. Glance validates, sorts, and deduplicates historical samples without letting them replace the current reading. The selected person's bounded history is encrypted in no-backup storage and erased on person change, local-data deletion, and sign-out.
 - The main screen draws up to 24 hours of actual observations in a horizontally scrollable timeline. A selected dot shows its exact reading and local timestamp; adjacent-point controls reach closely spaced samples. Gaps longer than 20 minutes remain disconnected. Portrait stacks the chart below the current reading; landscape places the reading and chart in independently scrollable columns. The graph uses no inferred or demo values in release builds. Existing installations seed the graph with their last saved reading until source history arrives. Local history keeps at most 1,500 validated points to cover a full day at one-minute cadence.
 

@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.view.View
@@ -15,7 +14,6 @@ import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.RuntimeState
-import com.khaleel.glance.monitoring.MonitoringService
 import java.time.ZoneId
 import java.util.Locale
 
@@ -90,7 +88,6 @@ class GlucoseNotificationRenderer(
 
         if (promoted) {
             builder.setStyle(Notification.BigTextStyle().bigText(content.bigText))
-            if (state.monitoringEnabled && actionGeneration != null) builder.addAction(refreshAction())
             // The promoted status chip can show a short current value without opening the shade.
             // Delayed or stale readings use a label instead of an apparently current number.
             builder.setShortCriticalText(content.statusChipText ?: "")
@@ -141,16 +138,6 @@ class GlucoseNotificationRenderer(
         )
     }
 
-    private fun refreshAction(): Notification.Action {
-        val generation = requireNotNull(actionGeneration)
-        val icon = Icon.createWithResource(appContext, android.R.drawable.ic_popup_sync)
-        return Notification.Action.Builder(
-            icon,
-            "Refresh",
-            MonitoringService.refreshPendingIntent(appContext, generation),
-        ).build()
-    }
-
     private fun customView(layoutId: Int, expanded: Boolean): RemoteViews =
         RemoteViews(appContext.packageName, layoutId).apply {
             setTextViewText(R.id.notification_primary, content.prominent)
@@ -164,18 +151,15 @@ class GlucoseNotificationRenderer(
                 R.id.notification_arrow,
                 if (content.prominentArrow == null) View.GONE else View.VISIBLE,
             )
+            setTextViewText(R.id.notification_delta, content.prominentDelta.orEmpty())
+            setViewVisibility(
+                R.id.notification_delta,
+                if (content.prominentDelta == null) View.GONE else View.VISIBLE,
+            )
             setTextViewText(
                 R.id.notification_detail,
                 if (expanded) content.expandedDetail else content.compactDetail,
             )
-            if (state.monitoringEnabled && actionGeneration != null) {
-                setOnClickPendingIntent(
-                    R.id.notification_refresh,
-                    MonitoringService.refreshPendingIntent(appContext, actionGeneration),
-                )
-            } else {
-                setViewVisibility(R.id.notification_refresh, View.GONE)
-            }
         }
 
     private fun buildRedactedPublicVersion(): Notification {

@@ -15,11 +15,7 @@ object GlucoseFormat {
                 SpecialValue.UNAVAILABLE -> "Unavailable"
             }
         }
-        val numeric = when {
-            reading.sourceUnit == unit && reading.sourceValue != null -> reading.sourceValue
-            unit == GlucoseUnit.MG_DL -> reading.valueMgDl
-            else -> reading.valueMgDl?.div(MG_DL_PER_MMOL_L)
-        } ?: return "Unavailable"
+        val numeric = numericValue(reading, unit) ?: return "Unavailable"
         return when (unit) {
             GlucoseUnit.MG_DL -> numeric.roundToInt().toString()
             GlucoseUnit.MMOL_L -> String.format(locale, "%.1f", numeric)
@@ -28,6 +24,17 @@ object GlucoseFormat {
 
     fun withUnit(reading: Reading, unit: GlucoseUnit, locale: Locale): String =
         "${value(reading, unit, locale)} ${unit.label}"
+
+    /** Numeric value before display rounding; special readings have no numeric delta. */
+    fun numericValue(reading: Reading, unit: GlucoseUnit): Double? {
+        if (reading.specialValue != null) return null
+        val numeric = when {
+            reading.sourceUnit == unit && reading.sourceValue != null -> reading.sourceValue
+            unit == GlucoseUnit.MG_DL -> reading.valueMgDl
+            else -> reading.valueMgDl?.div(MG_DL_PER_MMOL_L)
+        }
+        return numeric?.takeIf { it.isFinite() && it > 0.0 }
+    }
 
     val GlucoseUnit.label: String
         get() = when (this) {

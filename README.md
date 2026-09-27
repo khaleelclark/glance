@@ -7,8 +7,10 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-The main screen includes a 12-hour graph of validated source samples. The
-notification keeps Refresh; Stop monitoring is available in Settings.
+The main screen includes a 24-hour graph of validated source samples. Drag
+across it to inspect readings. The notification shows the current glucose,
+trend arrow, and recent change when available; Refresh remains in the app.
+Stop monitoring is available in Settings.
 
 ## Open in Android Studio on another machine
 

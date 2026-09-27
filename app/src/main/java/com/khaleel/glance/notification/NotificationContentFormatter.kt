@@ -9,9 +9,11 @@ import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Trend
 import java.time.ZoneId
+import java.time.Duration
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 internal data class NotificationContent(
     val title: String,
@@ -21,6 +23,7 @@ internal data class NotificationContent(
     val prominent: String = title,
     val prominentUnit: String? = null,
     val prominentArrow: String? = null,
+    val prominentDelta: String? = null,
     val compactDetail: String = text,
     val expandedDetail: String = bigText,
 )
@@ -65,14 +68,14 @@ internal class NotificationContentFormatter(
         return when (state.freshness) {
             ReadingFreshness.FRESH -> {
                 val arrow = trendArrow(reading.trend)
-                val titleValue = listOfNotNull(value, arrow).joinToString(" ")
-                val text = "Reading $measuredAt"
+                val delta = recentDelta(reading, state.history, unit)
+                val text = listOfNotNull(value, arrow, delta).joinToString(" ")
+                val timeAndPerson = "$person · $measuredAt"
                 NotificationContent(
-                    title = "$person · $titleValue",
+                    title = timeAndPerson,
                     text = text,
                     bigText = listOfNotNull(
                         text,
-                        trendDescription(reading.trend),
                         connectionNote,
                     ).joinToString("\n"),
                     statusChipText = when (state.connection) {
@@ -90,10 +93,10 @@ internal class NotificationContentFormatter(
                         GlucoseUnit.MMOL_L -> "mmol/L"
                     },
                     prominentArrow = arrow,
-                    compactDetail = "$text · $person",
+                    prominentDelta = delta,
+                    compactDetail = timeAndPerson,
                     expandedDetail = listOfNotNull(
-                        "$text · $person",
-                        trendDescription(reading.trend),
+                        timeAndPerson,
                         connectionNote,
                     ).joinToString(" · "),
                 )
@@ -215,6 +218,27 @@ internal class NotificationContentFormatter(
 
     private fun formatValue(reading: Reading, unit: GlucoseUnit): String =
         GlucoseFormat.withUnit(reading, unit, locale)
+
+    private fun recentDelta(current: Reading, history: List<Reading>, unit: GlucoseUnit): String? {
+        val previous = history.asSequence()
+            .filter {
+                it.connectionId == current.connectionId &&
+                    it.measuredAt.isBefore(current.measuredAt) &&
+                    Duration.between(it.measuredAt, current.measuredAt) <= Duration.ofMinutes(15) &&
+                    GlucoseFormat.numericValue(it, unit) != null
+            }
+            .maxByOrNull { it.measuredAt } ?: return null
+        val currentValue = GlucoseFormat.numericValue(current, unit) ?: return null
+        val previousValue = GlucoseFormat.numericValue(previous, unit) ?: return null
+        val change = when (unit) {
+            GlucoseUnit.MG_DL -> "%+d".format(locale, currentValue.roundToInt() - previousValue.roundToInt())
+            GlucoseUnit.MMOL_L -> "%+.1f".format(
+                locale,
+                (currentValue.times(10).roundToInt() - previousValue.times(10).roundToInt()) / 10.0,
+            )
+        }
+        return "($change)"
+    }
 
     private fun trendArrow(trend: Trend): String? = when (trend) {
         Trend.RISING_QUICKLY -> "↑"

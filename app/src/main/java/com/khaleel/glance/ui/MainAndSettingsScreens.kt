@@ -1,11 +1,18 @@
 package com.khaleel.glance.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -20,9 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -46,8 +55,45 @@ internal fun MainReadingScreen(
     locale: Locale,
     onOpenSettings: () -> Unit,
 ) {
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var selectedChartTime by rememberSaveable(displayState.person?.id) { mutableStateOf<Long?>(null) }
+    if (landscape) {
+        Row(
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Column(Modifier.weight(0.42f).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                MainReadingSummary(displayState, settings, callbacks, text, now, onOpenSettings)
+            }
+            Column(Modifier.weight(0.58f).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                ReadingHistoryChart(
+                    displayState.history, displayState.person?.id, settings.unit, now, zoneId, locale,
+                    selectedChartTime, { selectedChartTime = it },
+                )
+            }
+        }
+    } else {
+        ScreenColumn {
+            MainReadingSummary(displayState, settings, callbacks, text, now, onOpenSettings)
+            ReadingHistoryChart(
+                displayState.history, displayState.person?.id, settings.unit, now, zoneId, locale,
+                selectedChartTime, { selectedChartTime = it },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainReadingSummary(
+    displayState: DisplayState,
+    settings: UserSettingsUi,
+    callbacks: GlanceCallbacks,
+    text: GlanceUiText,
+    now: Instant,
+    onOpenSettings: () -> Unit,
+) {
     val reading = text.reading(displayState, settings.unit, now)
-    ScreenColumn {
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -131,14 +177,6 @@ internal fun MainReadingScreen(
         TextButton(onClick = callbacks.onRestoreNotification, modifier = Modifier.fillMaxWidth()) {
             Text("Show notification again")
         }
-        ReadingHistoryChart(
-            history = displayState.history,
-            connectionId = displayState.person?.id,
-            unit = settings.unit,
-            now = now,
-            zoneId = zoneId,
-            locale = locale,
-        )
     }
 }
 
@@ -178,7 +216,7 @@ internal fun SettingsScreen(
             )
             SettingSwitch(
                 title = "Status chip Live Update",
-                detail = "Shows the value in Android's status chip when available. Its card stays expanded; turn this off for the large, collapsible reading.",
+                detail = "On by default. Shows the value in Android's status chip when available; this card stays expanded. Turn off for the large, collapsible card.",
                 checked = settings.enhancedNotification,
                 onCheckedChange = callbacks.onEnhancedNotificationChanged,
             )

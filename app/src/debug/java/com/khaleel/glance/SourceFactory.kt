@@ -11,9 +11,12 @@ import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.SourceSnapshot
 import com.khaleel.glance.core.Trend
 import com.khaleel.glance.librelinkup.LibreLinkUpSource
 import okhttp3.OkHttpClient
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /** Debug-only synthetic source selected solely by an explicit debug fixture action. */
 internal object SourceFactory {
@@ -61,6 +64,29 @@ internal object SourceFactory {
                         receivedAt = clock.now(),
                     ),
                 )
+            }
+
+            override suspend fun snapshot(session: Session, connectionId: String): SourceResult<SourceSnapshot> {
+                if (!demo()) return real.snapshot(session, connectionId)
+                return when (val latest = latest(session, connectionId)) {
+                    is SourceResult.Failure -> latest
+                    is SourceResult.Success -> {
+                        val receivedAt = clock.now()
+                        // Debug-only source history makes the 24-hour chart testable without an account.
+                        val history = (1..287).filterNot { it in 120..127 }.map { step ->
+                            val value = (110 + 18 * sin(step / 20.0) + 5 * sin(step / 5.0))
+                                .roundToInt().toDouble()
+                            latest.value.copy(
+                                measuredAt = receivedAt.minusSeconds((step * 5L + 1L) * 60L),
+                                valueMgDl = value,
+                                sourceValue = value,
+                                sourceRecordId = "synthetic-history-$step",
+                                receivedAt = receivedAt,
+                            )
+                        }
+                        SourceResult.Success(SourceSnapshot(latest.value, history))
+                    }
+                }
             }
         }
     }

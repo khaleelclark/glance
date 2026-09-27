@@ -33,7 +33,7 @@ class LocalStateStore(private val encrypted: SecureFileStore) : PatientPersisten
                 Duration.between(it.measuredAt, Instant.now()) < Duration.ofHours(24)
         }
         val storedHistory = value.optJSONArray("history")?.let { items ->
-            (0 until minOf(items.length(), 500)).mapNotNull { index ->
+            (0 until minOf(items.length(), 1500)).mapNotNull { index ->
                 items.optJSONObject(index)?.let { runCatching { readingFromJson(it) }.getOrNull() }
             }
         }.orEmpty()
@@ -106,9 +106,9 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getBoolean("lock_visible", false)
         set(value) = prefs.edit().putBoolean("lock_visible", value).apply()
     override var enhancedNotification: Boolean
-        // The old default enabled an uncollapsible promoted card. Treat the new layout as the
-        // default, including existing installs; the chip remains available by explicit opt-in.
-        get() = prefs.getBoolean("enhanced_explicit", false)
+        // A stored choice still wins; new installs and users who never changed this switch
+        // request the status chip when Android supports promotion.
+        get() = prefs.getBoolean("enhanced_explicit", true)
         set(value) = prefs.edit().putBoolean("enhanced_explicit", value).apply()
     override var intervalMinutes: Int
         get() = prefs.getInt("interval_minutes", 1).takeIf { it == 1 || it == 5 } ?: 1

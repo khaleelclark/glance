@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
     private var accountState by mutableStateOf(AccountUiState(AccountStatus.SIGNED_OUT))
     private var connectionState by mutableStateOf(ConnectionSetupUiState())
     private var setupState by mutableStateOf(SetupUiState(SetupStep.SIGN_IN))
-    private var settingsUi by mutableStateOf(UserSettingsUi(GlucoseUnit.MG_DL, false, 1, false, true))
+    private var settingsUi by mutableStateOf(UserSettingsUi(GlucoseUnit.MG_DL, false, 1, true, true))
     private var showDiagnostics by mutableStateOf(false)
 
     private val notificationPermission = registerForActivityResult(

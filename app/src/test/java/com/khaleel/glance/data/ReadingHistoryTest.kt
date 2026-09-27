@@ -28,6 +28,18 @@ class ReadingHistoryTest {
         assertEquals(listOf(109.0, 112.0), merged.map { it.valueMgDl })
     }
 
+    @Test fun historyRetainsAFullDayAtOneMinuteCadence() {
+        val samples = (0..1440).map { minute ->
+            reading("patrick", now.minusSeconds(minute * 60L), 100.0 + minute % 20)
+        }
+
+        val merged = ReadingHistory.merge(emptyList(), samples, "patrick", now)
+
+        assertEquals(1441, merged.size)
+        assertEquals(now.minusSeconds(24 * 3600L), merged.first().measuredAt)
+        assertEquals(now, merged.last().measuredAt)
+    }
+
     private fun reading(person: String, measured: Instant, value: Double) = Reading(
         person, measured, value, value, GlucoseUnit.MG_DL, null,
         Trend.STEADY, null, now,

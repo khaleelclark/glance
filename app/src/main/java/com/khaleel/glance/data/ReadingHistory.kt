@@ -8,7 +8,8 @@ import java.time.Instant
 object ReadingHistory {
     private val retention = Duration.ofHours(24)
     private val futureTolerance = Duration.ofMinutes(2)
-    private const val maxPoints = 300
+    // Covers a full day even when the source supplies a distinct reading every minute.
+    private const val maxPoints = 1500
 
     fun merge(
         existing: List<Reading>,

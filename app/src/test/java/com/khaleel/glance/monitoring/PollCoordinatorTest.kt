@@ -17,6 +17,7 @@ import com.khaleel.glance.data.AppController
 import com.khaleel.glance.data.PatientPersistence
 import com.khaleel.glance.data.SettingsPersistence
 import com.khaleel.glance.data.StoredPatientState
+import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -31,6 +32,13 @@ class PollCoordinatorTest {
     private val base = Instant.parse("2026-09-27T12:00:00Z")
     private val patrick = Connection("person-a", "Synthetic Person A")
     private val other = Connection("person-b", "Synthetic Person B")
+
+    @Test
+    fun serviceUsesNotificationRendererActionContract() {
+        assertEquals(GlucoseNotificationRenderer.NOTIFICATION_ID, MonitoringService.NOTIFICATION_ID)
+        assertEquals(GlucoseNotificationRenderer.ACTION_REFRESH, MonitoringService.ACTION_REFRESH)
+        assertEquals(GlucoseNotificationRenderer.ACTION_PAUSE, MonitoringService.ACTION_PAUSE)
+    }
 
     @Test
     fun concurrentRefreshCoalescesInsteadOfStartingSecondFetch() = runBlocking {
@@ -196,4 +204,3 @@ class PollCoordinatorTest {
         override fun hide() = Unit
     }
 }
-

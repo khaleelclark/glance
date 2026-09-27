@@ -3,8 +3,8 @@ package com.khaleel.glance.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,16 +61,18 @@ internal fun ColorWheelPicker(hex: String, onColorChange: (String) -> Unit) {
             Canvas(
                 Modifier.size(220.dp)
                     .pointerInput(Unit) {
-                        detectTapGestures { selectAt(it, size.width.toFloat(), size.height.toFloat()) }
-                    }
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { selectAt(it, size.width.toFloat(), size.height.toFloat()) },
-                            onDrag = { change, _ ->
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            selectAt(down.position, size.width.toFloat(), size.height.toFloat())
+                            down.consume()
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
                                 selectAt(change.position, size.width.toFloat(), size.height.toFloat())
                                 change.consume()
-                            },
-                        )
+                            }
+                        }
                     }
                     .semantics {
                         contentDescription = "Color wheel. Drag to choose hue and saturation."
@@ -92,9 +94,10 @@ internal fun ColorWheelPicker(hex: String, onColorChange: (String) -> Unit) {
                     drawCircle(Color.Black.copy(alpha = 1f - selected.brightness), radius = radius)
                 }
                 val angle = Math.toRadians(selected.hue.toDouble())
+                val markerRadius = radius - 12.dp.toPx()
                 val marker = Offset(
-                    center.x + cos(angle).toFloat() * selected.saturation * radius,
-                    center.y + sin(angle).toFloat() * selected.saturation * radius,
+                    center.x + cos(angle).toFloat() * selected.saturation * markerRadius,
+                    center.y + sin(angle).toFloat() * selected.saturation * markerRadius,
                 )
                 drawCircle(Color.Black, radius = 12.dp.toPx(), center = marker)
                 drawCircle(Color.White, radius = 10.dp.toPx(), center = marker)

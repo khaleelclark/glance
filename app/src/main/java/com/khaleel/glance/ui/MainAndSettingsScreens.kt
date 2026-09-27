@@ -329,6 +329,7 @@ private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
             )
         }
     }
+    ColorWheelPicker(normalized ?: selectedHex) { draft = it }
     OutlinedTextField(
         value = draft,
         onValueChange = { if (it.length <= 7) draft = it },
@@ -339,7 +340,7 @@ private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
         isError = draft.isNotBlank() && normalized == null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
         supportingText = {
-            Text(if (draft.isNotBlank() && normalized == null) "Enter six hex digits, such as #087E82." else "Preview updates when you apply the color.")
+            Text(if (draft.isNotBlank() && normalized == null) "Enter six hex digits, such as #087E82." else "Drag the wheel or enter a hex color, then apply.")
         },
     )
     Button(

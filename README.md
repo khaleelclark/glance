@@ -10,8 +10,9 @@ Galaxy S25 Ultra behavior remain unverified.
 The main screen includes a 24-hour graph of validated source samples. Drag
 across it to inspect readings. The notification shows the current glucose,
 trend arrow, and recent change when available; Refresh remains in the app.
-Stop monitoring and a choice of app colors, including custom hex colors, are
-available in Settings.
+Stop monitoring and a choice of app colors are available in Settings. Custom
+colors can be chosen on a color wheel with a brightness slider or entered as
+six-digit hex values.
 
 ## Open in Android Studio on another machine
 

@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `10`, and versionName
-`0.10.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `11`, and versionName
+`0.11.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.10.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.11.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -68,8 +68,9 @@ application ID and signer for every upgrade; increment versionCode.
    collapsible card. The main screen has a 24-hour timeline of validated source
    samples: drag across the graph to inspect exact readings; swipe the time
    labels sideways to browse the full day. Landscape places the graph beside
-   the current reading. Settings has color presets and a custom six-digit hex
-   field; light and dark themes follow the phone. Use Refresh in the app, and Stop
+   the current reading. Settings has color presets, a touchable color wheel,
+   brightness slider, and a custom six-digit hex field; light and dark themes
+   follow the phone. Use Refresh in the app, and Stop
    monitoring in Settings to end the session. Test screen-off
    behavior before relying on the chosen polling interval.
 

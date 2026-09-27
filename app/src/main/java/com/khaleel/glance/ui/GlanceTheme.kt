@@ -8,6 +8,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+
+internal data class PickerColor(val hue: Float, val saturation: Float, val brightness: Float)
 
 internal data class AccentPreset(val name: String, val hex: String)
 
@@ -34,6 +37,48 @@ internal object ThemeAccent {
             green = ((rgb shr 8) and 0xFF) / 255f,
             blue = (rgb and 0xFF) / 255f,
         )
+    }
+
+    fun pickerColor(hex: String): PickerColor {
+        val normalized = normalize(hex) ?: DEFAULT
+        val rgb = normalized.drop(1).toInt(16)
+        val r = ((rgb shr 16) and 0xFF) / 255f
+        val g = ((rgb shr 8) and 0xFF) / 255f
+        val b = (rgb and 0xFF) / 255f
+        val maximum = max(r, max(g, b))
+        val minimum = min(r, min(g, b))
+        val difference = maximum - minimum
+        val hue = when {
+            difference == 0f -> 0f
+            maximum == r -> 60f * (((g - b) / difference) % 6f)
+            maximum == g -> 60f * ((b - r) / difference + 2f)
+            else -> 60f * ((r - g) / difference + 4f)
+        }
+        return PickerColor(
+            hue = (hue + 360f) % 360f,
+            saturation = if (maximum == 0f) 0f else difference / maximum,
+            brightness = maximum,
+        )
+    }
+
+    fun fromPicker(color: PickerColor): String {
+        val hue = ((color.hue % 360f) + 360f) % 360f
+        val saturation = color.saturation.coerceIn(0f, 1f)
+        val brightness = color.brightness.coerceIn(0f, 1f)
+        val chroma = brightness * saturation
+        val sector = hue / 60f
+        val secondary = chroma * (1f - kotlin.math.abs(sector % 2f - 1f))
+        val (r, g, b) = when (sector.toInt()) {
+            0 -> Triple(chroma, secondary, 0f)
+            1 -> Triple(secondary, chroma, 0f)
+            2 -> Triple(0f, chroma, secondary)
+            3 -> Triple(0f, secondary, chroma)
+            4 -> Triple(secondary, 0f, chroma)
+            else -> Triple(chroma, 0f, secondary)
+        }
+        val offset = brightness - chroma
+        fun channel(value: Float) = ((value + offset) * 255f).roundToInt().coerceIn(0, 255)
+        return "#%02X%02X%02X".format(channel(r), channel(g), channel(b))
     }
 
     fun scheme(hex: String, dark: Boolean): ColorScheme {

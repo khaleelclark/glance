@@ -146,6 +146,16 @@ class AppController(
         mutableDisplay.value = snapshot(ConnectionState.READY)
     }
 
+    /** Enter person selection without retaining the prior person's display or late response. */
+    @Synchronized
+    fun clearSelectedPerson() {
+        generation++
+        patient = StoredPatientState(null, null)
+        patientStore.clear()
+        settings.nextAllowedFetch = null
+        mutableDisplay.value = snapshot(ConnectionState.READY)
+    }
+
     suspend fun connections(): SourceResult<List<Connection>> {
         val session = sessionOrRecover() ?: return SourceResult.Failure(currentAuthError())
         val result = source.connections(session)

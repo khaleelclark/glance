@@ -8,10 +8,17 @@ import com.khaleel.glance.data.DeviceClock
 import com.khaleel.glance.data.LocalStateStore
 import com.khaleel.glance.data.UserSettings
 import com.khaleel.glance.librelinkup.LibreLinkUpSource
+import com.khaleel.glance.monitoring.MonitoringDependencies
+import com.khaleel.glance.monitoring.MonitoringDependencyProvider
+import com.khaleel.glance.monitoring.MonitoringNotifications
+import com.khaleel.glance.monitoring.MonitoringPresentation
+import com.khaleel.glance.notification.GlucoseNotificationRenderer
+import android.app.Notification
+import android.app.Service
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
-class GlanceApplication : Application() {
+class GlanceApplication : Application(), MonitoringDependencyProvider {
     val controller: AppController by lazy {
         val encrypted = SecureFileStore(this)
         val http = OkHttpClient.Builder()
@@ -27,4 +34,39 @@ class GlanceApplication : Application() {
             clock = DeviceClock,
         )
     }
+
+    private val notifications = object : MonitoringNotifications {
+        private fun renderer(presentation: MonitoringPresentation) =
+            GlucoseNotificationRenderer(
+                this@GlanceApplication,
+                presentation.display,
+                controller.settings.unit,
+                controller.settings.showOnLockScreen,
+                controller.settings.enhancedNotification,
+            )
+
+        override fun startingNotification(service: Service, presentation: MonitoringPresentation): Notification =
+            renderer(presentation).apply { createChannel() }.build()
+
+        override fun render(presentation: MonitoringPresentation) {
+            renderer(presentation).post()
+        }
+
+        override fun hide() {
+            GlucoseNotificationRenderer(
+                this@GlanceApplication,
+                controller.display.value,
+                controller.settings.unit,
+                controller.settings.showOnLockScreen,
+            ).hide()
+        }
+    }
+
+    override fun monitoringDependencies() = MonitoringDependencies(controller, notifications, DeviceClock)
+
+    fun showCurrentNotification() {
+        notifications.render(MonitoringPresentation(controller.display.value, 0L))
+    }
+
+    fun hideCurrentNotification() = notifications.hide()
 }

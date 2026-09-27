@@ -1,0 +1,31 @@
+# Notification implementation notes
+
+The standard renderer is the baseline. It uses one stable notification ID, an
+`IMPORTANCE_LOW` channel with sound/vibration disabled, platform `BigTextStyle`, and explicit
+immutable `PendingIntent`s. Refresh and Pause target `MonitoringService`; that service must
+coalesce Refresh through its single-flight/rate-limited poller and re-check the current
+monitoring generation before acting. The intents contain no patient or account identifiers.
+
+The public constructor reserves `enhanced` as an optional input, but the baseline milestone
+does not request promotion. Android's primary documentation (checked
+2026-09-27) says an eligible Live Update must use a standard supported style (including
+`BigTextStyle`), be ongoing, have a title, avoid custom `RemoteViews`, group-summary and
+colorized presentation, use a channel above `IMPORTANCE_MIN`, request the non-runtime
+`POST_PROMOTED_NOTIFICATIONS` manifest permission, and request promotion. The API 36
+`NotificationManager.canPostPromotedNotifications()` check covers user permission/settings;
+`Notification.hasPromotableCharacteristics()` checks notification structure but does not
+guarantee promotion. OEMs may impose additional criteria, and users may demote or dismiss the
+presentation. Consequently enhanced mode has no separate update or polling loop and always
+falls back to this standard notification.
+
+The renderer does not claim device or Samsung One UI behavior. The manifest permission and
+settings flow are integration-owned and must be coordinated before enabling enhanced mode in
+the UI.
+
+Primary references:
+
+- https://developer.android.com/develop/ui/views/notifications/live-update
+- https://developer.android.com/reference/android/app/NotificationManager#canPostPromotedNotifications()
+- https://developer.android.com/reference/android/app/Notification#hasPromotableCharacteristics()
+- https://developer.android.com/privacy-and-security/risks/pending-intent
+- https://developer.android.com/about/versions/14/behavior-changes-all

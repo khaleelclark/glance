@@ -106,8 +106,10 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getBoolean("lock_visible", false)
         set(value) = prefs.edit().putBoolean("lock_visible", value).apply()
     override var enhancedNotification: Boolean
-        get() = prefs.getBoolean("enhanced", true)
-        set(value) = prefs.edit().putBoolean("enhanced", value).apply()
+        // The old default enabled an uncollapsible promoted card. Treat the new layout as the
+        // default, including existing installs; the chip remains available by explicit opt-in.
+        get() = prefs.getBoolean("enhanced_explicit", false)
+        set(value) = prefs.edit().putBoolean("enhanced_explicit", value).apply()
     override var intervalMinutes: Int
         get() = prefs.getInt("interval_minutes", 1).takeIf { it == 1 || it == 5 } ?: 1
         set(value) { require(value == 1 || value == 5); prefs.edit().putInt("interval_minutes", value).apply() }

@@ -9,6 +9,8 @@ import android.content.Intent
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
+import android.view.View
+import android.widget.RemoteViews
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
@@ -59,11 +61,15 @@ class GlucoseNotificationRenderer(
     }
 
     fun build(): Notification {
+        val promoted = enhanced &&
+            state.monitoringEnabled &&
+            state.runtime == RuntimeState.RUNNING &&
+            supportsPromotedOngoingApi() &&
+            notificationManager.canPostPromotedNotifications()
         val builder = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle(content.title)
             .setContentText(content.text)
-            .setStyle(Notification.BigTextStyle().bigText(content.bigText))
             .setContentIntent(contentIntent())
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(state.monitoringEnabled)
@@ -78,25 +84,23 @@ class GlucoseNotificationRenderer(
 
         actionGeneration?.let { builder.setDeleteIntent(dismissIntent(it)) }
 
-        if (state.monitoringEnabled && actionGeneration != null) {
-            builder.addAction(refreshAction())
-        }
-
         if (!lockScreenVisible) {
             builder.setPublicVersion(buildRedactedPublicVersion())
         }
 
-        if (
-            enhanced &&
-            state.monitoringEnabled &&
-            state.runtime == RuntimeState.RUNNING &&
-            supportsPromotedOngoingApi() &&
-            notificationManager.canPostPromotedNotifications()
-        ) {
+        if (promoted) {
+            builder.setStyle(Notification.BigTextStyle().bigText(content.bigText))
+            if (state.monitoringEnabled && actionGeneration != null) builder.addAction(refreshAction())
             // The promoted status chip can show a short current value without opening the shade.
             // Delayed or stale readings use a label instead of an apparently current number.
             builder.setShortCriticalText(content.statusChipText ?: "")
             builder.setRequestPromotedOngoing(true)
+        } else {
+            // Promoted Live Updates cannot use RemoteViews and Android makes them uncollapsible.
+            // The regular card uses distinct compact and expanded views for readable numbers.
+            builder.setStyle(Notification.DecoratedCustomViewStyle())
+                .setCustomContentView(customView(R.layout.notification_glucose_compact, expanded = false))
+                .setCustomBigContentView(customView(R.layout.notification_glucose_expanded, expanded = true))
         }
 
         return builder.build()
@@ -146,6 +150,33 @@ class GlucoseNotificationRenderer(
             MonitoringService.refreshPendingIntent(appContext, generation),
         ).build()
     }
+
+    private fun customView(layoutId: Int, expanded: Boolean): RemoteViews =
+        RemoteViews(appContext.packageName, layoutId).apply {
+            setTextViewText(R.id.notification_primary, content.prominent)
+            setTextViewText(R.id.notification_unit, content.prominentUnit.orEmpty())
+            setViewVisibility(
+                R.id.notification_unit,
+                if (content.prominentUnit == null) View.GONE else View.VISIBLE,
+            )
+            setTextViewText(R.id.notification_arrow, content.prominentArrow.orEmpty())
+            setViewVisibility(
+                R.id.notification_arrow,
+                if (content.prominentArrow == null) View.GONE else View.VISIBLE,
+            )
+            setTextViewText(
+                R.id.notification_detail,
+                if (expanded) content.expandedDetail else content.compactDetail,
+            )
+            if (state.monitoringEnabled && actionGeneration != null) {
+                setOnClickPendingIntent(
+                    R.id.notification_refresh,
+                    MonitoringService.refreshPendingIntent(appContext, actionGeneration),
+                )
+            } else {
+                setViewVisibility(R.id.notification_refresh, View.GONE)
+            }
+        }
 
     private fun buildRedactedPublicVersion(): Notification {
         val builder = Notification.Builder(appContext, CHANNEL_ID)

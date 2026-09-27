@@ -18,6 +18,11 @@ internal data class NotificationContent(
     val text: String,
     val bigText: String,
     val statusChipText: String? = null,
+    val prominent: String = title,
+    val prominentUnit: String? = null,
+    val prominentArrow: String? = null,
+    val compactDetail: String = text,
+    val expandedDetail: String = bigText,
 )
 
 internal class NotificationContentFormatter(
@@ -43,6 +48,8 @@ internal class NotificationContentFormatter(
                     last,
                     "Monitoring could not start. Open Glance to review notification and background access.",
                 ).joinToString("\n"),
+                prominent = "UNAVAILABLE",
+                compactDetail = "$person · ${last ?: "Open Glance to resume"}",
             )
         }
 
@@ -77,6 +84,18 @@ internal class NotificationContentFormatter(
                         else -> GlucoseFormat.value(reading, unit, locale)
                             .takeUnless { it == "Unavailable" } ?: "WAIT"
                     },
+                    prominent = GlucoseFormat.value(reading, unit, locale),
+                    prominentUnit = when (unit) {
+                        GlucoseUnit.MG_DL -> "mg/dL"
+                        GlucoseUnit.MMOL_L -> "mmol/L"
+                    },
+                    prominentArrow = arrow,
+                    compactDetail = "$text · $person",
+                    expandedDetail = listOfNotNull(
+                        "$text · $person",
+                        trendDescription(reading.trend),
+                        connectionNote,
+                    ).joinToString(" · "),
                 )
             }
             ReadingFreshness.DELAYED -> {
@@ -91,6 +110,13 @@ internal class NotificationContentFormatter(
                         connectionNote,
                     ).joinToString("\n"),
                     statusChipText = "OLD",
+                    prominent = "OLD",
+                    compactDetail = "$last · $person",
+                    expandedDetail = listOfNotNull(
+                        "$last · $person",
+                        trendDescription(reading.trend),
+                        connectionNote,
+                    ).joinToString(" · "),
                 )
             }
             ReadingFreshness.STALE -> {
@@ -100,6 +126,9 @@ internal class NotificationContentFormatter(
                     text = last,
                     bigText = listOfNotNull(last, connectionNote).joinToString("\n"),
                     statusChipText = "STALE",
+                    prominent = "STALE",
+                    compactDetail = "$last · $person",
+                    expandedDetail = listOfNotNull("$last · $person", connectionNote).joinToString(" · "),
                 )
             }
             ReadingFreshness.INVALID_TIME -> {
@@ -109,6 +138,9 @@ internal class NotificationContentFormatter(
                     text = last,
                     bigText = listOfNotNull(last, connectionNote).joinToString("\n"),
                     statusChipText = "TIME?",
+                    prominent = "TIME?",
+                    compactDetail = "$last · $person",
+                    expandedDetail = listOfNotNull("$last · $person", connectionNote).joinToString(" · "),
                 )
             }
             ReadingFreshness.ABSENT -> absentContent(person, state.connection)
@@ -127,6 +159,8 @@ internal class NotificationContentFormatter(
             title = "$person · Monitoring stopped",
             text = last,
             bigText = "$last\nOpen Glance to start monitoring.",
+            prominent = "STOPPED",
+            compactDetail = "$person · $last",
         )
     }
 
@@ -164,7 +198,19 @@ internal class NotificationContentFormatter(
                 }
             }
         }
-        return NotificationContent(title, detail, detail)
+        val prominent = when (connection) {
+            ConnectionState.SIGN_IN_REQUIRED -> "SIGN IN"
+            ConnectionState.TERMS_REQUIRED -> "TERMS"
+            ConnectionState.CONNECTION_REMOVED -> "NO SHARE"
+            ConnectionState.PROTOCOL_ERROR, ConnectionState.LOCAL_ERROR -> "ERROR"
+            else -> "WAITING"
+        }
+        return NotificationContent(
+            title, detail, detail,
+            prominent = prominent,
+            compactDetail = "$person · $detail",
+            expandedDetail = "$person · $detail",
+        )
     }
 
     private fun formatValue(reading: Reading, unit: GlucoseUnit): String =

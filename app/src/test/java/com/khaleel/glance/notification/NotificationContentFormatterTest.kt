@@ -28,6 +28,11 @@ class NotificationContentFormatterTest {
         assertEquals("Reading 10:42 AM", content.text)
         assertEquals("112", content.statusChipText)
         assertTrue(content.bigText.contains("Trend: steady"))
+        assertEquals("112", content.prominent)
+        assertEquals("mg/dL", content.prominentUnit)
+        assertEquals("→", content.prominentArrow)
+        assertEquals("Reading 10:42 AM · Patrick", content.compactDetail)
+        assertTrue(content.expandedDetail.contains("Trend: steady"))
     }
 
     @Test
@@ -40,6 +45,9 @@ class NotificationContentFormatterTest {
         assertEquals("Patrick · Reading delayed", content.title)
         assertEquals("Last: 112 mg/dL → at 10:42 AM", content.text)
         assertEquals("OLD", content.statusChipText)
+        assertEquals("OLD", content.prominent)
+        assertEquals(null, content.prominentArrow)
+        assertTrue(content.compactDetail.contains("Last: 112 mg/dL → at 10:42 AM"))
     }
 
     @Test
@@ -54,6 +62,8 @@ class NotificationContentFormatterTest {
         assertFalse(content.bigText.contains("Trend"))
         assertFalse(content.text.contains("↗"))
         assertEquals("STALE", content.statusChipText)
+        assertEquals("STALE", content.prominent)
+        assertEquals(null, content.prominentArrow)
     }
 
     @Test
@@ -121,6 +131,8 @@ class NotificationContentFormatterTest {
 
         assertEquals("Patrick · 6.2 mmol/L →", content.title)
         assertEquals("6.2", content.statusChipText)
+        assertEquals("6.2", content.prominent)
+        assertEquals("mmol/L", content.prominentUnit)
     }
 
     @Test

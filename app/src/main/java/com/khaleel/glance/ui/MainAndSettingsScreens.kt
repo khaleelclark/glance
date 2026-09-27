@@ -177,8 +177,8 @@ internal fun SettingsScreen(
                 onCheckedChange = callbacks.onLockScreenVisibilityChanged,
             )
             SettingSwitch(
-                title = "Enhanced Live Update",
-                detail = "Ask Android for an enhanced presentation. Unsupported or denied devices keep the standard notification.",
+                title = "Status chip Live Update",
+                detail = "Shows the value in Android's status chip when available. Its card stays expanded; turn this off for the large, collapsible reading.",
                 checked = settings.enhancedNotification,
                 onCheckedChange = callbacks.onEnhancedNotificationChanged,
             )

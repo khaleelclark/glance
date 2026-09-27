@@ -2,7 +2,10 @@
 
 Glance is a native Android app for a LibreLinkUp follower to view one selected person's latest shared glucose reading in an ongoing notification. The app communicates directly from the phone to LibreLinkUp. It has no backend.
 
-**Current status:** Android project bootstrap and secure local storage build successfully. Protocol, monitoring, and notification implementations are in progress. The present debug APK is a shell and is not a usable glucose monitor.
+**Current status:** The LibreLinkUp adapter, encrypted local state, Compose setup,
+foreground monitoring service, and silent notification are integrated. Synthetic
+tests and API 36 emulator lifecycle checks pass. Live follower-account and
+Galaxy S25 Ultra behavior remain unverified.
 
 ## Open in Android Studio on another machine
 
@@ -17,7 +20,9 @@ From a terminal with `ANDROID_HOME` or `local.properties` pointing to your SDK:
 ./gradlew :app:assembleDebug :app:testDebugUnitTest
 ```
 
-The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`. A release APK and its signing/install instructions will be documented in `docs/release.md` once the app is integrated and verified. Do not use a debug key for an upgradeable personal installation.
+The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`. For a signed
+personal APK, key backup, install and upgrade instructions, see
+[docs/release.md](docs/release.md). The signing key stays outside this repository.
 
 ## Development boundaries
 

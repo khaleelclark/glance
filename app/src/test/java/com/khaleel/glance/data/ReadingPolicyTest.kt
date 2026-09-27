@@ -28,4 +28,13 @@ class ReadingPolicyTest {
         assertEquals(current, ReadingPolicy.selectCurrent(current, reading("2026-09-27T12:00:00Z", "other"), "patrick"))
         assertEquals(null, ReadingPolicy.selectCurrent(current, reading("2026-09-27T12:00:00Z"), "other"))
     }
+
+    @Test fun duplicateKeepsFirstReceiptButSourceCorrectionReplacesIt() {
+        val firstReceipt = now.minusSeconds(60)
+        val original = reading("2026-09-27T11:55:00Z", received = firstReceipt)
+        val duplicate = reading("2026-09-27T11:55:00Z", received = now)
+        assertEquals(original, ReadingPolicy.selectCurrent(original, duplicate, "patrick"))
+        val corrected = duplicate.copy(valueMgDl = 113.0, sourceValue = 113.0)
+        assertEquals(corrected, ReadingPolicy.selectCurrent(original, corrected, "patrick"))
+    }
 }

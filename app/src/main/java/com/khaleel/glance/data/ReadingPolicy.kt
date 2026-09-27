@@ -23,7 +23,12 @@ object ReadingPolicy {
         return when {
             order > 0 -> candidate
             order < 0 -> current
-            candidate.receivedAt >= current.receivedAt -> candidate // source correction, deterministic tie policy
+            candidate.valueMgDl == current.valueMgDl &&
+                candidate.sourceValue == current.sourceValue &&
+                candidate.specialValue == current.specialValue &&
+                candidate.trend == current.trend &&
+                candidate.sourceRecordId == current.sourceRecordId -> current // repeated source sample
+            candidate.receivedAt >= current.receivedAt -> candidate // same-time source correction
             else -> current
         }
     }

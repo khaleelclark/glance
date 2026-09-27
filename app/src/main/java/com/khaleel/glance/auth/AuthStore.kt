@@ -7,8 +7,14 @@ import java.time.Instant
 
 data class SavedAuth(val credentials: Credentials, val session: Session?)
 
-class AuthStore(private val encrypted: SecureFileStore) {
-    fun save(auth: SavedAuth) {
+interface AuthPersistence {
+    fun save(auth: SavedAuth)
+    fun load(): SavedAuth?
+    fun clear()
+}
+
+class AuthStore(private val encrypted: SecureFileStore) : AuthPersistence {
+    override fun save(auth: SavedAuth) {
         encrypted.write("auth", JSONObject().apply {
             put("email", auth.credentials.email)
             put("password", auth.credentials.password)
@@ -23,7 +29,7 @@ class AuthStore(private val encrypted: SecureFileStore) {
         })
     }
 
-    fun load(): SavedAuth? {
+    override fun load(): SavedAuth? {
         val data = encrypted.read("auth") ?: return null
         val session = data.optJSONObject("session")?.let {
             Session(
@@ -36,5 +42,5 @@ class AuthStore(private val encrypted: SecureFileStore) {
         return SavedAuth(Credentials(data.getString("email"), data.getString("password")), session)
     }
 
-    fun clear() = encrypted.delete("auth")
+    override fun clear() { encrypted.delete("auth") }
 }

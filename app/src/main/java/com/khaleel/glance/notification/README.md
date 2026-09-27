@@ -21,6 +21,15 @@ guarantee promotion. OEMs may impose additional criteria, and users may demote o
 presentation. Consequently enhanced mode has no separate update or polling loop and always
 falls back to this standard notification.
 
+On eligible promoted notifications, `setShortCriticalText` puts a fresh glucose
+value in Android's status chip beside the required small icon. A delayed reading
+shows `OLD`, a stale reading shows `STALE`, and an invalid time shows `TIME?`;
+the chip never presents those historical values as current. The normal card
+keeps its measurement time and Refresh/Pause actions. The public lock-screen
+version explicitly supplies empty chip text when values are hidden. Android
+can still shorten or omit chip text depending on available space and device
+policy, so this presentation requires emulator and phone checks.
+
 The renderer does not claim device or Samsung One UI behavior. The manifest permission and
 settings flow are integration-owned and must be coordinated before enabling enhanced mode in
 the UI.

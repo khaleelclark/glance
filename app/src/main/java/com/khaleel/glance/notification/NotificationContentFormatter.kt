@@ -17,6 +17,7 @@ internal data class NotificationContent(
     val title: String,
     val text: String,
     val bigText: String,
+    val statusChipText: String? = null,
 )
 
 internal class NotificationContentFormatter(
@@ -67,6 +68,15 @@ internal class NotificationContentFormatter(
                         trendDescription(reading.trend),
                         connectionNote,
                     ).joinToString("\n"),
+                    statusChipText = when (state.connection) {
+                        ConnectionState.SIGN_IN_REQUIRED,
+                        ConnectionState.TERMS_REQUIRED,
+                        ConnectionState.CONNECTION_REMOVED,
+                        ConnectionState.PROTOCOL_ERROR,
+                        ConnectionState.LOCAL_ERROR -> "CHECK"
+                        else -> GlucoseFormat.value(reading, unit, locale)
+                            .takeUnless { it == "Unavailable" } ?: "WAIT"
+                    },
                 )
             }
             ReadingFreshness.DELAYED -> {
@@ -80,6 +90,7 @@ internal class NotificationContentFormatter(
                         trendDescription(reading.trend),
                         connectionNote,
                     ).joinToString("\n"),
+                    statusChipText = "OLD",
                 )
             }
             ReadingFreshness.STALE -> {
@@ -88,6 +99,7 @@ internal class NotificationContentFormatter(
                     title = "$person · No recent reading",
                     text = last,
                     bigText = listOfNotNull(last, connectionNote).joinToString("\n"),
+                    statusChipText = "STALE",
                 )
             }
             ReadingFreshness.INVALID_TIME -> {
@@ -96,6 +108,7 @@ internal class NotificationContentFormatter(
                     title = "$person · Reading time unavailable",
                     text = last,
                     bigText = listOfNotNull(last, connectionNote).joinToString("\n"),
+                    statusChipText = "TIME?",
                 )
             }
             ReadingFreshness.ABSENT -> absentContent(person, state.connection)

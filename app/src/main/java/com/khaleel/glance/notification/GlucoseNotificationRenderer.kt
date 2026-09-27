@@ -12,6 +12,7 @@ import android.os.Build
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.monitoring.MonitoringService
 import java.time.ZoneId
 import java.util.Locale
@@ -102,9 +103,13 @@ class GlucoseNotificationRenderer(
         if (
             enhanced &&
             state.monitoringEnabled &&
+            state.runtime == RuntimeState.RUNNING &&
             supportsPromotedOngoingApi() &&
             notificationManager.canPostPromotedNotifications()
         ) {
+            // The promoted status chip can show a short current value without opening the shade.
+            // Delayed or stale readings use a label instead of an apparently current number.
+            builder.setShortCriticalText(content.statusChipText ?: "")
             builder.setRequestPromotedOngoing(true)
         }
 
@@ -161,8 +166,8 @@ class GlucoseNotificationRenderer(
         return Notification.Action.Builder(icon, label, pendingIntent).build()
     }
 
-    private fun buildRedactedPublicVersion(): Notification =
-        Notification.Builder(appContext, CHANNEL_ID)
+    private fun buildRedactedPublicVersion(): Notification {
+        val builder = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle("Glance · Monitoring")
             .setContentText("Reading hidden on lock screen")
@@ -172,7 +177,9 @@ class GlucoseNotificationRenderer(
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .build()
+        if (supportsPromotedOngoingApi()) builder.setShortCriticalText("")
+        return builder.build()
+    }
 
     private fun supportsPromotedOngoingApi(): Boolean =
         Build.VERSION.SDK_INT >= 37 ||

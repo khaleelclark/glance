@@ -26,6 +26,7 @@ class NotificationContentFormatterTest {
 
         assertEquals("Patrick · 112 mg/dL →", content.title)
         assertEquals("Reading 10:42 AM", content.text)
+        assertEquals("112", content.statusChipText)
         assertTrue(content.bigText.contains("Trend: steady"))
     }
 
@@ -38,6 +39,7 @@ class NotificationContentFormatterTest {
 
         assertEquals("Patrick · Reading delayed", content.title)
         assertEquals("Last: 112 mg/dL → at 10:42 AM", content.text)
+        assertEquals("OLD", content.statusChipText)
     }
 
     @Test
@@ -51,6 +53,7 @@ class NotificationContentFormatterTest {
         assertEquals("Last: 112 mg/dL at 10:42 AM", content.text)
         assertFalse(content.bigText.contains("Trend"))
         assertFalse(content.text.contains("↗"))
+        assertEquals("STALE", content.statusChipText)
     }
 
     @Test
@@ -117,6 +120,7 @@ class NotificationContentFormatterTest {
         val content = formatter.format(state(valueMgDl = 112.0), GlucoseUnit.MMOL_L)
 
         assertEquals("Patrick · 6.2 mmol/L →", content.title)
+        assertEquals("6.2", content.statusChipText)
     }
 
     @Test
@@ -131,6 +135,7 @@ class NotificationContentFormatterTest {
         )
 
         assertEquals("Patrick · 6.3 mmol/L →", content.title)
+        assertEquals("6.3", content.statusChipText)
     }
 
     @Test
@@ -141,6 +146,7 @@ class NotificationContentFormatterTest {
         )
 
         assertEquals("Patrick · LOW mg/dL →", content.title)
+        assertEquals("LOW", content.statusChipText)
     }
 
     @Test

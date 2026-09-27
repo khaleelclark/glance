@@ -11,6 +11,7 @@ import android.os.Build
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.monitoring.MonitoringService
 import java.time.ZoneId
 import java.util.Locale
 
@@ -26,6 +27,7 @@ class GlucoseNotificationRenderer(
     private val unit: GlucoseUnit,
     private val lockScreenVisible: Boolean,
     private val enhanced: Boolean = false,
+    private val actionGeneration: Long? = null,
     zoneId: ZoneId = ZoneId.systemDefault(),
     locale: Locale = Locale.getDefault(),
 ) {
@@ -72,13 +74,12 @@ class GlucoseNotificationRenderer(
 
         state.reading?.let { builder.setWhen(it.measuredAt.toEpochMilli()) }
 
-        if (state.monitoringEnabled) {
+        if (state.monitoringEnabled && actionGeneration != null) {
             builder
                 .addAction(
                     action(
                         "Refresh",
                         ACTION_REFRESH,
-                        REQUEST_REFRESH,
                         android.R.drawable.ic_popup_sync,
                     ),
                 )
@@ -86,7 +87,6 @@ class GlucoseNotificationRenderer(
                     action(
                         "Pause",
                         ACTION_PAUSE,
-                        REQUEST_PAUSE,
                         android.R.drawable.ic_media_pause,
                     ),
                 )
@@ -132,18 +132,14 @@ class GlucoseNotificationRenderer(
     private fun action(
         label: String,
         intentAction: String,
-        requestCode: Int,
         iconResource: Int,
     ): Notification.Action {
-        val intent = Intent()
-            .setClassName(appContext, MONITORING_SERVICE_CLASS)
-            .setAction(intentAction)
-        val pendingIntent = PendingIntent.getService(
-            appContext,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        val generation = requireNotNull(actionGeneration)
+        val pendingIntent = if (intentAction == ACTION_REFRESH) {
+            MonitoringService.refreshPendingIntent(appContext, generation)
+        } else {
+            MonitoringService.pausePendingIntent(appContext, generation)
+        }
         val icon = Icon.createWithResource(appContext, iconResource)
         return Notification.Action.Builder(icon, label, pendingIntent).build()
     }
@@ -178,11 +174,6 @@ class GlucoseNotificationRenderer(
 
         private const val CHANNEL_NAME = "Glucose monitoring"
         private const val MAIN_ACTIVITY_CLASS = "com.khaleel.glance.MainActivity"
-        private const val MONITORING_SERVICE_CLASS =
-            "com.khaleel.glance.monitoring.MonitoringService"
-
         private const val REQUEST_OPEN = 1000
-        private const val REQUEST_REFRESH = 1001
-        private const val REQUEST_PAUSE = 1002
     }
 }

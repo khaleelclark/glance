@@ -12,6 +12,7 @@ import com.khaleel.glance.monitoring.MonitoringDependencies
 import com.khaleel.glance.monitoring.MonitoringDependencyProvider
 import com.khaleel.glance.monitoring.MonitoringNotifications
 import com.khaleel.glance.monitoring.MonitoringPresentation
+import com.khaleel.glance.monitoring.MonitoringService
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import android.app.Notification
 import android.app.Service
@@ -47,6 +48,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                 controller.settings.unit,
                 controller.settings.showOnLockScreen,
                 controller.settings.enhancedNotification,
+                presentation.actionGeneration.takeIf { it != 0L },
             )
 
         override fun startingNotification(service: Service, presentation: MonitoringPresentation): Notification =
@@ -69,7 +71,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     override fun monitoringDependencies() = MonitoringDependencies(controller, notifications, DeviceClock)
 
     fun showCurrentNotification() {
-        notifications.render(MonitoringPresentation(controller.display.value, 0L))
+        notifications.render(MonitoringPresentation(controller.display.value, MonitoringService.currentActionGeneration ?: 0L))
     }
 
     fun hideCurrentNotification() = notifications.hide()

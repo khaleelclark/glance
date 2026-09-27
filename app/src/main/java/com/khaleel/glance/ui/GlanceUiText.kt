@@ -3,10 +3,10 @@ package com.khaleel.glance.ui
 import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
-import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.GlucoseFormat
+import com.khaleel.glance.core.GlucoseFormat.label
 import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
-import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
 import java.time.Duration
 import java.time.Instant
@@ -14,7 +14,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
-import kotlin.math.roundToInt
 
 data class ReadingUiText(
     val value: String,
@@ -38,7 +37,7 @@ class GlanceUiText(
         val reading = state.reading ?: return null
         val trend = trend(reading.trend, state.freshness)
         return ReadingUiText(
-            value = value(reading, unit),
+            value = GlucoseFormat.value(reading, unit, locale),
             unit = unit.label,
             trendSymbol = trend.first,
             trendDescription = trend.second,
@@ -85,25 +84,6 @@ class GlanceUiText(
         return title to reading.measured
     }
 
-    private fun value(reading: Reading, unit: GlucoseUnit): String {
-        reading.specialValue?.let {
-            return when (it) {
-                SpecialValue.LOW -> "LOW"
-                SpecialValue.HIGH -> "HIGH"
-                SpecialValue.UNAVAILABLE -> "Unavailable"
-            }
-        }
-        val numeric = when {
-            reading.sourceUnit == unit -> reading.sourceValue
-            unit == GlucoseUnit.MG_DL -> reading.valueMgDl
-            else -> reading.valueMgDl?.div(MG_DL_PER_MMOL_L)
-        } ?: return "Unavailable"
-        return when (unit) {
-            GlucoseUnit.MG_DL -> numeric.roundToInt().toString()
-            GlucoseUnit.MMOL_L -> String.format(locale, "%.1f", numeric)
-        }
-    }
-
     private fun trend(trend: Trend, freshness: ReadingFreshness): Pair<String, String> {
         if (freshness == ReadingFreshness.STALE || freshness == ReadingFreshness.INVALID_TIME) return "" to "Trend unavailable"
         return when (trend) {
@@ -131,13 +111,4 @@ class GlanceUiText(
     private fun lastReadingSuffix(state: DisplayState, message: String) =
         if (state.reading == null) "$message. No reading is available yet." else "$message. Showing the last reading."
 
-    private val GlucoseUnit.label: String
-        get() = when (this) {
-            GlucoseUnit.MG_DL -> "mg/dL"
-            GlucoseUnit.MMOL_L -> "mmol/L"
-        }
-
-    private companion object {
-        const val MG_DL_PER_MMOL_L = 18.0182
-    }
 }

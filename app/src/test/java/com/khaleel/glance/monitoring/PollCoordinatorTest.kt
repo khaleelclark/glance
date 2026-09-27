@@ -10,7 +10,10 @@ import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.GlucoseSource
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.Session
+import com.khaleel.glance.core.SourceError
+import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.core.Trend
 import com.khaleel.glance.data.AppController
@@ -22,6 +25,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -93,8 +98,31 @@ class PollCoordinatorTest {
         assertEquals(0, fixture.source.latestCalls)
     }
 
+    @Test
+    fun blockedConnectionStillAgesReadingWithoutNetworkFetch() = runBlocking {
+        val fixture = fixture(
+            initialReading = reading(patrick),
+            sourceResult = { SourceResult.Failure(SourceError(SourceErrorKind.TERMS_REQUIRED)) },
+        )
+        fixture.coordinator.pollIfEligible(PollTrigger.AUTOMATIC, 7L)
+        assertEquals(ReadingFreshness.FRESH, fixture.controller.display.value.freshness)
+        fixture.coordinator.start(7L)
+        fixture.clock.wall = base.plusSeconds(6 * 60)
+        withTimeout(3_000) {
+            while (fixture.controller.display.value.freshness != ReadingFreshness.DELAYED) delay(5)
+        }
+        fixture.clock.wall = base.plusSeconds(16 * 60)
+        withTimeout(3_000) {
+            while (fixture.controller.display.value.freshness != ReadingFreshness.STALE) delay(5)
+        }
+        assertEquals(1, fixture.source.latestCalls)
+        assertEquals(ReadingFreshness.STALE, fixture.notifications.presentations.last().display.freshness)
+        fixture.coordinator.stop()
+    }
+
     private fun fixture(
         nextAllowed: Instant? = null,
+        initialReading: Reading? = null,
         sourceResult: suspend () -> SourceResult<Reading>,
     ): Fixture {
         val clock = FakeClock(base, 1_000L)
@@ -106,15 +134,16 @@ class PollCoordinatorTest {
         val controller = AppController(
             source = source,
             authStore = MemoryAuth(savedAuth()),
-            patientStore = MemoryPatient(StoredPatientState(patrick, null)),
+            patientStore = MemoryPatient(StoredPatientState(patrick, initialReading)),
             settings = settings,
             clock = clock,
         )
         val notifications = FakeNotifications()
         val dependencies = MonitoringDependencies(controller, notifications, clock)
         return Fixture(
-            coordinator = PollCoordinator(dependencies, kotlinx.coroutines.CoroutineScope(Job())),
+            coordinator = PollCoordinator(dependencies, kotlinx.coroutines.CoroutineScope(Job()), PollingPolicy(freshnessTickMillis = 10)),
             controller = controller,
+            clock = clock,
             source = source,
             notifications = notifications,
         )
@@ -140,12 +169,13 @@ class PollCoordinatorTest {
     private data class Fixture(
         val coordinator: PollCoordinator,
         val controller: AppController,
+        val clock: FakeClock,
         val source: FakeSource,
         val notifications: FakeNotifications,
     )
 
     private class FakeClock(
-        private val wall: Instant,
+        var wall: Instant,
         private val elapsed: Long,
     ) : Clock {
         override fun now(): Instant = wall

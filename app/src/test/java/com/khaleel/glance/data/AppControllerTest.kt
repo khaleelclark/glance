@@ -18,8 +18,11 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 
@@ -80,6 +83,49 @@ class AppControllerTest {
         assertEquals(1, source.latestCalls)
     }
 
+    @Test fun networkFailurePersistsRetryDeadlineAndBlocksManualRefresh() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Failure(SourceError(SourceErrorKind.NETWORK)) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        controller.poll()
+        assertTrue(settings.nextAllowedFetch!! >= start.plusSeconds(60))
+        assertTrue(settings.nextAllowedFetch!! <= start.plusSeconds(75))
+        assertEquals(SourceErrorKind.RATE_LIMITED, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+        assertEquals(1, source.latestCalls)
+    }
+
+    @Test fun rejectedConnectionSessionReauthenticatesAndReplaysOnce() = runBlocking {
+        var calls = 0
+        val source = FakeSource(
+            onLatest = { _, _ -> SourceResult.Success(reading(patrick)) },
+            onConnections = {
+                calls++
+                if (calls == 1) SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+                else SourceResult.Success(listOf(patrick))
+            },
+        )
+        val controller = controller(source, MemoryPatient())
+        assertEquals(listOf(patrick), (controller.connections() as SourceResult.Success).value)
+        assertEquals(2, calls)
+    }
+
+    @Test fun timeoutInvalidatesLateSourceResultAndPublishesBackoff() = runBlocking {
+        val pending = CompletableDeferred<SourceResult<Reading>>()
+        val source = FakeSource { _, _ -> withContext(NonCancellable) { pending.await() } }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        val poll = async { runCatching { controller.poll() } }
+        withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+        controller.recordPollTimeout()
+        pending.complete(SourceResult.Success(reading(patrick)))
+        poll.await()
+        assertNull(controller.display.value.reading)
+        assertTrue(settings.nextAllowedFetch!! >= start.plusSeconds(60))
+        assertTrue(settings.nextAllowedFetch!! <= start.plusSeconds(75))
+    }
+
     private fun controller(
         source: FakeSource,
         patient: MemoryPatient,
@@ -112,13 +158,16 @@ class AppControllerTest {
         override var nextAllowedFetch: Instant? = null
         override fun clear() { monitoringEnabled = false; nextAllowedFetch = null }
     }
-    private class FakeSource(val onLatest: suspend (Session, String) -> SourceResult<Reading>) : GlucoseSource {
+    private class FakeSource(
+        val onConnections: suspend (Session) -> SourceResult<List<Connection>> = { SourceResult.Success(emptyList()) },
+        val onLatest: suspend (Session, String) -> SourceResult<Reading>,
+    ) : GlucoseSource {
         @Volatile
         var latestCalls = 0
         override suspend fun signIn(credentials: Credentials) = SourceResult.Success(
             Session("synthetic-account", "new-token", "api-us.libreview.io", Instant.parse("2030-01-01T00:00:00Z")),
         )
-        override suspend fun connections(session: Session) = SourceResult.Success(emptyList<Connection>())
+        override suspend fun connections(session: Session) = onConnections(session)
         override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> {
             latestCalls++
             return onLatest(session, connectionId)

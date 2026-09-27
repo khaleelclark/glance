@@ -9,6 +9,7 @@ import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
+import com.khaleel.glance.notification.NotificationContentFormatter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -41,6 +42,17 @@ class GlanceUiTextTest {
 
         assertEquals("6.2", text.value)
         assertEquals("mmol/L", text.unit)
+    }
+
+    @Test
+    fun mmolRoundingMatchesNotificationAtBoundaryValues() {
+        val notification = NotificationContentFormatter(ZoneId.of("UTC"), Locale.US)
+        for (mgDl in listOf(100.0, 109.0)) {
+            val state = state(reading = reading().copy(valueMgDl = mgDl, sourceValue = mgDl))
+            val ui = formatter.reading(state, GlucoseUnit.MMOL_L, now)!!
+            val card = notification.format(state, GlucoseUnit.MMOL_L)
+            assertEquals("Patrick · ${ui.value} ${ui.unit} →", card.title)
+        }
     }
 
     @Test

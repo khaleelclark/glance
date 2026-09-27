@@ -3,16 +3,15 @@ package com.khaleel.glance.notification
 import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.GlucoseFormat
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
-import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
-import kotlin.math.roundToInt
 
 internal data class NotificationContent(
     val title: String,
@@ -151,31 +150,8 @@ internal class NotificationContentFormatter(
         return NotificationContent(title, detail, detail)
     }
 
-    private fun formatValue(reading: Reading, unit: GlucoseUnit): String {
-        val unitLabel = if (unit == GlucoseUnit.MG_DL) "mg/dL" else "mmol/L"
-        val special = when (reading.specialValue) {
-            SpecialValue.LOW -> "LOW"
-            SpecialValue.HIGH -> "HIGH"
-            SpecialValue.UNAVAILABLE -> "Unavailable"
-            null -> null
-        }
-        if (special != null) return "$special $unitLabel"
-
-        val value = if (reading.sourceUnit == unit && reading.sourceValue != null) {
-            reading.sourceValue
-        } else {
-            when (unit) {
-                GlucoseUnit.MG_DL -> reading.valueMgDl
-                GlucoseUnit.MMOL_L -> reading.valueMgDl?.div(MG_DL_PER_MMOL_L)
-            }
-        }
-        if (value == null) return "Unavailable $unitLabel"
-
-        return when (unit) {
-            GlucoseUnit.MG_DL -> "${value.roundToInt()} $unitLabel"
-            GlucoseUnit.MMOL_L -> String.format(locale, "%.1f %s", value, unitLabel)
-        }
-    }
+    private fun formatValue(reading: Reading, unit: GlucoseUnit): String =
+        GlucoseFormat.withUnit(reading, unit, locale)
 
     private fun trendArrow(trend: Trend): String? = when (trend) {
         Trend.RISING_QUICKLY -> "↑"
@@ -209,7 +185,4 @@ internal class NotificationContentFormatter(
         ConnectionState.READY, ConnectionState.FETCHING -> null
     }
 
-    private companion object {
-        const val MG_DL_PER_MMOL_L = 18.0
-    }
 }

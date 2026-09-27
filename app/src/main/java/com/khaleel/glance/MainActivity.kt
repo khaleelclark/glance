@@ -1,5 +1,7 @@
 package com.khaleel.glance
 
+import com.khaleel.glance.core.ConnectionState
+
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -302,16 +304,22 @@ class MainActivity : ComponentActivity() {
             loadConnections()
         },
         onReconnect = {
-            scope.launch {
-                val result = runCatching { controller.connections() }.getOrNull()
-                if (result is SourceResult.Success && controller.display.value.person != null) {
-                    controller.poll(manual = true)
-                }
-                showDiagnostics = true
+            if (controller.display.value.connection == ConnectionState.SIGN_IN_REQUIRED ||
+                controller.display.value.connection == ConnectionState.TERMS_REQUIRED
+            ) {
+                pauseMonitoring()
+                accountState = AccountUiState(AccountStatus.SIGNED_OUT)
+                setupState = setupState.copy(step = SetupStep.SIGN_IN)
+            } else {
+                setupState = setupState.copy(step = SetupStep.CONNECTION)
+                loadConnections()
             }
         },
         onOpenDiagnostics = { showDiagnostics = true },
-        onDeleteLocalData = { signOut() },
+        onDeleteLocalData = {
+            controller.clearLocalData()
+            if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
+        },
         onSignOut = { signOut() },
     )
 

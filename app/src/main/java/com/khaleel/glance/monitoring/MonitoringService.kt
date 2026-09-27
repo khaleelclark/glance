@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -39,20 +40,23 @@ class MonitoringService : Service() {
         val expectedGeneration = intent?.generationExtra()
 
         if (action == ACTION_PAUSE) {
-            // The current renderer publishes no generation extra. Explicit
-            // helper-built actions do, and stale non-null generations remain rejected.
-            if (
-                expectedGeneration == null ||
-                activeGeneration == null ||
-                expectedGeneration == activeGeneration
-            ) {
+            if (expectedGeneration != null && expectedGeneration == activeGeneration) {
                 coordinator?.stop()
                 deps.controller.setMonitoringEnabled(false)
                 runCatching { deps.notifications.hide() }
                 if (foreground) stopForeground(STOP_FOREGROUND_REMOVE)
                 foreground = false
                 stopSelf()
+            } else if (activeGeneration == null) {
+                stopSelf(startId)
             }
+            return START_NOT_STICKY
+        }
+
+        if (action == ACTION_REFRESH &&
+            (expectedGeneration == null || expectedGeneration != activeGeneration)
+        ) {
+            if (activeGeneration == null) stopSelf(startId)
             return START_NOT_STICKY
         }
 
@@ -77,6 +81,7 @@ class MonitoringService : Service() {
         }
 
         activeGeneration = actionGeneration
+        currentActionGeneration = actionGeneration
         val activeCoordinator = coordinator ?: PollCoordinator(deps, serviceScope).also { coordinator = it }
         activeCoordinator.start(actionGeneration)
         if (action == ACTION_REFRESH) activeCoordinator.requestRefresh()
@@ -127,7 +132,6 @@ class MonitoringService : Service() {
         actionGeneration: Long,
         reason: StartFailure,
     ) {
-        deps.controller.setMonitoringEnabled(false)
         deps.controller.setRuntime(RuntimeState.UNABLE_TO_START)
         runCatching {
             deps.notifications.render(
@@ -151,7 +155,10 @@ class MonitoringService : Service() {
     override fun onDestroy() {
         coordinator?.stop()
         val deps = dependencies
-        if (deps != null && deps.controller.display.value.monitoringEnabled) {
+        if (currentActionGeneration == activeGeneration) currentActionGeneration = null
+        if (deps != null && deps.controller.display.value.monitoringEnabled &&
+            deps.controller.display.value.runtime != RuntimeState.UNABLE_TO_START
+        ) {
             deps.controller.setRuntime(RuntimeState.STOPPED)
         }
         serviceScope.cancel()
@@ -168,6 +175,8 @@ class MonitoringService : Service() {
         const val EXTRA_GENERATION = "com.khaleel.glance.monitoring.GENERATION"
 
         private val generationCounter = AtomicLong(SystemClock.elapsedRealtimeNanos())
+        @Volatile var currentActionGeneration: Long? = null
+            private set
 
         /** Call only from a visible, explicit user Start/Resume action. */
         fun start(context: Context): Boolean {
@@ -180,7 +189,6 @@ class MonitoringService : Service() {
                 ContextCompat.startForegroundService(context, intent)
                 true
             } catch (error: Exception) {
-                deps.controller.setMonitoringEnabled(false)
                 deps.controller.setRuntime(RuntimeState.UNABLE_TO_START)
                 runCatching {
                     deps.notifications.render(
@@ -214,6 +222,7 @@ class MonitoringService : Service() {
         private fun serviceIntent(context: Context, action: String, actionGeneration: Long) =
             Intent(context, MonitoringService::class.java)
                 .setAction(action)
+                .setData(Uri.parse("glance://monitoring/$actionGeneration/$action"))
                 .putExtra(EXTRA_GENERATION, actionGeneration)
 
         private fun nextActionGeneration(): Long = generationCounter.incrementAndGet()

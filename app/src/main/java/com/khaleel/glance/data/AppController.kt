@@ -26,6 +26,7 @@ import kotlinx.coroutines.sync.withLock
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.min
+import kotlin.random.Random
 
 object DeviceClock : Clock {
     override fun now(): Instant = Instant.now()
@@ -160,7 +161,17 @@ class AppController(
 
     suspend fun connections(): SourceResult<List<Connection>> {
         val session = sessionOrRecover() ?: return SourceResult.Failure(currentAuthError())
-        val result = source.connections(session)
+        val capturedGeneration = synchronized(this) { generation }
+        var result = source.connections(session)
+        if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.AUTH_EXPIRED) {
+            val recovered = recoverSession(session.token)
+            result = if (recovered != null) source.connections(recovered)
+            else SourceResult.Failure(currentAuthError())
+        }
+        if (result is SourceResult.Failure) {
+            updateFailure(result.error, capturedGeneration)
+            return result
+        }
         if (result is SourceResult.Success) {
             val selectedId = synchronized(this) { patient.selected?.id }
             if (selectedId != null && result.value.none { it.id == selectedId }) {
@@ -178,6 +189,18 @@ class AppController(
         }
         return try { deferred.await() } finally {
             gate.withLock { if (inFlight === deferred && deferred.isCompleted) inFlight = null }
+        }
+    }
+
+    /** Abort a timed-out source call and invalidate any late response before publishing failure. */
+    suspend fun recordPollTimeout() {
+        gate.withLock {
+            inFlight?.cancel()
+            inFlight = null
+            synchronized(this) {
+                generation++
+                updateFailure(SourceError(SourceErrorKind.SERVER), generation)
+            }
         }
     }
 
@@ -248,9 +271,14 @@ class AppController(
         }
         if (error.kind == SourceErrorKind.RATE_LIMITED) {
             settings.nextAllowedFetch = error.retryAfter ?: clock.now().plus(Duration.ofMinutes(15))
-        } else if (error.kind == SourceErrorKind.SERVER || error.kind == SourceErrorKind.PROTOCOL) {
+        } else if (error.kind == SourceErrorKind.NETWORK ||
+            error.kind == SourceErrorKind.SERVER || error.kind == SourceErrorKind.PROTOCOL
+        ) {
+            // Persist a bounded deadline so process restarts and manual taps cannot retry-storm.
             val minutes = min(15, 1 shl min(4, consecutiveFailures++))
-            settings.nextAllowedFetch = clock.now().plus(Duration.ofMinutes(minutes.toLong()))
+            settings.nextAllowedFetch = clock.now()
+                .plus(Duration.ofMinutes(minutes.toLong()))
+                .plusMillis(Random.nextLong(0, 15_001))
         }
         mutableDisplay.value = snapshot(state)
     }
@@ -302,5 +330,15 @@ class AppController(
         patient = StoredPatientState(null, null)
         mutableDisplay.value = snapshot(ConnectionState.SIGN_IN_REQUIRED, RuntimeState.STOPPED)
         diagnostics.clear()
+    }
+
+    /** Remove cached health data while retaining account, selected person, and preferences. */
+    @Synchronized
+    fun clearLocalData() {
+        generation++
+        patient = patient.copy(lastReading = null)
+        patientStore.save(patient)
+        diagnostics.clear()
+        mutableDisplay.value = snapshot(mutableDisplay.value.connection)
     }
 }

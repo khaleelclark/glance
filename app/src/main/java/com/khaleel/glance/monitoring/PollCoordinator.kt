@@ -18,10 +18,12 @@ import kotlin.random.Random
 data class PollingPolicy(
     val requestTimeoutMillis: Long = 30_000L,
     val schedulerJitterMillis: Long = 3_000L,
+    val freshnessTickMillis: Long = 30_000L,
 ) {
     init {
         require(requestTimeoutMillis > 0)
         require(schedulerJitterMillis >= 0)
+        require(freshnessTickMillis > 0)
     }
 }
 
@@ -78,7 +80,11 @@ class PollCoordinator(
             val display = dependencies.controller.display.value
             if (!display.monitoringEnabled) return
             if (display.connection.blocksAutomaticPolling()) {
-                refreshRequests.receive()
+                select<Unit> {
+                    refreshRequests.onReceive { }
+                    onTimeout(policy.freshnessTickMillis) { }
+                }
+                refreshFreshness(actionGeneration)
                 continue
             }
 
@@ -91,13 +97,20 @@ class PollCoordinator(
             val dueDelay = (nominalDueElapsed - elapsedNow).coerceAtLeast(0L)
             val waitMillis = max(dueDelay, cooldownDelay)
 
-            val trigger = if (waitMillis == 0L) {
+            val trigger: PollTrigger? = if (waitMillis == 0L) {
                 PollTrigger.AUTOMATIC
             } else {
                 select {
                     refreshRequests.onReceive { PollTrigger.MANUAL }
-                    onTimeout(waitMillis) { PollTrigger.AUTOMATIC }
+                    onTimeout(minOf(waitMillis, policy.freshnessTickMillis)) {
+                        if (waitMillis <= policy.freshnessTickMillis) PollTrigger.AUTOMATIC else null
+                    }
                 }
+            }
+
+            if (trigger == null) {
+                refreshFreshness(actionGeneration)
+                continue
             }
 
             val decision = pollIfEligible(trigger, actionGeneration)
@@ -140,7 +153,7 @@ class PollCoordinator(
                     controller.poll(manual = trigger == PollTrigger.MANUAL)
                 }
             } catch (_: TimeoutCancellationException) {
-                controller.updateFreshness()
+                controller.recordPollTimeout()
                 render(actionGeneration)
                 return PollDecision.TIMED_OUT
             } catch (cancelled: CancellationException) {
@@ -168,6 +181,11 @@ class PollCoordinator(
             )
         }
     }
+
+    private fun refreshFreshness(actionGeneration: Long) {
+        dependencies.controller.updateFreshness()
+        render(actionGeneration)
+    }
 }
 
 private fun ConnectionState.blocksAutomaticPolling(): Boolean = when (this) {
@@ -178,4 +196,3 @@ private fun ConnectionState.blocksAutomaticPolling(): Boolean = when (this) {
     -> true
     else -> false
 }
-

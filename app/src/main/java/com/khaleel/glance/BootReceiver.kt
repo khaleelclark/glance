@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import com.khaleel.glance.monitoring.MonitoringService
+import com.khaleel.glance.core.RuntimeState
 
 /** BOOT_COMPLETED arrives after credential-encrypted storage becomes available. */
 class BootReceiver : BroadcastReceiver() {
@@ -25,7 +26,7 @@ class BootReceiver : BroadcastReceiver() {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
         if (!permissionGranted) {
-            controller.setMonitoringEnabled(false)
+            controller.setRuntime(RuntimeState.UNABLE_TO_START)
             return
         }
         MonitoringService.start(context)

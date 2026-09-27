@@ -18,6 +18,9 @@ Status: work in progress; no live follower account or Galaxy S25 Ultra has been 
 | Unit tests | **Pass** — `./gradlew :app:testDebugUnitTest`, 2026-09-27, includes freshness and wrong-person tests |
 | API 36 emulator | Google APIs x86_64, Pixel 9 Pro XL profile, KVM accelerated; `Glance_API36` AVD booted (`sys.boot_completed=1`) |
 | Bootstrap APK install/launch | **Pass** — `adb install -r app/build/outputs/apk/debug/app-debug.apk`, `adb shell am start -n com.khaleel.glance/.MainActivity`; process remained running; [shell screenshot](evidence/api36-bootstrap-shell.png) |
+| Synthetic notification on API 36 | **Pass for renderer only** — debug-only activity posted one silent `glucose_monitoring` card with stable ID 1001, `ONGOING_EVENT|ONLY_ALERT_ONCE`, no sound/vibration, absolute source time, Refresh/Pause actions, and a redacted public version. [Fresh shade screenshot](evidence/api36-notification-fresh-demo.png); `dumpsys notification --noredact` also showed distinct delayed and stale titles. This does not exercise the service or polling. |
+| API 36 permission denial | **Pass for platform suppression only** — after `pm revoke com.khaleel.glance android.permission.POST_NOTIFICATIONS`, the debug activity could run but no Glance card appeared in `dumpsys notification`; permission was restored afterward. Setup UI response remains not run. |
+| Debug fixture separation | **Pass** — `DebugNotificationActivity` is present only in the debug merged manifest, absent from the release merged manifest. |
 
 The APK produced so far is a bootstrap shell and does not satisfy product acceptance.
 
@@ -27,7 +30,7 @@ The APK produced so far is a bootstrap shell and does not satisfy product accept
 |---|---|---|
 | LibreLinkUp sign-in and person selection | Not run | Requires integrated adapter and owner login on-device. |
 | Same-timestamp source parity | Not run | Requires owner login and comparison with official source. |
-| Standard notification, privacy, permission denial | Not run | Test on API 30/33/34/35/36+ emulators after service integration. |
+| Standard notification, privacy, permission denial | Partial | API 36 synthetic renderer/permission checks above; service integration and visual lock-screen privacy remain not run. |
 | Live Update | Not run | Test on API 36+ image, then target phone. |
 | Forced Doze and recovery | Not run | Use `adb shell dumpsys deviceidle force-idle`, then unforce. |
 | Screen-off overnight / 24-hour cadence | Not run | Requires integrated app and long device run. |

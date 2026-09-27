@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Build
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
 import java.time.ZoneId
@@ -23,7 +24,7 @@ class GlucoseNotificationRenderer(
     private val state: DisplayState,
     private val unit: GlucoseUnit,
     private val lockScreenVisible: Boolean,
-    @Suppress("unused") private val enhanced: Boolean = false,
+    private val enhanced: Boolean = false,
     zoneId: ZoneId = ZoneId.systemDefault(),
     locale: Locale = Locale.getDefault(),
 ) {
@@ -94,6 +95,15 @@ class GlucoseNotificationRenderer(
             builder.setPublicVersion(buildRedactedPublicVersion())
         }
 
+        if (
+            enhanced &&
+            state.monitoringEnabled &&
+            supportsPromotedOngoingApi() &&
+            notificationManager.canPostPromotedNotifications()
+        ) {
+            builder.setRequestPromotedOngoing(true)
+        }
+
         return builder.build()
     }
 
@@ -149,6 +159,13 @@ class GlucoseNotificationRenderer(
             .setShowWhen(false)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .build()
+
+    private fun supportsPromotedOngoingApi(): Boolean =
+        Build.VERSION.SDK_INT >= 37 ||
+            (
+                Build.VERSION.SDK_INT >= 36 &&
+                    Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+            )
 
     companion object {
         const val CHANNEL_ID = "glucose_monitoring"

@@ -1,0 +1,16 @@
+{
+  "status": 0,
+  "data": {
+    "connection": {
+      "glucoseMeasurement": {
+        "FactoryTimestamp": "9/27/2026 4:46:00 AM",
+        "ValueInMgPerDl": 500,
+        "TrendArrow": 5,
+        "GlucoseUnits": 1,
+        "Value": 500,
+        "isHigh": true,
+        "isLow": false
+      }
+    }
+  }
+}

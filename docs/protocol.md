@@ -1,7 +1,8 @@
 # LibreLinkUp protocol discovery record
 
-Status: discovery baseline for Glance; implementation is intentionally deferred
-until the shared Kotlin API is frozen.
+Status: source-backed discovery baseline plus implemented `GlucoseSource`
+adapter and synthetic transport tests. Authenticated owner verification remains
+outstanding.
 
 Inspection date: 2026-09-27 (UTC).
 
@@ -27,6 +28,36 @@ This adapter must never be presented as a primary glucose monitor or as a basis
 for treatment decisions. The official product describes LibreLinkUp as a tool
 for family, friends, and caregivers, dependent on Internet connectivity, and
 not intended for dosing decisions.
+
+### Implemented boundary
+
+The adapter is implemented in
+`app/src/main/java/com/khaleel/glance/librelinkup/LibreLinkUpSource.kt` with a
+private strict JSON reader. It implements the frozen `GlucoseSource` contract
+without changing shared models or build files. Focused JVM tests use
+MockWebServer plus synthetic resources under `app/src/test/resources/librelinkup`.
+
+The frozen API deliberately leaves several orchestration responsibilities
+outside the transport adapter:
+
+- `AUTH_EXPIRED` tells the credential/session owner to perform the one
+  serialized reauthentication and at most one replay; the adapter never has
+  credentials during `connections` or `latest`.
+- `RATE_LIMITED` includes an absolute `retryAfter`; the monitoring layer must
+  persist and enforce that deadline across process restarts.
+- A successful empty connection list is the frozen representation of “no
+  shared people.” Comparing a persisted selected ID against that list and
+  rejecting late or wrong-person responses belongs to the repository/runtime.
+- Duplicate, out-of-order, and same-time-correction decisions require the
+  stored prior reading, so they remain repository tests rather than stateless
+  HTTP adapter tests.
+
+Two useful distinctions do not fit the current shared enum. A status-920 retry
+that still fails or supplies a malformed minimum version maps to `PROTOCOL`
+rather than a distinct client-upgrade result. Also, the shared `Reading` cannot
+retain unverified `isHigh`/`isLow` flags separately; the adapter leaves
+`specialValue` null and never invents `HIGH` or `LOW`. Add shared outcomes only
+if the UI needs to distinguish these cases before live verification.
 
 ## Pinned upstream and attribution
 
@@ -392,8 +423,11 @@ Glance does not call it.
 
 ## Synthetic fixture catalog
 
-The future adapter tests should use only synthetic identifiers and values. The
-fixture names below are the minimum contract for the implementation handoff:
+Adapter and later orchestration tests use only synthetic identifiers and
+values. The fixture names below remain the minimum end-to-end contract; cases
+that need stored prior state, persisted cooldowns, or concurrent credential
+refresh belong to the repository/monitoring integration rather than the
+stateless HTTP adapter:
 
 | Fixture | Required assertion |
 |---|---|

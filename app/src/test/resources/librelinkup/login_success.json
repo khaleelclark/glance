@@ -1,0 +1,11 @@
+{
+  "status": 0,
+  "data": {
+    "user": { "id": " synthetic-user-id ", "ignored": "extra" },
+    "authTicket": {
+      "token": "synthetic-token",
+      "expires": 1893456000,
+      "duration": 15552000000
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "status": 4,
+  "data": {
+    "step": { "type": "tou" },
+    "authTicket": { "token": "discard-this-synthetic-ticket" }
+  }
+}

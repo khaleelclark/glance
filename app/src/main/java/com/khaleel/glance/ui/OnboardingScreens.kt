@@ -103,7 +103,7 @@ internal fun SignInScreen(accountState: AccountUiState, onSignIn: (Credentials) 
             }
         }
         Text(
-            "Your credentials are sent only when you tap Sign in and are not saved by this screen.",
+            "After sign-in, Glance stores your credentials encrypted on this phone to reconnect.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

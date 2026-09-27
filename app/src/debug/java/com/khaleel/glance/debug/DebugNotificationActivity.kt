@@ -13,6 +13,7 @@ import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Trend
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
+import com.khaleel.glance.monitoring.MonitoringService
 import java.time.Instant
 
 /** Debug-build-only synthetic visual fixture. Release builds cannot receive this action. */
@@ -25,6 +26,18 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode == "service-start") {
+            GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).hide()
+            MonitoringService.start(context)
+            return
+        }
+        if (mode == "service-pause") {
+            (context.applicationContext as com.khaleel.glance.GlanceApplication).controller
+                .setMonitoringEnabled(false)
+            context.stopService(Intent(context, MonitoringService::class.java))
+            GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).hide()
+            return
+        }
         if (mode == "hide") {
             GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).hide()
             return

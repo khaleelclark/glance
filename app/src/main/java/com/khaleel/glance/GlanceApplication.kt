@@ -15,6 +15,8 @@ import com.khaleel.glance.monitoring.MonitoringPresentation
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import android.app.Notification
 import android.app.Service
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -69,4 +71,16 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     }
 
     fun hideCurrentNotification() = notifications.hide()
+
+    /** A Task Manager Stop is an explicit stop, even if persisted intent was enabled. */
+    fun honorExplicitSystemStop() {
+        val latest = getSystemService(ActivityManager::class.java)
+            .getHistoricalProcessExitReasons(packageName, 0, 1)
+            .firstOrNull() ?: return
+        if (latest.reason != ApplicationExitInfo.REASON_USER_REQUESTED) return
+        val prefs = getSharedPreferences("runtime_recovery", MODE_PRIVATE)
+        if (latest.timestamp <= prefs.getLong("last_handled_user_stop", 0L)) return
+        prefs.edit().putLong("last_handled_user_stop", latest.timestamp).apply()
+        controller.setMonitoringEnabled(false)
+    }
 }

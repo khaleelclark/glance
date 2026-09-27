@@ -3,10 +3,12 @@ package com.khaleel.glance
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.WindowInsetsController
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,6 +66,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        app.honorExplicitSystemStop()
+        val lightTheme = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK !=
+            Configuration.UI_MODE_NIGHT_YES
+        window.decorView.windowInsetsController?.setSystemBarsAppearance(
+            if (lightTheme) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
+            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+        )
         accountState = AccountUiState(if (controller.hasAccount) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT)
         setupState = SetupUiState(
             step = when {
@@ -76,6 +85,17 @@ class MainActivity : ComponentActivity() {
         refreshSettings()
         refreshSystemState()
         if (setupState.step == SetupStep.CONNECTION) loadConnections()
+        if (controller.display.value.monitoringEnabled &&
+            controller.display.value.person != null &&
+            controller.display.value.runtime != RuntimeState.RUNNING
+        ) {
+            if (setupState.notificationPermission == PermissionStatus.GRANTED) {
+                startMonitoring()
+            } else {
+                controller.setMonitoringEnabled(false)
+                setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
+            }
+        }
 
         setContent {
             val display by controller.display.collectAsState()

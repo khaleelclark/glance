@@ -127,6 +127,7 @@ class MonitoringService : Service() {
         actionGeneration: Long,
         reason: StartFailure,
     ) {
+        deps.controller.setMonitoringEnabled(false)
         deps.controller.setRuntime(RuntimeState.UNABLE_TO_START)
         runCatching {
             deps.notifications.render(
@@ -179,6 +180,7 @@ class MonitoringService : Service() {
                 ContextCompat.startForegroundService(context, intent)
                 true
             } catch (error: Exception) {
+                deps.controller.setMonitoringEnabled(false)
                 deps.controller.setRuntime(RuntimeState.UNABLE_TO_START)
                 runCatching {
                     deps.notifications.render(

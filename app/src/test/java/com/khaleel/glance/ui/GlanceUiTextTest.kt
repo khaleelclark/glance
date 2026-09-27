@@ -30,7 +30,7 @@ class GlanceUiTextTest {
         assertEquals("112", text.value)
         assertEquals("mg/dL", text.unit)
         assertEquals("→", text.trendSymbol)
-        assertEquals("steady", text.trendDescription)
+        assertEquals("Holding steady", text.trendDescription)
         assertEquals("Reading at 10:42 AM · 1 min ago", text.measured)
         assertEquals("Current reading", text.freshness)
     }
@@ -72,7 +72,26 @@ class GlanceUiTextTest {
 
         assertEquals("No recent reading", text.freshness)
         assertEquals("", text.trendSymbol)
-        assertEquals("Trend unavailable", text.trendDescription)
+        assertEquals("Unavailable", text.trendDescription)
+    }
+
+    @Test
+    fun sourceTrendCategoriesHavePlainLanguageDescriptions() {
+        val expected = mapOf(
+            Trend.RISING_QUICKLY to ("↑" to "Rising quickly"),
+            Trend.RISING to ("↗" to "Rising"),
+            Trend.RISING_SLOWLY to ("↗" to "Slight rise"),
+            Trend.STEADY to ("→" to "Holding steady"),
+            Trend.FALLING_SLOWLY to ("↘" to "Slight drop"),
+            Trend.FALLING to ("↘" to "Dropping"),
+            Trend.FALLING_QUICKLY to ("↓" to "Dropping quickly"),
+            Trend.UNKNOWN to ("" to "Unavailable"),
+        )
+        for ((trend, description) in expected) {
+            val text = formatter.reading(state(reading = reading().copy(trend = trend)), GlucoseUnit.MG_DL, now)!!
+            assertEquals(description.first, text.trendSymbol)
+            assertEquals(description.second, text.trendDescription)
+        }
     }
 
     @Test

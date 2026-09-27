@@ -86,16 +86,16 @@ class GlanceUiText(
     }
 
     private fun trend(trend: Trend, freshness: ReadingFreshness): Pair<String, String> {
-        if (freshness == ReadingFreshness.STALE || freshness == ReadingFreshness.INVALID_TIME) return "" to "Trend unavailable"
+        if (freshness == ReadingFreshness.STALE || freshness == ReadingFreshness.INVALID_TIME) return "" to "Unavailable"
         return when (trend) {
-            Trend.RISING_QUICKLY -> "↑" to "rising quickly"
-            Trend.RISING -> "↗" to "rising"
-            Trend.RISING_SLOWLY -> "↗" to "rising slowly"
-            Trend.STEADY -> "→" to "steady"
-            Trend.FALLING_SLOWLY -> "↘" to "falling slowly"
-            Trend.FALLING -> "↘" to "falling"
-            Trend.FALLING_QUICKLY -> "↓" to "falling quickly"
-            Trend.UNKNOWN -> "" to "trend unavailable"
+            Trend.RISING_QUICKLY -> "↑" to "Rising quickly"
+            Trend.RISING -> "↗" to "Rising"
+            Trend.RISING_SLOWLY -> "↗" to "Slight rise"
+            Trend.STEADY -> "→" to "Holding steady"
+            Trend.FALLING_SLOWLY -> "↘" to "Slight drop"
+            Trend.FALLING -> "↘" to "Dropping"
+            Trend.FALLING_QUICKLY -> "↓" to "Dropping quickly"
+            Trend.UNKNOWN -> "" to "Unavailable"
         }
     }
 

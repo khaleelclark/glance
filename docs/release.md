@@ -67,9 +67,10 @@ application ID and signer for every upgrade; increment versionCode.
    promoted cards stay expanded. Turn that switch off in Settings for the large,
    collapsible card. The main screen has a 24-hour timeline of validated source
    samples: drag across the graph to inspect exact readings; swipe the time
-   labels sideways to browse the full day. Landscape places the graph beside
-   the current reading. Settings has color presets, a touchable color wheel,
-   brightness slider, and a custom six-digit hex field; light and dark themes
+   labels sideways to browse the full day. The current reading places the
+   value, unit, and trend arrow together, with a plain-language trend below;
+   landscape places the graph beside it. Settings has color presets, a
+   touchable color wheel, brightness slider, and a custom six-digit hex field; light and dark themes
    follow the phone. Use Refresh in the app, and Stop
    monitoring in Settings to end the session. Test screen-off
    behavior before relying on the chosen polling interval.

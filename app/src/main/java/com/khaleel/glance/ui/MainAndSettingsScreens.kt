@@ -125,13 +125,16 @@ private fun MainReadingSummary(
                     Text("A value will appear after the first successful fetch.")
                 } else {
                     Text(reading.freshness, style = MaterialTheme.typography.titleMedium)
-                    Text(reading.value, style = MaterialTheme.typography.displayLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(reading.unit, style = MaterialTheme.typography.titleLarge)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Text(reading.value, style = MaterialTheme.typography.displayLarge, modifier = Modifier.alignByBaseline())
+                        Text(reading.unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
                         if (reading.trendSymbol.isNotBlank()) {
                             Text(
                                 text = reading.trendSymbol,
-                                modifier = Modifier.semantics {
+                                modifier = Modifier.alignByBaseline().semantics {
                                     contentDescription = "Trend ${reading.trendDescription}"
                                 },
                                 style = MaterialTheme.typography.displayMedium.copy(
@@ -139,10 +142,13 @@ private fun MainReadingSummary(
                                     color = MaterialTheme.colorScheme.primary,
                                 ),
                             )
-                        } else {
-                            Text(reading.trendDescription, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                    Text(
+                        "Trend · ${reading.trendDescription}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Text(reading.measured, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }

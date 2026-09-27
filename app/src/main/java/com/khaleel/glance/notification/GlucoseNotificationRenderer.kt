@@ -72,7 +72,7 @@ class GlucoseNotificationRenderer(
         val builder = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle(content.title)
-            .setContentText(if (promoted) emphasizedReading(content.text) else content.text)
+            .setContentText(emphasizedReading(content.text))
             .setContentIntent(contentIntent())
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(state.monitoringEnabled)

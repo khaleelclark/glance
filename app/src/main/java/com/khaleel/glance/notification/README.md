@@ -22,7 +22,9 @@ guarantee promotion. OEMs may impose additional criteria, and users may demote o
 presentation. Consequently enhanced mode has no separate update or polling loop and always
 falls back to this standard notification.
 
-The standard custom view uses larger bold glucose text. Promoted cards use
+The standard custom view uses a heavy condensed glucose face and heavy arrow in
+both compact and expanded layouts. Its system-template fallback also bolds the
+fresh reading. Promoted cards use
 Android's own template, which removes app-supplied text-size spans; Glance
 bolds the fresh reading with a `StyleSpan`, but Android controls its rendered
 font size and may vary by device.

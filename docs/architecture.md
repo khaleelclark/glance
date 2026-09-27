@@ -8,3 +8,11 @@
 - Initial development branches are local Git worktrees. Package owners avoid root build files and shared contracts.
 
 The source adapter's `Session` is an in-memory model; the lead's auth store will encrypt persisted credentials and session material with an Android Keystore key. Release signing remains outside Git.
+
+## Local state and concurrency, 2026-09-27
+
+- `SecureFileStore` writes authenticated AES-GCM ciphertext to Android's no-backup directory with `AtomicFile`. An Android Keystore key is usable without biometric prompts after first unlock. Both cloud backup and device transfer are excluded by manifest policy; corrupt/restored ciphertext sends the app back to sign-in.
+- `AuthStore` encrypts reconnect credentials and the reusable session. `LocalStateStore` encrypts the selected stable connection ID, display name, and last normalized reading. Ordinary display and cadence preferences use app-private preferences.
+- `AppController` is the source-of-truth for selected person and `DisplayState`. It increments a generation before account/person changes and rejects late results from previous generations. A single deferred network operation coalesces timer and manual refresh; a persisted retry deadline cannot be bypassed by restart or Refresh.
+- Freshness is computed from `Reading.measuredAt`, not response receipt. Out-of-order readings never replace current data; a duplicate preserves the first receipt; a changed same-timestamp sample may replace it as a source correction.
+- The Android background and notification specialists own their packages in isolated branches. Integration into `AppController` and root manifest/build files remains lead-owned.

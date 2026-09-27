@@ -139,7 +139,7 @@ internal class NotificationContentFormatter(
             }
             ConnectionState.LOCAL_ERROR -> {
                 title = "$person · Saving failed"
-                detail = "Glance could not save the latest reading. Open the app for details."
+                detail = "Glance could not save local data. Open the app for details."
             }
             else -> {
                 title = "$person · Waiting for first reading"
@@ -186,7 +186,7 @@ internal class NotificationContentFormatter(
         ConnectionState.TERMS_REQUIRED -> "LibreLinkUp action required. Showing the last reading."
         ConnectionState.CONNECTION_REMOVED -> "Shared person unavailable. Showing the last reading."
         ConnectionState.PROTOCOL_ERROR -> "Response unavailable. Showing the last reading."
-        ConnectionState.LOCAL_ERROR -> "Glance could not save the latest reading. Showing the last saved reading."
+        ConnectionState.LOCAL_ERROR -> "Glance could not save local data. Showing the last saved reading."
         ConnectionState.READY, ConnectionState.FETCHING -> null
     }
 

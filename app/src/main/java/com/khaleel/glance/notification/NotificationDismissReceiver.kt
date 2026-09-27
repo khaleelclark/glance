@@ -20,7 +20,7 @@ class NotificationDismissReceiver : BroadcastReceiver() {
     }
 }
 
-/** Suppression survives process recreation; only explicit restore or user Start clears it. */
+/** Dismissal survives process recreation; automatic restarts stop instead of reposting. */
 object NotificationVisibility {
     private const val PREFS = "notification_visibility"
     private const val DISMISSED = "dismissed"

@@ -66,6 +66,14 @@ class MonitoringService : Service() {
             return START_NOT_STICKY
         }
 
+        // A sticky restart must not recreate a foreground card the user dismissed.
+        // Stopping the session makes the persisted monitoring state truthful.
+        if (!foreground && NotificationVisibility.isDismissed(this)) {
+            deps.controller.setMonitoringEnabled(false)
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+
         val actionGeneration = when {
             action == ACTION_START && expectedGeneration != null -> expectedGeneration
             activeGeneration == null -> expectedGeneration ?: nextActionGeneration()

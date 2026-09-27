@@ -133,20 +133,35 @@ class AppController(
         }
         synchronized(this) {
             if (generation != capturedGeneration) return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
-            auth = SavedAuth(credentials, session)
-            authStore.save(auth!!)
+            val saved = SavedAuth(credentials, session)
+            try {
+                authStore.save(saved)
+            } catch (_: Exception) {
+                val error = SourceError(SourceErrorKind.STORAGE)
+                updateFailure(error, capturedGeneration)
+                return SourceResult.Failure(error)
+            }
+            auth = saved
             mutableDisplay.value = snapshot(ConnectionState.READY, RuntimeState.STOPPED)
         }
         return connections
     }
 
     @Synchronized
-    fun selectPerson(connection: Connection) {
+    fun selectPerson(connection: Connection): SourceResult<Unit> {
+        val next = StoredPatientState(connection, null)
+        try {
+            patientStore.save(next)
+        } catch (_: Exception) {
+            val error = SourceError(SourceErrorKind.STORAGE)
+            updateFailure(error, generation)
+            return SourceResult.Failure(error)
+        }
         generation++
-        patient = StoredPatientState(connection, null)
-        patientStore.save(patient)
+        patient = next
         settings.nextAllowedFetch = null
         mutableDisplay.value = snapshot(ConnectionState.READY)
+        return SourceResult.Success(Unit)
     }
 
     /** Enter person selection without retaining the prior person's display or late response. */
@@ -210,6 +225,9 @@ class AppController(
     }
 
     private suspend fun doPoll(manual: Boolean): SourceResult<Reading> {
+        if (mutableDisplay.value.connection == ConnectionState.LOCAL_ERROR) {
+            return SourceResult.Failure(SourceError(SourceErrorKind.STORAGE))
+        }
         val (selected, capturedGeneration) = synchronized(this) { patient.selected to generation }
         if (selected == null) return SourceResult.Failure(SourceError(SourceErrorKind.CONNECTION_REMOVED))
         val now = clock.now()
@@ -318,8 +336,14 @@ class AppController(
         }
         synchronized(this) {
             if (generation != capturedGeneration || auth?.credentials != credentials) return@withLock null
-            auth = SavedAuth(credentials, result.value)
-            authStore.save(auth!!)
+            val saved = SavedAuth(credentials, result.value)
+            try {
+                authStore.save(saved)
+            } catch (_: Exception) {
+                updateFailure(SourceError(SourceErrorKind.STORAGE), capturedGeneration)
+                return@withLock null
+            }
+            auth = saved
         }
         result.value
     }
@@ -329,6 +353,7 @@ class AppController(
             ConnectionState.TERMS_REQUIRED -> SourceErrorKind.TERMS_REQUIRED
             ConnectionState.OFFLINE -> SourceErrorKind.NETWORK
             ConnectionState.PROTOCOL_ERROR -> SourceErrorKind.PROTOCOL
+            ConnectionState.LOCAL_ERROR -> SourceErrorKind.STORAGE
             ConnectionState.BACKING_OFF -> SourceErrorKind.SERVER
             else -> SourceErrorKind.AUTH_EXPIRED
         },

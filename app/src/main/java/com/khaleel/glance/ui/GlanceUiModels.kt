@@ -10,6 +10,7 @@ enum class AccountProblem {
     INVALID_CREDENTIALS,
     NETWORK,
     TERMS_REQUIRED,
+    STORAGE,
     PROTOCOL,
 }
 
@@ -18,7 +19,7 @@ data class AccountUiState(
     val problem: AccountProblem? = null,
 )
 
-enum class ConnectionProblem { NONE_FOUND, NETWORK, REMOVED, PROTOCOL }
+enum class ConnectionProblem { NONE_FOUND, NETWORK, REMOVED, STORAGE, PROTOCOL }
 
 data class ConnectionSetupUiState(
     val connections: List<Connection> = emptyList(),

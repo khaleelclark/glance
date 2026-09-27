@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.khaleel.glance.monitoring.MonitoringService
 import com.khaleel.glance.core.RuntimeState
+import com.khaleel.glance.notification.NotificationVisibility
 
 /** BOOT_COMPLETED arrives after credential-encrypted storage becomes available. */
 class BootReceiver : BroadcastReceiver() {
@@ -17,6 +18,10 @@ class BootReceiver : BroadcastReceiver() {
         val app = context.applicationContext as? GlanceApplication ?: return
         app.honorExplicitSystemStop()
         val controller = app.controller
+        if (NotificationVisibility.isDismissed(context) && controller.display.value.monitoringEnabled) {
+            controller.setMonitoringEnabled(false)
+            return
+        }
         if (!controller.settings.resumeAfterBoot ||
             !controller.display.value.monitoringEnabled ||
             !controller.hasAccount ||

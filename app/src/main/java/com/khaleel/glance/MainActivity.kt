@@ -28,6 +28,7 @@ import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.monitoring.MonitoringService
+import com.khaleel.glance.notification.NotificationVisibility
 import com.khaleel.glance.ui.AccountProblem
 import com.khaleel.glance.ui.AccountStatus
 import com.khaleel.glance.ui.AccountUiState
@@ -86,6 +87,12 @@ class MainActivity : ComponentActivity() {
         refreshSettings()
         refreshSystemState()
         if (setupState.step == SetupStep.CONNECTION) loadConnections()
+        if (controller.display.value.monitoringEnabled &&
+            controller.display.value.runtime != RuntimeState.RUNNING &&
+            NotificationVisibility.isDismissed(this)
+        ) {
+            controller.setMonitoringEnabled(false)
+        }
         if (controller.display.value.monitoringEnabled &&
             controller.display.value.person != null &&
             controller.display.value.runtime != RuntimeState.RUNNING
@@ -268,9 +275,14 @@ class MainActivity : ComponentActivity() {
         onConfirmConnection = {
             val selected = connectionState.connections.firstOrNull { it.id == connectionState.selectedConnectionId }
             if (selected != null) {
-                controller.selectPerson(selected)
-                setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
-                scope.launch { controller.poll() }
+                when (controller.selectPerson(selected)) {
+                    is SourceResult.Success -> {
+                        setupState = setupState.copy(step = SetupStep.NOTIFICATION_PRIVACY)
+                        scope.launch { controller.poll() }
+                    }
+                    is SourceResult.Failure ->
+                        connectionState = connectionState.copy(problem = ConnectionProblem.STORAGE)
+                }
             }
         },
         onRetryConnections = { loadConnections() },
@@ -345,11 +357,13 @@ private fun SourceErrorKind.accountProblem(): AccountProblem = when (this) {
     SourceErrorKind.INVALID_CREDENTIALS, SourceErrorKind.AUTH_EXPIRED -> AccountProblem.INVALID_CREDENTIALS
     SourceErrorKind.NETWORK -> AccountProblem.NETWORK
     SourceErrorKind.TERMS_REQUIRED -> AccountProblem.TERMS_REQUIRED
+    SourceErrorKind.STORAGE -> AccountProblem.STORAGE
     else -> AccountProblem.PROTOCOL
 }
 
 private fun SourceErrorKind.connectionProblem(): ConnectionProblem = when (this) {
     SourceErrorKind.NETWORK -> ConnectionProblem.NETWORK
     SourceErrorKind.CONNECTION_REMOVED -> ConnectionProblem.REMOVED
+    SourceErrorKind.STORAGE -> ConnectionProblem.STORAGE
     else -> ConnectionProblem.PROTOCOL
 }

@@ -173,6 +173,13 @@ the lock screen and via Clear all. Respect dismissal and offer **Show
 notification again** in the app. Do not immediately repost in a loop. See
 [Android 14 notification behavior](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications).
 
+Glance suppresses ordinary updates after a recorded dismissal while the
+foreground service remains alive. If Android later recreates that service,
+Glance stops the persisted monitoring session before calling `startForeground`;
+the owner must explicitly Resume to start a new session. This avoids restoring
+a dismissed card during a sticky restart. Actual swipe delivery and process
+recreation still need device validation.
+
 Live Update is progressive enhancement only. Android 16 / API 36 introduced
 the promoted-ongoing capability, and OEMs may add eligibility criteria. A user
 explicitly starting and stopping an ongoing glucose-monitoring session plausibly

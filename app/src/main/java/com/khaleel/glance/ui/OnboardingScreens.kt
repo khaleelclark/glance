@@ -291,6 +291,7 @@ private fun accountProblemText(problem: AccountProblem?) = when (problem) {
     AccountProblem.INVALID_CREDENTIALS -> "Email or password was not accepted. Check them and try again."
     AccountProblem.NETWORK -> "No internet connection. Check the network and try again."
     AccountProblem.TERMS_REQUIRED -> "Open LibreLinkUp to review its terms, then try again."
+    AccountProblem.STORAGE -> "Glance could not save sign-in on this device. Check local storage and try again."
     AccountProblem.PROTOCOL -> "LibreLinkUp returned an unexpected response. Try again later."
 }
 
@@ -299,6 +300,7 @@ private fun connectionProblemText(problem: ConnectionProblem?) = when (problem) 
     ConnectionProblem.NONE_FOUND -> "No shared people found. Accept Patrick's invitation in LibreLinkUp, then try again."
     ConnectionProblem.NETWORK -> "No internet connection. Shared people could not be loaded."
     ConnectionProblem.REMOVED -> "The selected shared person is no longer available."
+    ConnectionProblem.STORAGE -> "Glance could not save the selected person on this device. Try again."
     ConnectionProblem.PROTOCOL -> "LibreLinkUp returned an unexpected response."
 }
 

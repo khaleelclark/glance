@@ -160,6 +160,52 @@ class AppControllerTest {
         assertEquals(1, source.latestCalls)
     }
 
+    @Test fun failedSignInPersistenceKeepsAccountSignedOut() = runBlocking {
+        val auth = MemoryAuth(null).apply { failSave = true }
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = AppController(source, auth, MemoryPatient(), MemorySettings(), FakeClock(start))
+
+        val result = controller.signIn(credentials)
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertNull(auth.saved)
+        assertTrue(!controller.hasAccount)
+        assertEquals(ConnectionState.SIGN_IN_REQUIRED, controller.display.value.connection)
+    }
+
+    @Test fun failedSessionRecoveryPersistenceStopsPollingWithLocalError() = runBlocking {
+        val auth = MemoryAuth(SavedAuth(credentials, session)).apply { failSave = true }
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = AppController(
+            source, auth, MemoryPatient(), MemorySettings(), FakeClock(start.plusSeconds(7200)),
+        )
+        controller.selectPerson(patrick)
+
+        val result = controller.poll()
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertEquals(session, auth.saved?.session)
+        assertEquals(0, source.latestCalls)
+        assertEquals(SourceErrorKind.STORAGE, (controller.poll() as SourceResult.Failure).error.kind)
+        assertEquals(0, source.latestCalls)
+    }
+
+    @Test fun failedPersonSelectionPersistenceKeepsPriorPerson() {
+        val patient = MemoryPatient()
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = controller(source, patient)
+        controller.selectPerson(patrick)
+        patient.failSave = true
+
+        val result = controller.selectPerson(other)
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertEquals(patrick, controller.display.value.person)
+        assertEquals(patrick, patient.state.selected)
+    }
+
     private fun controller(
         source: FakeSource,
         patient: MemoryPatient,
@@ -172,7 +218,11 @@ class AppControllerTest {
         override fun elapsedRealtimeMillis() = 0L
     }
     private class MemoryAuth(var saved: SavedAuth?) : AuthPersistence {
-        override fun save(auth: SavedAuth) { saved = auth }
+        var failSave = false
+        override fun save(auth: SavedAuth) {
+            if (failSave) throw IllegalStateException("synthetic storage failure")
+            saved = auth
+        }
         override fun load() = saved
         override fun clear() { saved = null }
     }

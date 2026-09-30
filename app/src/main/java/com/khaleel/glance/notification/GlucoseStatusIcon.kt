@@ -16,8 +16,14 @@ import java.util.Locale
 
 /** No historical number is presented as a current status-bar value. */
 object GlucoseStatusIcon {
-    fun text(state: DisplayState, unit: GlucoseUnit, enabled: Boolean): String? {
-        if (!enabled || !state.monitoringEnabled || state.runtime != RuntimeState.RUNNING ||
+    fun text(
+        state: DisplayState,
+        unit: GlucoseUnit,
+        enabled: Boolean,
+        lockScreenVisible: Boolean = true,
+    ): String? {
+        // PRIVATE/publicVersion redacts the card, but does not reliably hide the original icon.
+        if (!enabled || !lockScreenVisible || !state.monitoringEnabled || state.runtime != RuntimeState.RUNNING ||
             state.freshness != ReadingFreshness.FRESH
         ) return null
         val reading = state.reading ?: return null
@@ -36,7 +42,7 @@ object GlucoseStatusIcon {
         }
         val bounds = Rect()
         paint.getTextBounds(text, 0, text.length, bounds)
-        paint.textSize *= minOf(88f / bounds.width().coerceAtLeast(1), 80f / bounds.height().coerceAtLeast(1))
+        paint.textSize *= minOf(80f / bounds.width().coerceAtLeast(1), 76f / bounds.height().coerceAtLeast(1))
         paint.getTextBounds(text, 0, text.length, bounds)
         Canvas(bitmap).drawText(text, 48f - bounds.exactCenterX(), 48f - bounds.exactCenterY(), paint)
         return Icon.createWithBitmap(bitmap)

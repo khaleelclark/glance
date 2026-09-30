@@ -124,8 +124,13 @@ Android 16 and a promotion request alone do not guarantee a Now bar card.
 Glucose number icon starts enabled and draws the selected unit's fresh number
 as a monochrome small icon. Paused, starting, absent, delayed, stale, special
 LOW/HIGH, invalid and excessively long values retain the Glance icon.
-The redacted public lock-screen card uses the Glance icon and no critical text.
-Android's lock-screen privacy and icon visibility settings still apply.
+When lock-screen values are hidden, the original notification also uses the
+Glance icon and no critical text, including while unlocked: publicVersion alone
+cannot reliably hide the original icon/chip on every Samsung surface.
+Promoted Live Updates use the Glance icon beside their chip value, avoiding a
+duplicate number; the numeric icon applies to the regular card. The bitmap has
+padding for OEM icon scaling, but Samsung decimal/three-digit readability still
+needs the owner's check. Android's lock-screen privacy settings still apply.
 
 The monitoring notification sets ongoing and NO_CLEAR: Clear all leaves it in
 place. Android 14 and newer can still permit an individual dismissal while

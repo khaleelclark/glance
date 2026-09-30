@@ -21,3 +21,10 @@ and compile API 37. The owner reports Android 16 / One UI 8.5 on the S25 Ultra.
 
 Independent review is tracked separately and must be tied to the candidate
 source revision before delivery.
+
+Review corrections: hidden lock-screen values now suppress the original
+numeric icon and short critical text, including while unlocked, because a
+redacted public card does not protect every icon/chip surface. Promoted cards
+retain the app glyph to avoid duplicating the chip number. Numeric bitmap
+padding was increased. The final review and emulator recheck are recorded in
+the release manifest; earlier screenshots above show the pre-review candidate.

@@ -83,7 +83,8 @@ class GlucoseNotificationRenderer(
                 else Notification.VISIBILITY_PRIVATE,
             )
 
-        GlucoseStatusIcon.text(state, unit, numericStatusIcon)?.let {
+        // A promoted chip already has the reading as text: retain the app glyph to avoid duplication.
+        GlucoseStatusIcon.text(state, unit, numericStatusIcon && !promoted, lockScreenVisible)?.let {
             builder.setSmallIcon(GlucoseStatusIcon.create(it))
         }
 
@@ -99,7 +100,8 @@ class GlucoseNotificationRenderer(
             builder.setStyle(Notification.BigTextStyle().bigText(emphasizedReading(content.bigText)))
             // The promoted status chip can show a short current value without opening the shade.
             // Delayed or stale readings use a label instead of an apparently current number.
-            LiveUpdateSupport.request(builder, content.statusChipText ?: "")
+            // The original chip can appear outside the redacted public card on lock screen/AOD.
+            LiveUpdateSupport.request(builder, if (lockScreenVisible) content.statusChipText.orEmpty() else "")
         } else {
             // Promoted Live Updates cannot use RemoteViews and Android makes them uncollapsible.
             // The regular card uses distinct compact and expanded views for readable numbers.

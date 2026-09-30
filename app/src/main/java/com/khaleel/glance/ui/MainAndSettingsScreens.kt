@@ -247,7 +247,7 @@ internal fun SettingsScreen(
             )
             SettingSwitch(
                 title = "Glucose number icon",
-                detail = "Show the current reading as the small notification icon. Uses the selected unit; older or unavailable readings use the Glance icon. Hidden lock-screen cards use the Glance icon too.",
+                detail = "Show the current reading as the regular notification icon. Older readings use the Glance icon. Hidden lock-screen values also hide the number icon and Live Update chip value, including while unlocked. Live Updates use the Glance icon beside the chip value.",
                 checked = settings.numericStatusIcon,
                 onCheckedChange = callbacks.onNumericStatusIconChanged,
             )

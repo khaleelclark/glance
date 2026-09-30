@@ -40,6 +40,13 @@ class GlucoseStatusIconTest {
         }
     }
 
+    @Test fun `hidden lock screen values suppress the original number icon in both units`() {
+        for (unit in GlucoseUnit.entries) {
+            assertNull(GlucoseStatusIcon.text(state, unit, true, lockScreenVisible = false))
+        }
+        assertEquals("112", GlucoseStatusIcon.text(state, GlucoseUnit.MG_DL, true, lockScreenVisible = true))
+    }
+
     @Test fun `special nonfinite and excessively long numbers fall back`() {
         for (special in SpecialValue.entries) {
             assertNull(GlucoseStatusIcon.text(state.copy(reading = reading.copy(specialValue = special)), GlucoseUnit.MG_DL, true))

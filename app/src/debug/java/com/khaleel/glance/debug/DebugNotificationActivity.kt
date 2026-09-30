@@ -32,6 +32,27 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode == "live-api-check" && android.os.Build.VERSION.SDK_INT >= 36) {
+            val manager = context.getSystemService(android.app.NotificationManager::class.java)
+            GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).createChannel()
+            val builder = android.app.Notification.Builder(context, GlucoseNotificationRenderer.CHANNEL_ID)
+                .setSmallIcon(com.khaleel.glance.R.drawable.ic_glance_status)
+                .setContentTitle("DEMO · Live Update API check")
+                .setContentText("DEMO · 112 mg/dL")
+                .setOngoing(true)
+                .setStyle(android.app.Notification.BigTextStyle().bigText("DEMO · 112 mg/dL"))
+            com.khaleel.glance.notification.LiveUpdateSupport.request(builder, "112")
+            val notification = builder.build()
+            val result = org.json.JSONObject()
+                .put("sdkFull", android.os.Build.VERSION.SDK_INT_FULL)
+                .put("promotionAllowed", manager.canPostPromotedNotifications())
+                .put("requestExtra", notification.extras.getBoolean("android.requestPromotedOngoing"))
+                .put("criticalText", notification.extras.getString("android.shortCriticalText"))
+                .put("customViewAbsent", notification.contentView == null && notification.bigContentView == null)
+            java.io.File(context.filesDir, "live-api-check.json").writeText(result.toString())
+            manager.notify(GlucoseNotificationRenderer.NOTIFICATION_ID, notification)
+            return
+        }
         if (mode == "service-demo") {
             context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit()
                 .putBoolean("enabled", true).putInt("poll_count", 0).commit()
@@ -113,11 +134,13 @@ class DebugNotificationActivity : Activity() {
             "stale" -> 18L
             else -> 1L
         }
+        val unit = if (intent.getStringExtra("unit") == "mmol") GlucoseUnit.MMOL_L else GlucoseUnit.MG_DL
+        val value = intent.getStringExtra("value")?.toDoubleOrNull()?.coerceIn(20.0, 600.0) ?: 112.0
         val reading = Reading(
             connectionId = "synthetic-person",
             measuredAt = now.minusSeconds(ageMinutes * 60),
-            valueMgDl = 112.0,
-            sourceValue = 112.0,
+            valueMgDl = value,
+            sourceValue = value,
             sourceUnit = GlucoseUnit.MG_DL,
             specialValue = null,
             trend = Trend.STEADY,
@@ -141,9 +164,10 @@ class DebugNotificationActivity : Activity() {
         GlucoseNotificationRenderer(
             context,
             state,
-            GlucoseUnit.MG_DL,
+            unit,
             lockScreenVisible = intent.getBooleanExtra("lock_visible", false),
-            enhanced = false,
+            enhanced = intent.getBooleanExtra("enhanced", false),
+            numericStatusIcon = intent.getBooleanExtra("numeric_icon", true),
         ).post()
     }
 

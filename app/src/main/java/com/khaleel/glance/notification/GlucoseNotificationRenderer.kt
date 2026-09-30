@@ -37,6 +37,7 @@ class GlucoseNotificationRenderer(
     private val actionGeneration: Long? = null,
     zoneId: ZoneId = ZoneId.systemDefault(),
     locale: Locale = Locale.getDefault(),
+    private val numericStatusIcon: Boolean = true,
 ) {
     private val appContext = context.applicationContext
     private val notificationManager =
@@ -67,8 +68,7 @@ class GlucoseNotificationRenderer(
         val promoted = enhanced &&
             state.monitoringEnabled &&
             state.runtime == RuntimeState.RUNNING &&
-            supportsPromotedOngoingApi() &&
-            notificationManager.canPostPromotedNotifications()
+            LiveUpdateSupport.canRequest(appContext)
         val builder = Notification.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_glance_status)
             .setContentTitle(content.title)
@@ -83,6 +83,10 @@ class GlucoseNotificationRenderer(
                 else Notification.VISIBILITY_PRIVATE,
             )
 
+        GlucoseStatusIcon.text(state, unit, numericStatusIcon)?.let {
+            builder.setSmallIcon(GlucoseStatusIcon.create(it))
+        }
+
         state.reading?.let { builder.setWhen(it.measuredAt.toEpochMilli()) }
 
         actionGeneration?.let { builder.setDeleteIntent(dismissIntent(it)) }
@@ -95,8 +99,7 @@ class GlucoseNotificationRenderer(
             builder.setStyle(Notification.BigTextStyle().bigText(emphasizedReading(content.bigText)))
             // The promoted status chip can show a short current value without opening the shade.
             // Delayed or stale readings use a label instead of an apparently current number.
-            builder.setShortCriticalText(content.statusChipText ?: "")
-            builder.setRequestPromotedOngoing(true)
+            LiveUpdateSupport.request(builder, content.statusChipText ?: "")
         } else {
             // Promoted Live Updates cannot use RemoteViews and Android makes them uncollapsible.
             // The regular card uses distinct compact and expanded views for readable numbers.
@@ -105,7 +108,10 @@ class GlucoseNotificationRenderer(
                 .setCustomBigContentView(customView(R.layout.notification_glucose_expanded, expanded = true))
         }
 
-        return builder.build()
+        return builder.build().apply {
+            // Clear all leaves the monitoring card in place. Android 14+ may still allow a swipe.
+            if (state.monitoringEnabled) flags = flags or Notification.FLAG_NO_CLEAR
+        }
     }
 
     fun post() {
@@ -186,16 +192,9 @@ class GlucoseNotificationRenderer(
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-        if (supportsPromotedOngoingApi()) builder.setShortCriticalText("")
+        if (Build.VERSION.SDK_INT >= 36) builder.setShortCriticalText("")
         return builder.build()
     }
-
-    private fun supportsPromotedOngoingApi(): Boolean =
-        Build.VERSION.SDK_INT >= 37 ||
-            (
-                Build.VERSION.SDK_INT >= 36 &&
-                    Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
-            )
 
     companion object {
         const val CHANNEL_ID = "glucose_monitoring"

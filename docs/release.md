@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `15`, and versionName
-`0.14.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `16`, and versionName
+`0.15.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.14.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.15.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -104,3 +104,38 @@ limits, and next retry time. If terms or policy acceptance is required, complete
 that in the official LibreLinkUp app, then reconnect in Glance. After a
 force-stop or Android Task Manager Stop, open Glance and explicitly resume.
 Reinstall only after checking the state and preserving the signing key.
+
+## Samsung Live Update and glucose icon (0.15.0)
+
+The owner reports Android 16 / One UI 8.5 on the Galaxy S25 Ultra. Version
+0.15 requests promoted ongoing notifications on Android 16.0 using the
+platform promotion extra, avoiding the builder method introduced in 36.1.
+It still checks whether promotion is allowed and uses the regular custom card
+when unavailable. Settings displays the observed promotion state and provides
+a Live Update settings shortcut, with the app notification page as fallback
+when the device has no dedicated screen.
+
+On Samsung, check Settings → Notifications → App notifications → Glance for
+Allow notifications, lock-screen display, and Live notifications if offered.
+Then check Settings → Lock screen and AOD → Now bar → Live notifications
+(or See all) and enable Glance if listed. Samsung controls app eligibility;
+Android 16 and a promotion request alone do not guarantee a Now bar card.
+
+Glucose number icon starts enabled and draws the selected unit's fresh number
+as a monochrome small icon. Paused, starting, absent, delayed, stale, special
+LOW/HIGH, invalid and excessively long values retain the Glance icon.
+The redacted public lock-screen card uses the Glance icon and no critical text.
+Android's lock-screen privacy and icon visibility settings still apply.
+
+The monitoring notification sets ongoing and NO_CLEAR: Clear all leaves it in
+place. Android 14 and newer can still permit an individual dismissal while
+unlocked. Glance respects that dismissal and offers Show notification again;
+it does not repost a dismissed card in a loop or impersonate a call/alarm.
+
+Primary references (checked 2026-09-30):
+
+- https://developer.android.com/develop/ui/views/notifications/live-update
+- https://developer.android.com/reference/android/app/Notification.Builder#setRequestPromotedOngoing(boolean)
+- https://developer.android.com/reference/android/provider/Settings#ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS
+- https://developer.android.com/about/versions/14/behavior-changes-all
+- https://www.samsung.com/uk/support/mobile-devices/how-to-use-the-now-bar-on-the-lock-screen-of-your-samsung-galaxy-device/

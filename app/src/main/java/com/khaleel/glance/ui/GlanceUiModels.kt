@@ -54,6 +54,8 @@ data class UserSettingsUi(
     val resumeAfterBoot: Boolean,
     val accentHex: String = ThemeAccent.DEFAULT,
     val alerts: AlertConfig = AlertConfig.defaults(),
+    val numericStatusIcon: Boolean = true,
+    val liveUpdateStatus: String = "Android decides whether to promote the monitoring notification.",
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -78,6 +80,8 @@ data class GlanceCallbacks(
     val onLockScreenVisibilityChanged: (Boolean) -> Unit,
     val onIntervalChanged: (Int) -> Unit,
     val onEnhancedNotificationChanged: (Boolean) -> Unit,
+    val onNumericStatusIconChanged: (Boolean) -> Unit,
+    val onOpenLiveUpdateSettings: () -> Unit,
     val onAccentHexChanged: (String) -> Unit,
     val onAlertRuleChanged: (AlertKind, AlertRule) -> Unit,
     val onAlertSoundChanged: (AlertKind) -> Unit,

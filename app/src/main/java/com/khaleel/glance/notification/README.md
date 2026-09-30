@@ -7,20 +7,25 @@ notification no longer posts Refresh or Pause. Refresh remains available in the
 app. Old generation-checked service intents remain recognized for cards created
 before an upgrade. The intents contain no patient or account identifiers.
 
-After the standard renderer compiled and its formatting tests passed, the optional enhancement
-was added. `enhanced = true` requests promoted-ongoing presentation only on Android API 36 or
-newer with the API 36.1 promoted-notification methods available, and only when
-`NotificationManager.canPostPromotedNotifications()` is true. Android still decides whether to
-promote it. Android's primary documentation (checked
-2026-09-27) says an eligible Live Update must use a standard supported style (including
-`BigTextStyle`), be ongoing, have a title, avoid custom `RemoteViews`, group-summary and
-colorized presentation, use a channel above `IMPORTANCE_MIN`, request the non-runtime
-`POST_PROMOTED_NOTIFICATIONS` manifest permission, and request promotion. The API 36
-`NotificationManager.canPostPromotedNotifications()` check covers user permission/settings;
-`Notification.hasPromotableCharacteristics()` checks notification structure but does not
-guarantee promotion. OEMs may impose additional criteria, and users may demote or dismiss the
-presentation. Consequently enhanced mode has no separate update or polling loop and always
-falls back to this standard notification.
+Enhanced mode requests promotion on Android 16 (API 36.0) and newer when
+`NotificationManager.canPostPromotedNotifications()` allows it. The
+`android.requestPromotedOngoing` extra is used instead of the platform builder
+setter, which was added in API 36.1. Short critical text is available in API
+36.0. The supported standard BigText style avoids custom RemoteViews in
+promoted mode. Android and Samsung still decide whether to promote the card.
+Settings reports the effective permission/channel/posting state and links to
+`ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS` with `EXTRA_APP_PACKAGE`;
+missing screens fall back to app notification settings.
+
+Fresh numeric readings use a generated 96×96 alpha-mask small icon in the
+selected unit by default. Nonfresh, special, absent, stopped, and unrenderably
+long values use the Glance icon. The user can disable numeric icons. Public
+versions always retain the ordinary icon. Android controls tint and icon size.
+
+Ongoing and NO_CLEAR protect the monitoring card from Clear all. Android 14+
+may allow an individual swipe while unlocked. The existing generation-checked
+dismissal handler and explicit restore action remain; no automatic repost loop
+is added.
 
 The standard custom view uses a heavy condensed glucose face and heavy arrow in
 both compact and expanded layouts. Its system-template fallback also bolds the

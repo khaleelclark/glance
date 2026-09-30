@@ -30,6 +30,7 @@ import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.monitoring.MonitoringService
 import com.khaleel.glance.notification.NotificationVisibility
+import com.khaleel.glance.notification.LiveUpdateSupport
 import com.khaleel.glance.ui.AccountProblem
 import com.khaleel.glance.ui.AccountStatus
 import com.khaleel.glance.ui.AccountUiState
@@ -151,7 +152,8 @@ class MainActivity : ComponentActivity() {
                     (diagnostic.largestObservedGapMillis?.let { it / 1000L } ?: "none") + " seconds\n" +
                     "Events retained: " + diagnostic.eventCount + "\n" +
                     "Next allowed fetch: " + (display.nextAllowedFetch ?: "now") + "\n" +
-                    "Notification permission: " + setupState.notificationPermission
+                    "Notification permission: " + setupState.notificationPermission + "\n" +
+                    "Live Update: " + LiveUpdateSupport.status(this)
                 AlertDialog(
                     onDismissRequest = { showDiagnostics = false },
                     title = { Text("Diagnostics") },
@@ -174,6 +176,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshSystemState()
+        if (controller.display.value.monitoringEnabled && controller.display.value.runtime == RuntimeState.RUNNING) {
+            app.showCurrentNotification()
+            refreshSettings()
+        }
         if (setupState.notificationPermission == PermissionStatus.DENIED &&
             controller.display.value.monitoringEnabled
         ) {
@@ -199,6 +205,8 @@ class MainActivity : ComponentActivity() {
             settings.resumeAfterBoot,
             settings.accentHex,
             app.alertPreferences.config(),
+            settings.numericStatusIcon,
+            LiveUpdateSupport.status(this),
         )
     }
 
@@ -214,6 +222,7 @@ class MainActivity : ComponentActivity() {
                 BatteryStatus.STANDARD
             },
         )
+        refreshSettings()
     }
 
     private fun loadConnections() {
@@ -249,8 +258,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderSettingsChange() {
-        refreshSettings()
         if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
+        refreshSettings()
     }
 
     private val callbacks = GlanceCallbacks(
@@ -322,6 +331,15 @@ class MainActivity : ComponentActivity() {
         },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },
         onEnhancedNotificationChanged = { controller.settings.enhancedNotification = it; renderSettingsChange() },
+        onNumericStatusIconChanged = { controller.settings.numericStatusIcon = it; renderSettingsChange() },
+        onOpenLiveUpdateSettings = {
+            val liveSettings = LiveUpdateSupport.settingsIntent(this)
+            try {
+                startActivity(liveSettings)
+            } catch (_: android.content.ActivityNotFoundException) {
+                startActivity(LiveUpdateSupport.appSettingsIntent(this))
+            }
+        },
         onAccentHexChanged = { controller.settings.accentHex = it; refreshSettings() },
         onAlertRuleChanged = { kind, rule ->
             runCatching { app.alertPreferences.setRule(kind, rule) }

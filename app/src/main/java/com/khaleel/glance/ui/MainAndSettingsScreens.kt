@@ -233,9 +233,27 @@ internal fun SettingsScreen(
             )
             SettingSwitch(
                 title = "Status chip Live Update",
-                detail = "On by default. Shows the value in Android's status chip when available; this card stays expanded. Turn off for the large, collapsible card.",
+                detail = "On by default. Requests a status chip on Android 16 or newer. Samsung decides whether to show it in the Now bar. Turn off for the large, collapsible card.",
                 checked = settings.enhancedNotification,
                 onCheckedChange = callbacks.onEnhancedNotificationChanged,
+            )
+            Text(settings.liveUpdateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = callbacks.onOpenLiveUpdateSettings, modifier = Modifier.fillMaxWidth()) {
+                Text("Live Update settings")
+            }
+            Text(
+                "Samsung: Settings → Lock screen and AOD → Now bar → Live notifications. Enable Glance if listed, and allow its lock-screen notifications.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SettingSwitch(
+                title = "Glucose number icon",
+                detail = "Show the current reading as the small notification icon. Uses the selected unit; older or unavailable readings use the Glance icon. Hidden lock-screen cards use the Glance icon too.",
+                checked = settings.numericStatusIcon,
+                onCheckedChange = callbacks.onNumericStatusIconChanged,
+            )
+            Text(
+                "The monitoring card stays when you tap Clear all. Android 14 or newer may still let you swipe it away; use Show notification again to restore it.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 

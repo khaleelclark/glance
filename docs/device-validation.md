@@ -71,3 +71,16 @@ The integrated APK contains the real source adapter, encrypted state, Compose sc
 | In-place signed APK upgrade | Partial | API 36 accepted 0.1.0 → 0.2.0 → 0.3.0 with the same certificate and retained synthetic private-file markers. Saved account/settings migration and phone behavior remain unverified. |
 
 Emulator observations will be recorded with API level, system image, commands, elapsed gaps, and screenshots where useful. Emulator battery percentages do not qualify the phone battery target.
+
+## 0.15.0 Samsung compatibility and numeric icon
+
+Owner-reported target configuration: Galaxy S25 Ultra, Android 16 / One UI
+8.5. This reports the installed version, not a successful device test.
+
+The API 36.0 Google APIs x86_64 AVD was tested using KVM via `sg kvm`.
+See [the focused test report](notification-0.15-validation.md) for the numeric
+icon, privacy, Clear all and Live Update API checks. Actual promotion is
+**not verified**: this system image reports promotion disallowed and does not
+provide the dedicated promotion settings activity. The regular card remains
+available. Samsung Now bar appearance, real source timing and physical-device
+battery/background qualification remain outstanding.

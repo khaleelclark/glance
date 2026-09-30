@@ -90,6 +90,7 @@ interface SettingsPersistence {
     var unit: GlucoseUnit
     var showOnLockScreen: Boolean
     var enhancedNotification: Boolean
+    var numericStatusIcon: Boolean
     var accentHex: String
     var intervalMinutes: Int
     var resumeAfterBoot: Boolean
@@ -114,6 +115,9 @@ class UserSettings(context: Context) : SettingsPersistence {
     override var accentHex: String
         get() = prefs.getString("accent_hex", "#087E82") ?: "#087E82"
         set(value) = prefs.edit().putString("accent_hex", value).apply()
+    override var numericStatusIcon: Boolean
+        get() = prefs.getBoolean("numeric_status_icon", true)
+        set(value) = prefs.edit().putBoolean("numeric_status_icon", value).apply()
     override var intervalMinutes: Int
         get() = prefs.getInt("interval_minutes", 1).takeIf { it == 1 || it == 5 } ?: 1
         set(value) { require(value == 1 || value == 5); prefs.edit().putInt("interval_minutes", value).apply() }

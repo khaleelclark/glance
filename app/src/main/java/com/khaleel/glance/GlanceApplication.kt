@@ -71,6 +71,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                 controller.settings.showOnLockScreen,
                 controller.settings.enhancedNotification,
                 presentation.actionGeneration.takeIf { it != 0L },
+                numericStatusIcon = controller.settings.numericStatusIcon,
             )
 
         override fun startingNotification(service: Service, presentation: MonitoringPresentation): Notification =

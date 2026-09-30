@@ -44,3 +44,9 @@ personal APK, key backup, install and upgrade instructions, see
 - Account credentials are entered only on the phone, encrypted with Android Keystore, and excluded from backup. Never put real account data, signing keys, or patient screenshots in Git.
 
 The LibreLinkUp interface is unofficial. Live account behavior and Samsung background operation require on-device verification before this is considered a qualified release.
+
+On Samsung Android 16, Glance requests a Live Update when permitted. Settings
+shows its observed status and links to Android's promotion controls. Also
+check Samsung's Now bar and Glance Live notifications settings. The fresh
+glucose number can serve as the small icon in either display mode. Clear all
+keeps the monitoring card; Android 14+ may still allow individual swipes.

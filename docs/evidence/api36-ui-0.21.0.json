@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "readingTimestampGraphAndClearMainActions": true,
+    "refreshDispatchesOnce": true,
+    "mainSixAndTwelveHourChoicesWork": true,
+    "commonSettingsDirectWithoutAccordions": true,
+    "privacySummaryToggleSemanticsAndSingleDispatch": true,
+    "notificationStyleChoicesDispatchCorrectly": true,
+    "showNotificationLivesWithNotificationControls": true,
+    "consolidatedNotificationHelpHasNoSideEffects": true,
+    "fixedTabsAndPagePositionPreserved": true,
+    "alertWheelChangeDispatchesBeforePageExit": true,
+    "colorWheelPresetsAndHexRemainReachable": true,
+    "widgetWatchControlsAndPrivacyReachable": true,
+    "destructiveConfirmationAndCancelPreserved": true,
+    "systemBackAndUnitChoiceRetained": true,
+    "staleLabelAndSuppressedCurrentTrendPreserved": true,
+    "offlineRecoveryCopyVisible": true,
+    "signInAndEncryptedStorageNoticeReachable": true,
+    "darkMainRenders": true,
+    "largeFontReadingUnitsAndFixedTabsReachable": true,
+    "landscapeReadingGraphAndTimeControlsRender": true
+  },
+  "allPassed": true,
+  "liveAccount": "not tested",
+  "GalaxyS25Ultra": "not tested",
+  "settingsPersistence": "fixture callbacks only; actual persistence not exercised"
+}

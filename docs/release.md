@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `25`, and versionName
-`0.20.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `26`, and versionName
+`0.21.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.20.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.21.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -268,3 +268,25 @@ runtime and chart math/gestures are unchanged. Existing Live Update preferences
 are respected; turn Status chip Live Update off for the regular graph card.
 See [UI refresh validation](ui-refresh-validation.md) for synthetic checks and
 physical-device boundaries. The watch needs no reinstall for this UI change.
+
+## 0.21.0 UI overhaul
+
+A defined reading hero, layered surfaces, consistent toolbar and three Settings
+pages replace the flat layout and accordion maze. Everyday shows the common
+preferences directly; Alerts contains glucose limits and sounds; More contains
+appearance, widgets, watch, system links and account controls. Individual
+About expanders are replaced with concise summaries. Privacy consequences remain
+visible at the relevant controls, and destructive actions retain confirmation.
+
+Show notification is located with notification settings; it invokes the same
+restoration action formerly labeled Restore card. The chart defaults to the latest
+6 hours and has 6/12/24-hour choices below it. Touch inspects real observations;
+pinching zooms without two-finger timeline scrolling. Axis limits and alert-driven
+colors are retained. Accessibility viewport actions now report actual changes and
+announce the visible time range. Special source values are excluded from numeric
+graph geometry and coincident limit lines honor red priority. Alert wheels persist
+each value change immediately so switching pages cannot cancel a pending save.
+
+No notification renderer, polling, credential storage, alert policy, widgets or
+watch runtime change. Existing watch installs remain compatible. Synthetic native
+checks and live-device boundaries are recorded in docs/ui-overhaul-validation.md.

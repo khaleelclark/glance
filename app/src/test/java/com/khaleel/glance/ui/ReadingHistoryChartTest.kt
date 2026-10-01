@@ -2,6 +2,7 @@ package com.khaleel.glance.ui
 
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
 import java.time.Instant
 import java.time.ZoneId
@@ -25,6 +26,11 @@ class ReadingHistoryChartTest {
         assertEquals(included, chartPoints(history, "patrick", now))
     }
 
+    @Test fun sourceSpecialValuesNeverBecomeExactNumericGraphPoints() {
+        val special = reading("patrick", 1, 40.0).copy(specialValue = SpecialValue.LOW)
+        assertEquals(emptyList<Reading>(), chartPoints(listOf(special), "patrick", now))
+    }
+
     @Test fun draggingSelectsNearestObservedPointByTimeEvenAwayFromDotHeight() {
         val points = chartPoints(
             listOf(reading("patrick", 18, 100.0), reading("patrick", 12, 120.0), reading("patrick", 6, 90.0)),
@@ -41,6 +47,14 @@ class ReadingHistoryChartTest {
         assertEquals(Instant.parse("2026-09-27T21:00:00Z"), ticks.last())
         assertEquals(0, ticks.last().atZone(ZoneId.of("America/Chicago")).minute)
         assertEquals(true, ticks.all { it >= Instant.parse("2026-09-26T21:47:00Z") })
+    }
+
+    @Test fun timeChoicesShowLatestSixTwelveOrTwentyFourHours() {
+        assertEquals(ChartViewport(0.75, 0.25), ChartViewport.latest(6))
+        assertEquals(ChartViewport(0.5, 0.5), ChartViewport.latest(12))
+        assertEquals(ChartViewport(0.0, 1.0), ChartViewport.latest(24))
+        assertEquals(ChartViewport.latest(6), ChartViewport())
+        for (hours in listOf(6, 12, 24)) assertEquals(1.0, ChartViewport.latest(hours).end, 0.000001)
     }
 
     @Test fun zoomKeepsTimeUnderFingersAndPansInVisibleTimeUnits() {
@@ -62,7 +76,7 @@ class ReadingHistoryChartTest {
     @Test fun selectionAtZoomOnlyUsesVisibleRealSamples() {
         val points = listOf(reading("patrick", 18, 100.0), reading("patrick", 12, 120.0), reading("patrick", 6, 90.0))
         assertEquals(1, nearestChartPointIndex(points, now, 240f, 0f, ChartViewport(0.4, 0.2)))
-        assertEquals(null, nearestChartPointIndex(points, now, 240f, 120f, ChartViewport()))
+        assertEquals(2, nearestChartPointIndex(points, now, 240f, 120f, ChartViewport()))
     }
 
     @Test fun malformedGestureDoesNotMoveViewport() {

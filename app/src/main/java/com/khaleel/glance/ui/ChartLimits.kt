@@ -30,10 +30,10 @@ internal fun chartYFraction(valueMgDl: Double): Double =
     (chartTopMgDl - valueMgDl) / (chartTopMgDl - chartBottomMgDl)
 
 /** Endpoints stay labeled; the legend keeps exact limits if nearby axis labels collide. */
-internal fun chartAxisValues(limits: ChartLimits): List<Double> {
+internal fun chartAxisValues(limits: ChartLimits, minimumSeparationMgDl: Double = 30.0): List<Double> {
     val labels = mutableListOf(chartTopMgDl)
     for (value in listOf(limits.highMgDl, limits.lowMgDl).distinct().sortedDescending()) {
-        if (value - chartBottomMgDl >= 30 && labels.last() - value >= 30) labels += value
+        if (value - chartBottomMgDl >= minimumSeparationMgDl && labels.last() - value >= minimumSeparationMgDl) labels += value
     }
     labels += chartBottomMgDl
     return labels

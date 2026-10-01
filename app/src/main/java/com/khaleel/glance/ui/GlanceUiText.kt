@@ -63,10 +63,10 @@ class GlanceUiText(
     fun connection(state: DisplayState): String? = when (state.connection) {
         ConnectionState.READY -> null
         ConnectionState.FETCHING -> "Checking for a new reading…"
-        ConnectionState.OFFLINE -> lastReadingSuffix(state, "Connection failed. Tap Refresh now to retry")
+        ConnectionState.OFFLINE -> lastReadingSuffix(state, "Connection failed. Tap Refresh to retry")
         ConnectionState.BACKING_OFF -> lastReadingSuffix(state, state.providerRetryAt?.let {
             "LibreLinkUp is limiting requests. Try again after ${timeFormatter.format(it)}"
-        } ?: "Refresh failed. Tap Refresh now to retry")
+        } ?: "Refresh failed. Tap Refresh to retry")
         ConnectionState.SIGN_IN_REQUIRED -> "Sign in again to continue."
         ConnectionState.TERMS_REQUIRED -> "Open LibreLinkUp to review its terms, then reconnect."
         ConnectionState.CONNECTION_REMOVED -> "The selected shared person is no longer available."

@@ -35,7 +35,7 @@ def main():
         raise RuntimeError("Incomplete gesture checks")
     result["GalaxyS25Ultra"] = "not tested"
     result["liveAccount"] = "not tested"
-    (ROOT / "docs/evidence/api36-chart-0.19.3.json").write_text(json.dumps(result, indent=2) + "\n")
+    (ROOT / "docs/evidence/api36-chart-0.21.0.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result["checks"]))
 
 

@@ -134,14 +134,14 @@ class GlanceUiTextTest {
         )
 
         assertEquals("Monitoring is running", formatter.monitoring(state))
-        assertEquals("Connection failed. Tap Refresh now to retry. Showing the last reading.", formatter.connection(state))
+        assertEquals("Connection failed. Tap Refresh to retry. Showing the last reading.", formatter.connection(state))
         assertNull(formatter.connection(state()))
     }
 
     @Test
     fun transientAndProviderWaitsExplainDifferentRefreshBehavior() {
         val backingOff = state().copy(connection = ConnectionState.BACKING_OFF, nextAllowedFetch = now.plusSeconds(900))
-        assertEquals("Refresh failed. Tap Refresh now to retry. Showing the last reading.", formatter.connection(backingOff))
+        assertEquals("Refresh failed. Tap Refresh to retry. Showing the last reading.", formatter.connection(backingOff))
         assertEquals("LibreLinkUp is limiting requests. Try again after 10:58 AM. Showing the last reading.",
             formatter.connection(backingOff.copy(providerRetryAt = now.plusSeconds(900))))
     }

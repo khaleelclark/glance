@@ -7,9 +7,10 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-The main screen includes a 24-hour graph of validated source samples. Use one finger
-to inspect readings, two fingers to pan through time, and pinch to zoom from
-one hour to the full day. **Show 24 hours** and **Latest 3 hours** reset the view.
+The main screen includes a 24-hour graph of validated source samples. Touch
+to inspect readings and pinch to zoom from one hour to the full day. Two-finger
+dragging does not scroll the timeline. **6 hr**, **12 hr** and **24 hr** under the
+graph show the latest time window; 6 hours is the default.
 The graph has a fixed 40–350 mg/dL scale, red below Low and orange above High.
 Enabled ordinary Low/High alert settings supply the limits; disabled alerts use
 70/240 mg/dL. Labels follow the selected unit.
@@ -56,9 +57,9 @@ On Samsung Android 16, Glance requests a Live Update when permitted. Settings
 shows its observed status and links to Android's promotion controls. Also
 check Samsung's Now bar and Glance Live notifications settings. The fresh
 glucose number can serve as the small icon in regular mode; promoted chips use
-the Glance icon beside the value. **Keep monitoring card visible** defaults on:
+the Glance icon beside the value. **Keep notification** defaults on:
 while monitoring is running, a delivered dismissal callback restores the same
-silent regular card after Clear or swipe. Turn it off for manual restoration.
+silent regular card after Clear or swipe. Turn it off for manual restoration using **Show notification** in Settings.
 Stop and sign-out clear the card. Samsung delivery and Now bar admission still
 need a phone check; see [notification validation](docs/notification-0.18-validation.md).
 This upgrade starts lock-screen values hidden because its checked privacy store

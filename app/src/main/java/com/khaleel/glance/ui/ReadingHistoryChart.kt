@@ -1,10 +1,20 @@
 package com.khaleel.glance.ui
 
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
-import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,11 +67,11 @@ import java.util.Locale
 
 internal val chartWindow: Duration = Duration.ofHours(24)
 private val gapLimit = Duration.ofMinutes(20)
-private val chartHeight = 220.dp
 
 internal fun chartPoints(history: List<Reading>, connectionId: String?, now: Instant): List<Reading> =
     history.filter {
         it.connectionId == connectionId &&
+            it.specialValue == null &&
             it.valueMgDl?.isFinite() == true &&
             it.valueMgDl > 0.0 &&
             !it.measuredAt.isBefore(now.minus(chartWindow)) &&
@@ -104,14 +114,18 @@ internal fun ReadingHistoryChart(
     onSelectedTimeChange: (Long) -> Unit,
     alerts: AlertConfig = AlertConfig.defaults(),
 ) {
+    val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val chartHeight = if (compact) 130.dp else 220.dp
     val points = chartPoints(history, connectionId, now)
     val limits = chartLimits(alerts)
-    var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.875) }
-    var viewportSpan by rememberSaveable(connectionId) { mutableStateOf(0.125) }
+    var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.75) }
+    var viewportSpan by rememberSaveable(connectionId) { mutableStateOf(0.25) }
     val viewport = ChartViewport(viewportStart, viewportSpan)
-    fun setViewport(next: ChartViewport) {
+    fun setViewport(next: ChartViewport): Boolean {
+        val changed = next != ChartViewport(viewportStart, viewportSpan)
         viewportStart = next.start
         viewportSpan = next.span
+        return changed
     }
     val latestPoints by rememberUpdatedState(points)
     val latestNow by rememberUpdatedState(now)
@@ -122,8 +136,10 @@ internal fun ReadingHistoryChart(
     val timeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(locale).withZone(zoneId)
 
-    Column(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shadowElevation = 2.dp) {
+        Column(Modifier.padding(if (compact) 16.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
             Text("History", modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
             if (points.isEmpty()) {
                 Text("The graph will appear after Glance receives readings for this person.")
@@ -150,16 +166,18 @@ internal fun ReadingHistoryChart(
                 val timeTicks = chartTimeTicks(now, zoneId, viewport.span)
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
-                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. Red below Low; orange above High. Use one finger for readings, two fingers to pan, and pinch to zoom."
+                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. Red below Low; orange above High. Touch to inspect readings. Pinch to zoom. Use the 6, 12 or 24 hour choices to reset the time window."
 
-                Text(
-                    "1 finger: inspect · 2 fingers: pan · Pinch: zoom",
+                if (!compact) Text(
+                    "Touch to inspect · Pinch to zoom",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(limitLegend, style = MaterialTheme.typography.bodySmall)
-                Text("Red below Low · Orange above High", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Low ${axisValue(limits.lowMgDl, points[0], unit, locale)}", color = lowColor, style = MaterialTheme.typography.labelMedium)
+                    Text("High ${axisValue(limits.highMgDl, points[0], unit, locale)}", color = highColor, style = MaterialTheme.typography.labelMedium)
+                    Text(unit.label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                }
                 if (limits.overlaps) Text("Low and High graph limits overlap; red takes priority.",
                     style = MaterialTheme.typography.bodySmall)
                 if (limits.lowMgDl !in bottom..top || limits.highMgDl !in bottom..top) {
@@ -167,7 +185,7 @@ internal fun ReadingHistoryChart(
                 }
                 Row(Modifier.fillMaxWidth()) {
                     Box(Modifier.width(48.dp).height(chartHeight)) {
-                        for (value in chartAxisValues(limits)) {
+                        for (value in chartAxisValues(limits, if (compact) 60.0 else 30.0)) {
                             val y = 16.dp + (chartHeight - 32.dp) * chartYFraction(value).toFloat() - 8.dp
                             Text(axisValue(value, points[0], unit, locale), Modifier.offset(y = y),
                                 style = MaterialTheme.typography.labelSmall)
@@ -184,7 +202,6 @@ internal fun ReadingHistoryChart(
                                         nearestChartPointIndex(latestPoints, latestNow, size.width.toFloat(), x, ChartViewport(viewportStart, viewportSpan))
                                             ?.let { latestOnSelect(latestPoints[it].measuredAt.toEpochMilli()) }
                                     }
-                                    select(down.position.x)
                                     // Once a second finger joins, never scrub with the remaining finger.
                                     var transformed = false
                                     do {
@@ -194,12 +211,12 @@ internal fun ReadingHistoryChart(
                                             transformed = true
                                             val centroid = event.calculateCentroid(useCurrent = false)
                                             setViewport(ChartViewport(viewportStart, viewportSpan).transform(
-                                                event.calculatePan().x.toDouble() / size.width,
+                                                0.0, // Two-finger translation never scrolls the timeline.
                                                 event.calculateZoom().toDouble(),
                                                 centroid.x.toDouble() / size.width,
                                             ))
                                         } else if (!transformed) {
-                                            pressed.firstOrNull { it.id == down.id }?.let { select(it.position.x) }
+                                            event.changes.firstOrNull { it.id == down.id }?.let { select(it.position.x) }
                                         }
                                         event.changes.forEach { it.consume() }
                                     } while (pressed.isNotEmpty())
@@ -210,7 +227,9 @@ internal fun ReadingHistoryChart(
                                 Modifier.fillMaxWidth().height(chartHeight)
                                     .semantics {
                                         contentDescription = chartDescription
-                                        stateDescription = String.format(Locale.ROOT, "Showing %.1f hours", viewport.span * 24)
+                                        stateDescription = String.format(Locale.ROOT, "Showing %.1f hours", viewport.span * 24) +
+                                            ", from " + timeFormat.format(now.minusMillis(((1.0 - viewport.start) * chartWindow.toMillis()).toLong())) +
+                                            " to " + timeFormat.format(now.minusMillis(((1.0 - viewport.end) * chartWindow.toMillis()).toLong()))
                                         fun reveal(index: Int): Boolean {
                                             if (index !in points.indices) return false
                                             val fraction = timeFraction(points[index].measuredAt, now)
@@ -226,16 +245,16 @@ internal fun ReadingHistoryChart(
                                             CustomAccessibilityAction("Earlier reading") { reveal(selectedIndex - 1) },
                                             CustomAccessibilityAction("Later reading") { reveal(selectedIndex + 1) },
                                             CustomAccessibilityAction("Earlier time") {
-                                                setViewport(viewport.transform(0.5, 1.0, 0.5)); true
+                                                setViewport(viewport.transform(0.5, 1.0, 0.5))
                                             },
                                             CustomAccessibilityAction("Later time") {
-                                                setViewport(viewport.transform(-0.5, 1.0, 0.5)); true
+                                                setViewport(viewport.transform(-0.5, 1.0, 0.5))
                                             },
                                             CustomAccessibilityAction("Zoom in") {
-                                                setViewport(viewport.transform(0.0, 2.0, 0.5)); true
+                                                setViewport(viewport.transform(0.0, 2.0, 0.5))
                                             },
                                             CustomAccessibilityAction("Zoom out") {
-                                                setViewport(viewport.transform(0.0, 0.5, 0.5)); true
+                                                setViewport(viewport.transform(0.0, 0.5, 0.5))
                                             },
                                         )
                                     },
@@ -256,7 +275,7 @@ internal fun ReadingHistoryChart(
                                         val x = size.width * viewport.xFraction(timeFraction(tick, now))
                                         drawLine(gridColor, Offset(x, inset), Offset(x, plotBottom), strokeWidth = 1.dp.toPx())
                                     }
-                                    for ((value, color) in listOf(limits.lowMgDl to lowColor, limits.highMgDl to highColor)) {
+                                    for ((value, color) in listOf(limits.highMgDl to highColor, limits.lowMgDl to lowColor)) {
                                         if (value in bottom..top) drawLine(color, Offset(0f, y(value)), Offset(size.width, y(value)), strokeWidth = 1.dp.toPx())
                                     }
                                     fun trace(color: Color) {
@@ -329,13 +348,25 @@ internal fun ReadingHistoryChart(
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = { setViewport(ChartViewport(0.0, 1.0)) }) { Text("Show 24 hours") }
-                    TextButton(onClick = { setViewport(ChartViewport()) }) { Text("Latest 3 hours") }
+                Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(14.dp)).padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for (hours in listOf(6, 12, 24)) {
+                        val target = ChartViewport.latest(hours)
+                        val active = viewport == target
+                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(10.dp),
+                            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant) {
+                            Box(Modifier.heightIn(min = 48.dp).selectable(selected = active, role = Role.RadioButton,
+                                onClick = { setViewport(target) }).semantics { contentDescription = "Show latest $hours hours" },
+                                contentAlignment = Alignment.Center) {
+                                Text("$hours hr", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
                 }
                 selected?.let { reading ->
-                    Column(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer, shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Selected reading", style = MaterialTheme.typography.labelMedium)
                             Text(GlucoseFormat.withUnit(reading, unit, locale), style = MaterialTheme.typography.headlineSmall,
                                 color = valueColor(reading.valueMgDl!!))

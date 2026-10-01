@@ -71,9 +71,9 @@ class DebugChartActivity : ComponentActivity() {
                     var selected by remember { mutableStateOf<Long?>(null) }
                     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState())) {
                         Text("DEMO · chart gesture test")
+                        Text("DEMO selected: $selected")
                         ReadingHistoryChart(points, "synthetic", unit, now,
                             ZoneId.of("UTC"), Locale.US, selected, { selected = it }, alerts = alerts)
-                        Text("DEMO selected: $selected")
                         Column(Modifier.height(600.dp)) { Text("DEMO · page scroll space") }
                     }
                 }
@@ -102,11 +102,11 @@ class ChartGestureInstrumentation : Instrumentation() {
             val left = bounds.left + bounds.width() * 0.2f
             val right = bounds.left + bounds.width() * 0.8f
             val y = bounds.centerY().toFloat()
-            check(initial.stateDescription.toString() == "Showing 3.0 hours")
+            check(initial.stateDescription.toString().startsWith("Showing 6.0 hours"))
             gesture(listOf(left to y), listOf(right to y))
             val selected = selectedTime()
             check(selected > 0)
-            check(chart().stateDescription.toString() == "Showing 3.0 hours")
+            check(chart().stateDescription.toString().startsWith("Showing 6.0 hours"))
             check(Rect().also { chart().getBoundsInScreen(it) } == bounds)
             gesture(listOf(right to y), listOf(left to y))
             check(selectedTime() < selected) { "Reverse scrub: first=$selected, reverse=${selectedTime()}, bounds=$bounds" }
@@ -115,20 +115,23 @@ class ChartGestureInstrumentation : Instrumentation() {
             checks.put("oneFingerScrubsWithoutPanningOrParentScrolling", true)
 
             // Start near the middle and spread fingers to zoom around that time.
+            val beforePinchSelection = selectedTime()
             val middle = bounds.centerX().toFloat()
             gesture(listOf((middle - 35) to y, (middle + 35) to y),
                 listOf((middle - 100) to y, (middle + 100) to y))
-            check(hours() in 1.0..2.0)
+            check(hours() in 1.0..3.0)
             checks.put("twoFingerPinchZoomsIn", true)
-            val zoomHours = hours()
+            check(selectedTime() == beforePinchSelection)
+            checks.put("twoFingerGesturesDoNotChangeSelectedReading", true)
+            val beforeDrag = chart().stateDescription.toString()
             gesture(listOf(left to y, (left + 80) to y), listOf((left + 80) to y, (left + 160) to y))
-            check(hours() == zoomHours)
-            gesture(listOf(middle to y), listOf(middle to y))
-            val earlier = selectedTime()
-            click("Latest 3 hours")
-            gesture(listOf(middle to y), listOf(middle to y))
-            check(earlier < selectedTime())
-            checks.put("twoFingerDragPansToEarlierReadings", true)
+            check(chart().stateDescription.toString() == beforeDrag)
+            checks.put("twoFingerDragDoesNotScrollTimeline", true)
+            click("Show latest 12 hours")
+            check(hours() == 12.0)
+            click("Show latest 6 hours")
+            check(hours() == 6.0)
+            checks.put("sixAndTwelveHourChoicesResetToLatestWindow", true)
 
             // After lifting the second finger, the remaining finger must not scrub.
             val stamp = SystemClock.uptimeMillis()
@@ -144,12 +147,16 @@ class ChartGestureInstrumentation : Instrumentation() {
             check(selectedTime() == beforeLift)
             checks.put("liftingOneFingerDoesNotSwitchFromPanToScrub", true)
 
-            click("Show 24 hours")
+            click("Show latest 24 hours")
             check(hours() == 24.0)
             gesture(listOf((middle - 100) to y, (middle + 100) to y), listOf((middle - 15) to y, (middle + 15) to y))
             check(hours() == 24.0)
             checks.put("zoomOutStopsAtTwentyFourHoursAndResetWorks", true)
-            click("Latest 3 hours")
+            val maximum = chart()
+            val maximumZoomOut = maximum.actionList.first { it.label?.toString() == "Zoom out" }
+            check(!maximum.performAction(maximumZoomOut.id))
+            checks.put("accessibilityBoundedZoomReportsNoChange", true)
+            click("Show latest 6 hours")
             repeat(3) {
                 gesture(listOf((middle - 15) to y, (middle + 15) to y), listOf((middle - 110) to y, (middle + 110) to y))
             }
@@ -161,7 +168,7 @@ class ChartGestureInstrumentation : Instrumentation() {
             settle()
             check(hours() == 2.0)
             checks.put("accessibilityZoomActionWorks", true)
-            click("Latest 3 hours")
+            click("Show latest 6 hours")
             limitChecks(checks)
             targetContext.filesDir.resolve("chart-gesture-probe.json").writeText(
                 JSONObject().put("synthetic", true).put("device", "API 36 emulator")
@@ -185,7 +192,7 @@ class ChartGestureInstrumentation : Instrumentation() {
 
     private fun limitChecks(checks: JSONObject) {
         launchLimits()
-        check("Low: 70 mg/dL · High: 240 mg/dL" in texts())
+        check("Low 70" in texts() && "High 240" in texts())
         check("350" in texts() && "40" in texts())
         check(chart().contentDescription.toString().contains("Scale: 40–350 mg/dL"))
         checks.put("fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty", true)
@@ -198,15 +205,15 @@ class ChartGestureInstrumentation : Instrumentation() {
         check(texts().any { it.startsWith("Outside graph scale") })
         checks.put("outOfScaleSelectionPreservesActualValues", true)
         launchLimits(lowEnabled = true, highEnabled = true)
-        check("Low: 85 mg/dL · High: 210 mg/dL" in texts())
+        check("Low 85" in texts() && "High 210" in texts())
         checkColorBands(0xC62828, 0xB85C00, 85.0, 210.0)
         launchLimits(lowEnabled = true)
-        check("Low: 85 mg/dL · High: 240 mg/dL" in texts())
+        check("Low 85" in texts() && "High 240" in texts())
         launchLimits(highEnabled = true)
-        check("Low: 70 mg/dL · High: 210 mg/dL" in texts())
+        check("Low 70" in texts() && "High 210" in texts())
         checks.put("enabledOrdinaryLimitsSyncIndependently", true)
         launchLimits("mmol")
-        check("Low: 3.9 mmol/L · High: 13.3 mmol/L" in texts())
+        check("Low 3.9" in texts() && "High 13.3" in texts())
         check("19.4" in texts() && "2.2" in texts())
         checkColorBands(0xC62828, 0xB85C00)
         checks.put("mmolScaleAndLimitsConvertWithIdenticalColorGeometry", true)
@@ -261,7 +268,7 @@ class ChartGestureInstrumentation : Instrumentation() {
     private fun hours(): Double = chart().stateDescription.toString().substringAfter("Showing ").substringBefore(" hours").toDouble()
 
     private fun click(label: String) {
-        val node = nodes(uiAutomation.rootInActiveWindow).first { it.text?.toString() == label }
+        val node = nodes(uiAutomation.rootInActiveWindow).first { it.text?.toString() == label || it.contentDescription?.toString() == label }
         check((if (node.isClickable) node else node.parent).performAction(AccessibilityNodeInfo.ACTION_CLICK))
         settle()
     }

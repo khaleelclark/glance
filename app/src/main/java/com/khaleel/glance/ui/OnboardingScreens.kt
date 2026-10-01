@@ -1,24 +1,17 @@
 package com.khaleel.glance.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import com.khaleel.glance.ui.GlanceButton as Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -32,7 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,6 +34,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.DisplayState
+import com.khaleel.glance.ui.GlanceButton as Button
+import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
 import java.time.Instant
 
 @Composable
@@ -49,63 +44,63 @@ internal fun SignInScreen(accountState: AccountUiState, onSignIn: (Credentials) 
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val busy = accountState.status == AccountStatus.SIGNING_IN
+    val canSubmit = !busy && email.isNotBlank() && password.isNotEmpty()
+
+    fun submit() {
+        if (!canSubmit) return
+        val submitted = Credentials(email.trim(), password)
+        email = ""
+        password = ""
+        passwordVisible = false
+        onSignIn(submitted)
+    }
 
     ScreenColumn {
-        Text("Glance", style = MaterialTheme.typography.headlineLarge)
-        Text(
-            "A shared reading, at a glance.",
-            style = MaterialTheme.typography.titleLarge,
+        OnboardingHeader(
+            eyebrow = "WELCOME TO GLANCE",
+            title = "A shared reading, always close.",
+            summary = "Sign in with the LibreLinkUp follower account you already use.",
         )
-        Text("Use your LibreLinkUp follower account.")
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !busy,
-            label = { Text("Email") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-        )
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !busy,
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            trailingIcon = {
-                TextButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Text(if (passwordVisible) "Hide" else "Show")
+        GlanceCard(Modifier.fillMaxWidth()) {
+            SectionTitle("Sign in", "Your credentials stay encrypted on this phone.")
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy,
+                label = { Text("Email") },
+                singleLine = true,
+                shape = GlanceShapes.medium,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy,
+                label = { Text("Password") },
+                singleLine = true,
+                shape = GlanceShapes.medium,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+                trailingIcon = {
+                    TextButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Text(if (passwordVisible) "Hide" else "Show")
+                    }
+                },
+            )
+            accountProblemText(accountState.problem)?.let { StatusMessage(it, isError = true) }
+            Button(onClick = ::submit, modifier = Modifier.fillMaxWidth(), enabled = canSubmit) {
+                if (busy) {
+                    CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Sign in")
                 }
-            },
-        )
-        accountProblemText(accountState.problem)?.let {
-            StatusMessage(it, isError = true)
-        }
-        Button(
-            onClick = {
-                val submitted = Credentials(email.trim(), password)
-                email = ""
-                password = ""
-                passwordVisible = false
-                onSignIn(submitted)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !busy && email.isNotBlank() && password.isNotEmpty(),
-        ) {
-            if (busy) {
-                CircularProgressIndicator(
-                    modifier = Modifier.height(20.dp),
-                    strokeWidth = 2.dp,
-                )
-            } else {
-                Text("Sign in")
             }
         }
         Text(
-            "Sign-in is stored encrypted on this phone.",
+            "Glance uses this account only to retrieve readings shared with you.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -116,17 +111,17 @@ internal fun SignInScreen(accountState: AccountUiState, onSignIn: (Credentials) 
 internal fun ConnectionScreen(state: ConnectionSetupUiState, callbacks: GlanceCallbacks) {
     val selected = state.connections.firstOrNull { it.id == state.selectedConnectionId }
     ScreenColumn {
-        Text("Choose a shared person", style = MaterialTheme.typography.headlineMedium)
-        Text("Choose whose readings to follow.")
+        OnboardingHeader(
+            eyebrow = "STEP 2",
+            title = "Choose a shared person",
+            summary = "Glance will follow only the person you explicitly confirm.",
+        )
         if (state.loading) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.height(24.dp), strokeWidth = 2.dp)
-                Text("Loading shared people…")
-            }
+            StatusMessage("Loading shared people…")
         }
         state.connections.forEach { connection ->
             val isSelected = connection.id == state.selectedConnectionId
-            Card(
+            GlanceCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .selectable(
@@ -134,16 +129,24 @@ internal fun ConnectionScreen(state: ConnectionSetupUiState, callbacks: GlanceCa
                         role = Role.RadioButton,
                         onClick = { callbacks.onSelectConnection(connection) },
                     ),
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerLow
+                },
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RadioButton(selected = isSelected, onClick = null)
-                    Column {
-                        Text(connection.displayName, style = MaterialTheme.typography.titleMedium)
-                        Text(if (isSelected) "Selected for confirmation" else "Tap to select")
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(connection.displayName, style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            if (isSelected) "Selected — confirm below" else "Tap to select",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -175,56 +178,67 @@ internal fun NotificationSetupScreen(
 ) {
     val preview = text.notificationPreview(displayState, settings, now)
     ScreenColumn {
-        Text("Set up notifications", style = MaterialTheme.typography.headlineMedium)
-        Text("Keep readings in your notifications. Updates are silent.")
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Preview", style = MaterialTheme.typography.labelLarge)
-                Text(preview.first, style = MaterialTheme.typography.titleMedium)
-                Text(preview.second, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        OnboardingHeader(
+            eyebrow = "FINAL STEP",
+            title = "Keep the reading close",
+            summary = "Glance updates one quiet notification and lets you decide what appears while locked.",
+        )
+        GlanceCard(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Text("NOTIFICATION PREVIEW", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(preview.first, style = MaterialTheme.typography.titleLarge)
+            Text(preview.second, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         PermissionStatusCard(setupState.notificationPermission, callbacks)
-        HorizontalDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { callbacks.onLockScreenVisibilityChanged(!settings.showOnLockScreen) },
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Show readings on lock screen", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (settings.showOnLockScreen) {
-                        "Anyone holding the phone may see the person's name, value, and reading time."
-                    } else {
-                        "The lock screen will say only that a new glucose reading is available."
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(
-                checked = settings.showOnLockScreen,
-                onCheckedChange = callbacks.onLockScreenVisibilityChanged,
-            )
-        }
-        Card(Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Background access", style = MaterialTheme.typography.titleMedium)
-                Text(batteryStatusText(setupState.batteryStatus))
-                OutlinedButton(onClick = callbacks.onOpenBatterySettings) {
-                    Text("Open battery settings")
+        GlanceCard(Modifier.fillMaxWidth()) {
+            SectionTitle("Lock-screen privacy")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 64.dp)
+                    .toggleable(
+                        value = settings.showOnLockScreen,
+                        role = Role.Switch,
+                        onValueChange = callbacks.onLockScreenVisibilityChanged,
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Show readings while locked", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (settings.showOnLockScreen) {
+                            "Anyone holding the phone may see the name, value, and reading time."
+                        } else {
+                            "The lock screen says only that a glucose reading is available."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                Switch(checked = settings.showOnLockScreen, onCheckedChange = null)
+            }
+        }
+        GlanceCard(Modifier.fillMaxWidth()) {
+            SectionTitle("Background access", "Screen-off updates depend on Android's battery controls.")
+            Text(batteryStatusText(setupState.batteryStatus), style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = callbacks.onOpenBatterySettings, modifier = Modifier.fillMaxWidth()) {
+                Text("Open battery settings")
             }
         }
         if (setupState.startFailed) {
-            StatusMessage("Monitoring did not start. Check notification and battery settings, then try again.", true)
+            StatusMessage(
+                "Monitoring did not start. Check notification and battery settings, then try again.",
+                isError = true,
+            )
         }
         Button(
             onClick = callbacks.onStartMonitoring,
             modifier = Modifier.fillMaxWidth(),
-            enabled = setupState.notificationPermission == PermissionStatus.GRANTED && !setupState.startingMonitoring,
+            enabled = setupState.notificationPermission == PermissionStatus.GRANTED &&
+                !setupState.startingMonitoring,
         ) {
             Text(if (setupState.startingMonitoring) "Starting…" else "Start monitoring")
         }
@@ -240,54 +254,45 @@ internal fun NotificationSetupScreen(
 
 @Composable
 private fun PermissionStatusCard(status: PermissionStatus, callbacks: GlanceCallbacks) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Notification permission", style = MaterialTheme.typography.titleMedium)
-            Text(
-                when (status) {
-                    PermissionStatus.UNKNOWN -> "Not requested yet"
-                    PermissionStatus.GRANTED -> "Allowed"
-                    PermissionStatus.DENIED -> "Not allowed. Glance cannot show its ongoing reading."
-                },
-            )
+    GlanceCard(Modifier.fillMaxWidth()) {
+        SectionTitle("Notification permission")
+        Text(
             when (status) {
-                PermissionStatus.UNKNOWN -> Button(onClick = callbacks.onRequestNotificationPermission) {
-                    Text("Allow notifications")
-                }
-                PermissionStatus.DENIED -> OutlinedButton(onClick = callbacks.onOpenNotificationSettings) {
-                    Text("Open notification settings")
-                }
-                PermissionStatus.GRANTED -> Unit
+                PermissionStatus.UNKNOWN -> "Not requested yet"
+                PermissionStatus.GRANTED -> "Allowed — Glance can show the ongoing reading."
+                PermissionStatus.DENIED -> "Not allowed — Glance cannot show its ongoing reading."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (status == PermissionStatus.DENIED) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+        when (status) {
+            PermissionStatus.UNKNOWN -> Button(
+                onClick = callbacks.onRequestNotificationPermission,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Allow notifications")
             }
+            PermissionStatus.DENIED -> OutlinedButton(
+                onClick = callbacks.onOpenNotificationSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Open notification settings")
+            }
+            PermissionStatus.GRANTED -> Unit
         }
     }
 }
 
 @Composable
-internal fun ScreenColumn(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        content = content,
-    )
-}
-
-@Composable
-internal fun StatusMessage(text: String, isError: Boolean = false) {
-    Column(Modifier.fillMaxWidth()) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier
-                .padding(vertical = 4.dp)
-                .semantics { contentDescription = text },
-            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-        )
+private fun OnboardingHeader(eyebrow: String, title: String, summary: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text(eyebrow, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineLarge)
+        Text(summary, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

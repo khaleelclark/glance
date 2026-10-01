@@ -83,8 +83,8 @@ internal object ThemeAccent {
 
     fun scheme(hex: String, dark: Boolean): ColorScheme {
         val requested = color(hex)
-        val background = if (dark) Color(0xFF121416) else Color(0xFFFAFAF8)
-        val card = if (dark) Color(0xFF1E2124) else Color(0xFFF0F1EE)
+        val background = if (dark) Color(0xFF10181E) else Color(0xFFEFF3F4)
+        val card = if (dark) Color(0xFF202E37) else Color(0xFFF7FAFA)
         val primary = readableAgainst(requested, card, dark)
         val onPrimary = if (contrast(primary, Color.White) >= contrast(primary, Color.Black)) {
             Color.White
@@ -108,11 +108,11 @@ internal object ThemeAccent {
             onTertiary = onPrimary,
             background = background,
             onBackground = onBackground,
-            surface = background,
+            surface = if (dark) Color(0xFF18242C) else Color.White,
             onSurface = onBackground,
             surfaceVariant = card,
             onSurfaceVariant = onVariant,
-            surfaceContainerLow = lerp(background, card, 0.45f),
+            surfaceContainerLow = if (dark) Color(0xFF18242C) else Color.White,
             surfaceContainer = card,
             surfaceContainerHigh = lerp(card, primary, 0.05f),
             surfaceContainerHighest = lerp(card, primary, 0.08f),

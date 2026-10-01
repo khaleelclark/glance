@@ -18,10 +18,8 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -41,7 +39,6 @@ import com.khaleel.glance.alerts.AlertConfig
 import com.khaleel.glance.alerts.AlertKind
 import com.khaleel.glance.alerts.AlertRule
 import com.khaleel.glance.core.GlucoseUnit
-import kotlinx.coroutines.delay
 import java.util.Locale
 
 @Composable
@@ -53,7 +50,7 @@ internal fun AlertSettings(
     onOpenNotificationSettings: () -> Unit,
 ) {
     var expandedName by rememberSaveable { mutableStateOf<String?>(null) }
-    Text("Each alert is optional. Sound is set in Android.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("Choose a limit, then turn it on.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedButton(onClick = onOpenNotificationSettings, modifier = Modifier.fillMaxWidth()) {
         Text("Android alert settings")
     }
@@ -83,14 +80,14 @@ internal fun AlertSettings(
                 onClick = { expandedName = if (expandedName == kind.name) null else kind.name },
                 modifier = Modifier.weight(1f),
             ) {
-                Text(if (expandedName == kind.name) "Close value wheel" else "Value & repeat", textAlign = TextAlign.Center)
+                Text(if (expandedName == kind.name) "Done" else "Edit limit", textAlign = TextAlign.Center)
             }
             TextButton(
                 onClick = { onSoundChange(kind) },
                 modifier = Modifier.weight(1f).semantics {
                     contentDescription = "Open ${kind.label} notification category in Android settings"
                 },
-            ) { Text("Sound & priority", textAlign = TextAlign.Center) }
+            ) { Text("Sound", textAlign = TextAlign.Center) }
         }
         if (expandedName == kind.name) {
             AlertRuleEditor(kind, rule, config, unit, onRuleChange)
@@ -151,11 +148,6 @@ private fun ValueWheel(
     val textSize = with(LocalDensity.current) { 28.sp.toPx() }
     val currentOnValueSelected by rememberUpdatedState(onValueSelected)
     val dividerColor = MaterialTheme.colorScheme.primary
-    var pendingValue by remember(values) { mutableIntStateOf(selectedValue) }
-    LaunchedEffect(pendingValue) {
-        delay(300)
-        if (pendingValue != selectedValue) currentOnValueSelected(pendingValue)
-    }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         key(values.first().storedValue, values.last().storedValue, values.size, unitLabel) {
             Box(Modifier.width(168.dp).height(168.dp)) {
@@ -173,14 +165,16 @@ private fun ValueWheel(
                             setTextColor(textColor)
                             setTextSize(textSize)
                             contentDescription = description
-                            setOnValueChangedListener { _, _, index -> pendingValue = values[index].storedValue }
+                            setOnValueChangedListener { _, _, index ->
+                                currentOnValueSelected(values[index].storedValue)
+                            }
                         }
                     },
                     update = { picker ->
                         picker.setTextColor(textColor)
                         picker.setTextSize(textSize)
                         val selectedIndex = nearestWheelIndex(values, selectedValue)
-                        if (picker.value != selectedIndex && pendingValue == selectedValue) picker.value = selectedIndex
+                        if (picker.value != selectedIndex) picker.value = selectedIndex
                     },
                     modifier = Modifier.width(168.dp).height(168.dp),
                 )

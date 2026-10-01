@@ -140,3 +140,22 @@ See [refresh-recovery-validation.md](refresh-recovery-validation.md) for the
 focused automated and synthetic API 36 checks. Manual retries can bypass local
 transient backoff while provider rate limits remain enforced. Actual resolver
 changes and the owner's Galaxy phone are not covered by these synthetic tests.
+
+## 0.21.0 UI overhaul
+
+Synthetic API36 validation: 20 UI checks and 16 native chart checks passed on
+the production implementation with debug-only fixtures. The chart checks include
+6/12-hour presets, no two-finger timeline scrolling, pinch bounds, observation
+selection, fixed scale, threshold colors/defaults/units and accessible zoom. UI
+checks exercise direct Settings controls and fixed tabs, notification style
+choices, callback counts, immediate wheel changes before page exit, destructive
+cancellation, stale/offline states, dark, 1.5x font, landscape and source units.
+Twelve DEMO screenshots are recorded. Manual inspection found the original
+landscape plot too tall despite node checks passing; the final compact layout
+and a check for its visible time choices replace that evidence.
+
+These tests use synthetic state/counter callbacks and do not establish real
+Settings persistence, credential retention, account/person switching, TalkBack,
+Samsung rendering/gestures, screen-off/battery reliability or physical watch
+behavior. Signed upgrade acceptance/launch is recorded separately in the release
+upgrade JSON; it does not exercise credentials or settings retention.

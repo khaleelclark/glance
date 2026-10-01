@@ -7,8 +7,10 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-The main screen includes a 24-hour graph of validated source samples. Drag
-across it to inspect readings. The notification shows the current glucose,
+The main screen includes a 24-hour graph of validated source samples. Use one finger
+to inspect readings, two fingers to pan through time, and pinch to zoom from
+one hour to the full day. **Show 24 hours** and **Latest 3 hours** reset the view.
+See [gesture verification](docs/chart-gesture-validation.md). The notification shows the current glucose,
 trend arrow, and recent change when available; Refresh remains in the app.
 Refresh retries connection failures even while automatic polling is backing off;
 provider rate limits still apply. Stop monitoring and a choice of app colors are available in Settings. Custom

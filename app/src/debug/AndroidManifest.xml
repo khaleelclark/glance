@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <instrumentation android:name=".debug.ChartGestureInstrumentation" android:targetPackage="com.khaleel.glance" />
     <application>
+        <activity android:name=".debug.DebugChartActivity" android:exported="true" />
         <activity android:name=".debug.DebugNotificationActivity" android:exported="true" />
         <activity android:name=".debug.DebugWidgetActivity" android:exported="true" />
         <receiver android:name=".debug.DebugWidgetReceiver" android:exported="false" android:label="DEMO widget fixture">

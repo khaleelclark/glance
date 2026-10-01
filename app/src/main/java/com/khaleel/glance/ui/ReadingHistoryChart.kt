@@ -3,9 +3,12 @@ package com.khaleel.glance.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,18 +16,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
@@ -32,6 +38,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.khaleel.glance.core.GlucoseFormat
 import com.khaleel.glance.core.GlucoseUnit
@@ -46,8 +53,6 @@ import java.util.Locale
 
 internal val chartWindow: Duration = Duration.ofHours(24)
 private val gapLimit = Duration.ofMinutes(20)
-// Ten dp between five-minute observations keeps the trace readable without dropping data.
-private val chartWidth = 2880.dp
 private val chartHeight = 220.dp
 
 internal fun chartPoints(history: List<Reading>, connectionId: String?, now: Instant): List<Reading> =
@@ -60,20 +65,25 @@ internal fun chartPoints(history: List<Reading>, connectionId: String?, now: Ins
     }.sortedBy { it.measuredAt }
 
 /** Select only a real observation; never interpolate a value through a gap. */
-internal fun nearestChartPointIndex(points: List<Reading>, now: Instant, widthPx: Float, x: Float): Int? =
-    points.indices.minByOrNull { index ->
-        kotlin.math.abs(widthPx * timeFraction(points[index].measuredAt, now) - x)
-    }
+internal fun nearestChartPointIndex(
+    points: List<Reading>, now: Instant, widthPx: Float, x: Float,
+    viewport: ChartViewport = ChartViewport(0.0, 1.0),
+): Int? = points.indices.filter {
+    timeFraction(points[it].measuredAt, now) in viewport.start..viewport.end
+}.minByOrNull { index ->
+    kotlin.math.abs(widthPx * viewport.xFraction(timeFraction(points[index].measuredAt, now)) - x)
+}
 
-/** Round local clock hours make the long timeline easier to scan. */
-internal fun chartTimeTicks(now: Instant, zoneId: ZoneId): List<Instant> {
+/** Local clock ticks become finer when zoomed in; instants stay ordered across DST. */
+internal fun chartTimeTicks(now: Instant, zoneId: ZoneId, span: Double = 1.0): List<Instant> {
     val start = now.minus(chartWindow)
-    var local = now.atZone(zoneId).truncatedTo(ChronoUnit.HOURS)
-    if (local.hour % 2 != 0) local = local.minusHours(1)
+    val minutes = if (span <= 1.0 / 12) 30L else if (span <= 0.25) 60L else 120L
+    var local = now.atZone(zoneId).truncatedTo(ChronoUnit.MINUTES)
+    local = local.minusMinutes((local.hour * 60L + local.minute) % minutes)
     val result = mutableListOf<Instant>()
     while (!local.toInstant().isBefore(start)) {
         result += local.toInstant()
-        local = local.minusHours(2)
+        local = local.minusMinutes(minutes)
     }
     return result.asReversed()
 }
@@ -90,6 +100,15 @@ internal fun ReadingHistoryChart(
     onSelectedTimeChange: (Long) -> Unit,
 ) {
     val points = chartPoints(history, connectionId, now)
+    var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.875) }
+    var viewportSpan by rememberSaveable(connectionId) { mutableStateOf(0.125) }
+    val viewport = ChartViewport(viewportStart, viewportSpan)
+    fun setViewport(next: ChartViewport) {
+        viewportStart = next.start
+        viewportSpan = next.span
+    }
+    val latestPoints by rememberUpdatedState(points)
+    val latestNow by rememberUpdatedState(now)
     val selectedIndex = points.indexOfFirst { it.measuredAt.toEpochMilli() == selectedTime }
         .takeIf { it >= 0 } ?: points.lastIndex
     val selected = points.getOrNull(selectedIndex)
@@ -114,14 +133,13 @@ internal fun ReadingHistoryChart(
                 val lineColor = MaterialTheme.colorScheme.primary
                 val gridColor = MaterialTheme.colorScheme.outlineVariant
                 val selectedColor = MaterialTheme.colorScheme.tertiary
-                val scrollState = rememberScrollState()
-                val timeTicks = chartTimeTicks(now, zoneId)
+                val timeTicks = chartTimeTicks(now, zoneId, viewport.span)
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
-                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. Drag across the graph for reading details."
+                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. Use one finger for readings, two fingers to pan, and pinch to zoom."
 
                 Text(
-                    "Drag across the graph to see each reading. Swipe the time labels to browse 24 hours.",
+                    "One finger: inspect readings. Two fingers: move through time. Pinch: zoom in or out.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -134,81 +152,113 @@ internal fun ReadingHistoryChart(
                         Text(axisValue((top + bottom) / 2, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
                         Text(axisValue(bottom, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
                     }
-                    Box(Modifier.weight(1f)) {
-                        LaunchedEffect(scrollState.maxValue) {
-                            if (scrollState.value == 0 && scrollState.maxValue > 0) {
-                                scrollState.scrollTo(scrollState.maxValue)
-                            }
-                        }
-                        Column(Modifier.horizontalScroll(scrollState)) {
-                            Canvas(
-                                Modifier.width(chartWidth).height(chartHeight)
-                                    .pointerInput(points, now) {
-                                        awaitEachGesture {
-                                            val down = awaitFirstDown(requireUnconsumed = false)
-                                            fun select(x: Float) {
-                                                nearestChartPointIndex(points, now, size.width.toFloat(), x)
-                                                    ?.let { latestOnSelect(points[it].measuredAt.toEpochMilli()) }
-                                            }
-                                            select(down.position.x)
-                                            do {
-                                                val change = awaitPointerEvent().changes
-                                                    .firstOrNull { it.id == down.id }
-                                                if (change?.pressed == true) select(change.position.x)
-                                            } while (change?.pressed == true)
-                                        }
+                    BoxWithConstraints(Modifier.weight(1f)) {
+                        val chartWidth = maxWidth
+                        Column(
+                            Modifier.fillMaxWidth().pointerInput(connectionId) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    down.consume()
+                                    fun select(x: Float) {
+                                        nearestChartPointIndex(latestPoints, latestNow, size.width.toFloat(), x, ChartViewport(viewportStart, viewportSpan))
+                                            ?.let { latestOnSelect(latestPoints[it].measuredAt.toEpochMilli()) }
                                     }
+                                    select(down.position.x)
+                                    // Once a second finger joins, never scrub with the remaining finger.
+                                    var transformed = false
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val pressed = event.changes.filter { it.pressed }
+                                        if (pressed.size >= 2) {
+                                            transformed = true
+                                            val centroid = event.calculateCentroid(useCurrent = false)
+                                            setViewport(ChartViewport(viewportStart, viewportSpan).transform(
+                                                event.calculatePan().x.toDouble() / size.width,
+                                                event.calculateZoom().toDouble(),
+                                                centroid.x.toDouble() / size.width,
+                                            ))
+                                        } else if (!transformed) {
+                                            pressed.firstOrNull { it.id == down.id }?.let { select(it.position.x) }
+                                        }
+                                        event.changes.forEach { it.consume() }
+                                    } while (pressed.isNotEmpty())
+                                }
+                            },
+                        ) {
+                            Canvas(
+                                Modifier.fillMaxWidth().height(chartHeight)
                                     .semantics {
                                         contentDescription = chartDescription
+                                        stateDescription = String.format(Locale.ROOT, "Showing %.1f hours", viewport.span * 24)
+                                        fun reveal(index: Int): Boolean {
+                                            if (index !in points.indices) return false
+                                            val fraction = timeFraction(points[index].measuredAt, now)
+                                            if (fraction !in viewport.start..viewport.end) {
+                                                setViewport(ChartViewport(
+                                                    (fraction - viewport.span / 2).coerceIn(0.0, 1.0 - viewport.span), viewport.span,
+                                                ))
+                                            }
+                                            latestOnSelect(points[index].measuredAt.toEpochMilli())
+                                            return true
+                                        }
                                         customActions = listOf(
-                                            CustomAccessibilityAction("Earlier reading") {
-                                                if (selectedIndex <= 0) false else {
-                                                    latestOnSelect(points[selectedIndex - 1].measuredAt.toEpochMilli())
-                                                    true
-                                                }
+                                            CustomAccessibilityAction("Earlier reading") { reveal(selectedIndex - 1) },
+                                            CustomAccessibilityAction("Later reading") { reveal(selectedIndex + 1) },
+                                            CustomAccessibilityAction("Earlier time") {
+                                                setViewport(viewport.transform(0.5, 1.0, 0.5)); true
                                             },
-                                            CustomAccessibilityAction("Later reading") {
-                                                if (selectedIndex >= points.lastIndex) false else {
-                                                    latestOnSelect(points[selectedIndex + 1].measuredAt.toEpochMilli())
-                                                    true
-                                                }
+                                            CustomAccessibilityAction("Later time") {
+                                                setViewport(viewport.transform(-0.5, 1.0, 0.5)); true
+                                            },
+                                            CustomAccessibilityAction("Zoom in") {
+                                                setViewport(viewport.transform(0.0, 2.0, 0.5)); true
+                                            },
+                                            CustomAccessibilityAction("Zoom out") {
+                                                setViewport(viewport.transform(0.0, 0.5, 0.5)); true
                                             },
                                         )
                                     },
                             ) {
                                 val inset = 16.dp.toPx()
-                                val offsets = points.map { plotOffset(it, now, size, bottom, top, inset) }
-                                for (fraction in listOf(0f, 0.5f, 1f)) {
-                                    val y = inset + (size.height - 2 * inset) * fraction
-                                    drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
-                                }
-                                for (tick in timeTicks) {
-                                    val x = size.width * timeFraction(tick, now)
-                                    drawLine(gridColor, Offset(x, inset), Offset(x, size.height - inset), strokeWidth = 1.dp.toPx())
-                                }
-                                offsets.zipWithNext().forEachIndexed { index, (left, right) ->
-                                    if (Duration.between(points[index].measuredAt, points[index + 1].measuredAt) <= gapLimit) {
-                                        drawLine(lineColor, left, right, strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                                val offsets = points.map { plotOffset(it, now, size, bottom, top, inset, viewport) }
+                                clipRect {
+                                    for (fraction in listOf(0f, 0.5f, 1f)) {
+                                        val y = inset + (size.height - 2 * inset) * fraction
+                                        drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
                                     }
-                                }
-                                offsets.getOrNull(selectedIndex)?.let { offset ->
-                                    drawLine(
-                                        selectedColor,
-                                        Offset(offset.x, inset),
-                                        Offset(offset.x, size.height - inset),
-                                        strokeWidth = 1.dp.toPx(),
-                                    )
-                                    drawCircle(selectedColor, radius = 6.dp.toPx(), center = offset)
+                                    for (tick in timeTicks) {
+                                        val x = size.width * viewport.xFraction(timeFraction(tick, now))
+                                        drawLine(gridColor, Offset(x, inset), Offset(x, size.height - inset), strokeWidth = 1.dp.toPx())
+                                    }
+                                    offsets.zipWithNext().forEachIndexed { index, (left, right) ->
+                                        if (Duration.between(points[index].measuredAt, points[index + 1].measuredAt) <= gapLimit) {
+                                            drawLine(lineColor, left, right, strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                                        }
+                                    }
+                                    offsets.getOrNull(selectedIndex)?.let { offset ->
+                                        drawLine(
+                                            selectedColor,
+                                            Offset(offset.x, inset),
+                                            Offset(offset.x, size.height - inset),
+                                            strokeWidth = 1.dp.toPx(),
+                                        )
+                                        drawCircle(selectedColor, radius = 6.dp.toPx(), center = offset)
+                                    }
                                 }
                             }
                             val axisTimeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
                                 .withLocale(locale).withZone(zoneId)
                             Box(Modifier.width(chartWidth).height(22.dp)) {
+                                var previousLabelEnd = (-1).dp
                                 for (tick in timeTicks) {
-                                    if (Duration.between(tick, now) < Duration.ofMinutes(45)) continue
-                                    val labelWidth = 80.dp
-                                    val x = (chartWidth * timeFraction(tick, now) - labelWidth / 2)
+                                    val fraction = timeFraction(tick, now)
+                                    if (fraction !in viewport.start..viewport.end) continue
+                                    if (viewport.end == 1.0 && viewport.xFraction(fraction) > 0.85f) continue
+                                    val labelWidth = minOf(80.dp, chartWidth)
+                                    val x = (chartWidth * viewport.xFraction(fraction) - labelWidth / 2)
                                         .coerceIn(0.dp, chartWidth - labelWidth)
+                                    if (x < previousLabelEnd || (viewport.end == 1.0 && x + labelWidth > chartWidth - labelWidth)) continue
+                                    previousLabelEnd = x + labelWidth
                                     Text(
                                         axisTimeFormat.format(tick),
                                         Modifier.offset(x = x).width(labelWidth),
@@ -217,15 +267,19 @@ internal fun ReadingHistoryChart(
                                         maxLines = 1,
                                     )
                                 }
-                                Text(
+                                if (viewport.end == 1.0) Text(
                                     "Now",
-                                    Modifier.offset(x = chartWidth - 80.dp).width(80.dp),
+                                    Modifier.offset(x = (chartWidth - 80.dp).coerceAtLeast(0.dp)).width(minOf(80.dp, chartWidth)),
                                     style = MaterialTheme.typography.labelSmall,
                                     textAlign = TextAlign.End,
                                 )
                             }
                         }
                     }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = { setViewport(ChartViewport(0.0, 1.0)) }) { Text("Show 24 hours") }
+                    TextButton(onClick = { setViewport(ChartViewport()) }) { Text("Latest 3 hours") }
                 }
                 selected?.let { reading ->
                     Card(Modifier.fillMaxWidth()) {
@@ -258,12 +312,13 @@ private fun plotOffset(
     bottom: Double,
     top: Double,
     inset: Float,
+    viewport: ChartViewport,
 ): Offset {
-    val x = size.width * timeFraction(reading.measuredAt, now)
+    val x = size.width * viewport.xFraction(timeFraction(reading.measuredAt, now))
     val yFraction = ((top - reading.valueMgDl!!) / (top - bottom)).toFloat().coerceIn(0f, 1f)
     return Offset(x, inset + (size.height - 2 * inset) * yFraction)
 }
 
-private fun timeFraction(measuredAt: Instant, now: Instant): Float =
+private fun timeFraction(measuredAt: Instant, now: Instant): Double =
     (Duration.between(now.minus(chartWindow), measuredAt).toMillis().toDouble() /
-        chartWindow.toMillis()).toFloat().coerceIn(0f, 1f)
+        chartWindow.toMillis()).coerceIn(0.0, 1.0)

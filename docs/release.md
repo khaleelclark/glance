@@ -225,3 +225,5 @@ Stop, sign-out and person change cancel last when a publication is already in
 flight, and reject callbacks prepared before cancellation. Dismissal also
 invalidates a pending promoted card. The settings switch retains its previous
 accepted choice and reports an error when persistence fails.
+Lock-screen value changes share that gate, invalidate pending public cards,
+and clear the current monitoring and alert cards before a private replacement.

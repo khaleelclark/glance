@@ -134,14 +134,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         }
 
         override fun hide() {
-            notificationPublication.clear {
-                GlucoseNotificationRenderer(
-                    this@GlanceApplication,
-                    controller.display.value,
-                    controller.settings.unit,
-                    controller.settings.showOnLockScreen,
-                ).hide()
-            }
+            notificationPublication.clear { cancelMonitoringNotification() }
             alertEngine.clearNotifications()
         }
     }
@@ -169,6 +162,20 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     }
 
     fun hideCurrentNotification() = notifications.hide()
+
+    private fun cancelMonitoringNotification() {
+        GlucoseNotificationRenderer(
+            this, controller.display.value, controller.settings.unit, controller.settings.showOnLockScreen,
+        ).hide()
+    }
+
+    /** The privacy choice cannot change between an in-flight final check and notify. */
+    fun setLockScreenValuesVisible(visible: Boolean) {
+        notificationPublication.clear {
+            cancelMonitoringNotification()
+            alertEngine.changePrivacy { controller.settings.showOnLockScreen = visible }
+        }
+    }
 
     /** A delayed delete callback cannot republish across a cancellation or a new session. */
     fun onNotificationDismissed(actionGeneration: Long) {

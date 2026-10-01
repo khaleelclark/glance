@@ -122,7 +122,9 @@ dismissal, old-generation rejection and Stop. A dismissed card is restored as
 a regular card with no new promotion request. This emulator cannot qualify
 promotion or Samsung Now bar display. The owner reports Android promotion on
 0.17.0, with no visible chip and both Clear/swipe removing the card; testing the
-0.18.1 recovery behavior on that phone remains outstanding. Four new publication
+0.18.1 recovery behavior on that phone remains outstanding. Five new publication
 tests cover Stop/sign-out/person-change ordering, overlapping notify/cancel,
 final session validation and pending promotion invalidation. Three storage tests
-cover the retention choice's failed-save handling and persistence.
+cover the retention choice's failed-save handling and persistence. Notification
+and alert overlap tests ensure a lock-screen privacy change waits for an
+in-flight publication and clears it before accepting the hidden choice.

@@ -36,6 +36,19 @@ class DebugNotificationActivity : Activity() {
             java.io.File(context.filesDir, "notification-probe.txt").writeText(
                 com.khaleel.glance.notification.LiveUpdateSupport.diagnostics(context)
             )
+            val posted = context.getSystemService(android.app.NotificationManager::class.java)
+                .activeNotifications.firstOrNull { it.id == GlucoseNotificationRenderer.NOTIFICATION_ID }?.notification
+            val public = posted?.publicVersion
+            val privacy = org.json.JSONObject()
+                .put("posted", posted != null)
+                .put("privateVisibility", posted?.visibility == android.app.Notification.VISIBILITY_PRIVATE)
+                .put("publicRedacted", public?.extras?.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString() == "Glance · Monitoring" &&
+                    public.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString() == "Reading hidden on lock screen")
+                .put("numericIconAbsent", posted?.smallIcon?.type == android.graphics.drawable.Icon.TYPE_RESOURCE &&
+                    posted.smallIcon.resId == com.khaleel.glance.R.drawable.ic_glance_status)
+                .put("graphAbsent", posted?.getLargeIcon() == null)
+                .put("chipTextAbsent", android.os.Build.VERSION.SDK_INT < 36 || posted?.shortCriticalText.isNullOrEmpty())
+            java.io.File(context.filesDir, "notification-privacy-probe.json").writeText(privacy.toString())
             return
         }
         if (mode == "notification-retention") {
@@ -47,6 +60,12 @@ class DebugNotificationActivity : Activity() {
         if (mode == "notification-restore") {
             (context.applicationContext as com.khaleel.glance.GlanceApplication)
                 .showCurrentNotification(restore = true)
+            return
+        }
+        if (mode == "notification-privacy") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            app.setLockScreenValuesVisible(intent.getBooleanExtra("visible", false))
+            app.showCurrentNotification()
             return
         }
         if (mode == "dismiss-active" || mode == "dismiss-saved") {

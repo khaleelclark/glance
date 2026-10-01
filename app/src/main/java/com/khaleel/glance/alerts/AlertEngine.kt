@@ -65,4 +65,11 @@ class AlertEngine(
 
     @Synchronized
     fun clearNotifications() = notifier.clear()
+
+    /** A lock-screen choice must not change after an alert's final privacy check. */
+    @Synchronized
+    fun changePrivacy(updateChoice: () -> Unit) {
+        updateChoice()
+        notifier.clear()
+    }
 }

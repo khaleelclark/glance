@@ -96,4 +96,46 @@ class NotificationPublicationTest {
         assertFalse(publication.publish(pendingPromotion, { true }) { host = "promoted" })
         assertEquals("regular", host)
     }
+
+    @Test fun `privacy choice waits for a passed final check then clears and rejects old public renders`() {
+        val publication = NotificationPublication()
+        val generation = publication.generation()
+        val visible = AtomicBoolean(true)
+        val finalCheckPassed = CountDownLatch(1)
+        val resumeNotify = CountDownLatch(1)
+        val privacyRequested = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        var host: String? = null
+        try {
+            val render = executor.submit<Boolean> {
+                publication.publish(generation, {
+                    visible.get().also { finalCheckPassed.countDown() }
+                }) {
+                    check(resumeNotify.await(3, TimeUnit.SECONDS))
+                    // A public card must never publish after the choice changed to hidden.
+                    check(visible.get())
+                    host = "public reading"
+                }
+            }
+            assertTrue(finalCheckPassed.await(3, TimeUnit.SECONDS))
+            val privacy = executor.submit {
+                privacyRequested.countDown()
+                publication.clear {
+                    host = null
+                    visible.set(false)
+                }
+            }
+            assertTrue(privacyRequested.await(3, TimeUnit.SECONDS))
+            assertTrue(visible.get())
+            resumeNotify.countDown()
+            assertTrue(render.get(3, TimeUnit.SECONDS))
+            privacy.get(3, TimeUnit.SECONDS)
+            assertFalse(visible.get())
+            assertNull(host)
+            assertFalse(publication.publish(generation, { true }) { host = "public reading" })
+        } finally {
+            resumeNotify.countDown()
+            executor.shutdownNow()
+        }
+    }
 }

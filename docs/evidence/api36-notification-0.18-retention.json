@@ -5,6 +5,7 @@
     "old_generation_ignored": true,
     "clear_all_removes_disposable_but_retains_glance": true,
     "real_swipe_restores_regular_card": true,
+    "privacy_off_posts_redacted_card_without_numeric_icon_graph_or_chip": true,
     "retention_off_respects_real_swipe": true,
     "stop_removes_card_and_no_restoration": true,
     "person-change_rejects_old_delete_intent": true,

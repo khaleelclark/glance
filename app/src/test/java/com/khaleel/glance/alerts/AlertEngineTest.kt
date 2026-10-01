@@ -11,8 +11,14 @@ import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.core.Trend
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class AlertEngineTest {
     private val start = Instant.parse("2026-09-27T12:00:00Z")
@@ -69,6 +75,49 @@ class AlertEngineTest {
         AlertEngine(store, delivery, MutableClock(start), { live }, { false })
             .onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, true)
         assertEquals(false, delivery.lastVisibleOnLockScreen)
+    }
+
+    @Test fun privacyChangeWaitsForAnInFlightAlertAndClearsItLast() {
+        val visible = AtomicBoolean(true)
+        val hostVisible = AtomicBoolean(false)
+        val postEntered = CountDownLatch(1)
+        val resumePost = CountDownLatch(1)
+        val privacyRequested = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        val reading = reading(305.0, start)
+        val live = display(reading)
+        val delivery = object : AlertDelivery {
+            override fun ensureChannels() = Unit
+            override fun canPost(kind: AlertKind) = true
+            override fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
+                postEntered.countDown()
+                check(resumePost.await(3, TimeUnit.SECONDS))
+                check(showOnLockScreen && visible.get())
+                hostVisible.set(true)
+            }
+            override fun clear() { hostVisible.set(false) }
+        }
+        val engine = AlertEngine(MemoryStore(), delivery, MutableClock(start), { live }, { visible.get() })
+        try {
+            val post = executor.submit {
+                engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, true)
+            }
+            assertTrue(postEntered.await(3, TimeUnit.SECONDS))
+            val privacy = executor.submit {
+                privacyRequested.countDown()
+                engine.changePrivacy { visible.set(false) }
+            }
+            assertTrue(privacyRequested.await(3, TimeUnit.SECONDS))
+            assertTrue(visible.get())
+            resumePost.countDown()
+            post.get(3, TimeUnit.SECONDS)
+            privacy.get(3, TimeUnit.SECONDS)
+            assertFalse(visible.get())
+            assertFalse(hostVisible.get())
+        } finally {
+            resumePost.countDown()
+            executor.shutdownNow()
+        }
     }
 
     private fun reading(value: Double, time: Instant) = Reading(

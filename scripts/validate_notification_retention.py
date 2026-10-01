@@ -51,16 +51,19 @@ def posted_probe(label):
 
 
 def swipe_glance():
-    root = shade()
-    for node in root.iter("node"):
-        if node.get("resource-id") == "android:id/app_name_text" and node.get("text") == "Glance":
-            x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.get("bounds")))
-            adb("shell", "input", "swipe", "1100", str((y1 + y2) // 2 + 100),
-                "100", str((y1 + y2) // 2 + 100), "300")
-            # UI dump waits for the transition to settle, including the delete-intent callback.
-            shade()
-            return
-    raise RuntimeError("Glance card was not found in the emulator shade")
+    deadline = time.monotonic() + 15
+    while True:
+        root = shade()
+        for node in root.iter("node"):
+            if node.get("resource-id") == "android:id/app_name_text" and node.get("text") == "Glance":
+                x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.get("bounds")))
+                adb("shell", "input", "swipe", "1100", str((y1 + y2) // 2 + 100),
+                    "100", str((y1 + y2) // 2 + 100), "300")
+                # UI dump waits for the transition to settle, including the delete-intent callback.
+                shade()
+                return
+        if time.monotonic() >= deadline:
+            raise RuntimeError("Glance card was not found in the emulator shade within 15 seconds")
 
 
 def main():
@@ -69,6 +72,8 @@ def main():
     if "DEBUGGABLE" not in adb("shell", "dumpsys", "package", "com.khaleel.glance"):
         raise RuntimeError("Install the debug APK on a dedicated synthetic-data emulator first")
     EVIDENCE.mkdir(exist_ok=True)
+    adb("shell", "input", "keyevent", "KEYCODE_WAKEUP")
+    adb("shell", "wm", "dismiss-keyguard")
     checks = {}
     try:
         fixture("demo-clear")
@@ -111,6 +116,14 @@ def main():
         shade()
         image = subprocess.run(ADB + ["exec-out", "screencap", "-p"], check=True, capture_output=True).stdout
         (EVIDENCE / "api36-notification-0.18-retained.png").write_bytes(image)
+        fixture("notification-privacy", "--ez", "visible", "true")
+        posted_probe("public-values")
+        fixture("notification-privacy", "--ez", "visible", "false")
+        posted_probe("private-values")
+        privacy = json.loads(adb("shell", "run-as", "com.khaleel.glance", "cat", "files/notification-privacy-probe.json"))
+        assert all(privacy.values()), privacy
+        (EVIDENCE / "api36-notification-0.18-privacy.json").write_text(json.dumps(privacy, indent=2) + "\n")
+        checks["privacy_off_posts_redacted_card_without_numeric_icon_graph_or_chip"] = True
         fixture("notification-restore")
         fixture("notification-retention", "--ez", "keep", "false")
         swipe_glance()

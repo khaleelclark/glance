@@ -330,8 +330,7 @@ class MainActivity : ComponentActivity() {
         },
         onUnitChanged = { controller.settings.unit = it; renderSettingsChange() },
         onLockScreenVisibilityChanged = {
-            controller.settings.showOnLockScreen = it
-            if (!it) app.alertEngine.clearNotifications()
+            app.setLockScreenValuesVisible(it)
             renderSettingsChange()
         },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },

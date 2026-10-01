@@ -143,7 +143,7 @@ class DebugNotificationActivity : Activity() {
             sourceValue = value,
             sourceUnit = GlucoseUnit.MG_DL,
             specialValue = null,
-            trend = Trend.STEADY,
+            trend = runCatching { Trend.valueOf(intent.getStringExtra("trend") ?: "STEADY") }.getOrDefault(Trend.STEADY),
             sourceRecordId = "synthetic-reading",
             receivedAt = now,
         )
@@ -160,6 +160,14 @@ class DebugNotificationActivity : Activity() {
             },
             lastSuccessfulFetch = now,
             nextAllowedFetch = null,
+            history = if (mode == "reference") (0 until 36).map { index ->
+                val demoValue = 120.0 + 30.0 * kotlin.math.sin(index / 5.0) + index
+                reading.copy(
+                    measuredAt = reading.measuredAt.minusSeconds((36L - index) * 300),
+                    valueMgDl = demoValue, sourceValue = demoValue,
+                    sourceRecordId = "synthetic-history-$index",
+                )
+            } else emptyList(),
         )
         GlucoseNotificationRenderer(
             context,

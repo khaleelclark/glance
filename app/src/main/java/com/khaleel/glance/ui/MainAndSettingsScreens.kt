@@ -233,7 +233,7 @@ internal fun SettingsScreen(
             )
             SettingSwitch(
                 title = "Status chip Live Update",
-                detail = "On by default. Requests a status chip on Android 16 or newer. Samsung decides whether to show it in the Now bar. Turn off for the large, collapsible card.",
+                detail = "Requests a status chip on Android 16 or newer. Samsung decides whether to show it in the Now bar. Turn off for the arrow, reading and unit card with a small history graph. Live Update uses Android's layout.",
                 checked = settings.enhancedNotification,
                 onCheckedChange = callbacks.onEnhancedNotificationChanged,
             )

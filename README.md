@@ -50,3 +50,9 @@ shows its observed status and links to Android's promotion controls. Also
 check Samsung's Now bar and Glance Live notifications settings. The fresh
 glucose number can serve as the small icon in either display mode. Clear all
 keeps the monitoring card; Android 14+ may still allow individual swipes.
+
+The regular notification follows the owner's reference: trend arrow, lighter
+large reading, unit, and a genuine three-hour history thumbnail when available.
+Expand for source time, person, trend and connection information. Turn off
+**Status chip Live Update** for this layout; Android owns promoted layouts and
+Samsung controls the notification shell and icon placement.

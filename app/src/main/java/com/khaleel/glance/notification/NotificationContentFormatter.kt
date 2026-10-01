@@ -69,7 +69,7 @@ internal class NotificationContentFormatter(
             ReadingFreshness.FRESH -> {
                 val arrow = trendArrow(reading.trend)
                 val delta = recentDelta(reading, state.history, unit)
-                val text = listOfNotNull(value, arrow, delta).joinToString(" ")
+                val text = listOfNotNull(value, arrow, delta?.label).joinToString(" ")
                 val timeAndPerson = "$person · $measuredAt"
                 NotificationContent(
                     title = timeAndPerson,
@@ -93,10 +93,16 @@ internal class NotificationContentFormatter(
                         GlucoseUnit.MMOL_L -> "mmol/L"
                     },
                     prominentArrow = arrow,
-                    prominentDelta = delta,
-                    compactDetail = timeAndPerson,
+                    prominentDelta = delta?.label,
+                    compactDetail = connectionNote?.let { "$it · $timeAndPerson" } ?: timeAndPerson,
                     expandedDetail = listOfNotNull(
                         timeAndPerson,
+                        trendDescription(reading.trend),
+                        delta?.let {
+                            val interval = if (it.elapsed.toMinutes() > 0) "${it.elapsed.toMinutes()} min"
+                                else "${it.elapsed.seconds} sec"
+                            "Change ${it.label} over $interval"
+                        },
                         connectionNote,
                     ).joinToString(" · "),
                 )
@@ -219,7 +225,9 @@ internal class NotificationContentFormatter(
     private fun formatValue(reading: Reading, unit: GlucoseUnit): String =
         GlucoseFormat.withUnit(reading, unit, locale)
 
-    private fun recentDelta(current: Reading, history: List<Reading>, unit: GlucoseUnit): String? {
+    private data class RecentDelta(val label: String, val elapsed: Duration)
+
+    private fun recentDelta(current: Reading, history: List<Reading>, unit: GlucoseUnit): RecentDelta? {
         val previous = history.asSequence()
             .filter {
                 it.connectionId == current.connectionId &&
@@ -237,7 +245,7 @@ internal class NotificationContentFormatter(
                 (currentValue.times(10).roundToInt() - previousValue.times(10).roundToInt()) / 10.0,
             )
         }
-        return "($change)"
+        return RecentDelta("($change)", Duration.between(previous.measuredAt, current.measuredAt))
     }
 
     private fun trendArrow(trend: Trend): String? = when (trend) {

@@ -84,3 +84,11 @@ icon, privacy, Clear all and Live Update API checks. Actual promotion is
 provide the dedicated promotion settings activity. The regular card remains
 available. Samsung Now bar appearance, real source timing and physical-device
 battery/background qualification remain outstanding.
+
+## 0.16.0 reference notification layout
+
+See [the focused layout report](notification-0.16-validation.md). The regular
+card uses an arrow/reading/unit row, a lighter numeric status icon, and an
+actual-source history thumbnail. Source time/status remain available when
+expanded. Existing Live Update and privacy choices are retained. Samsung
+placement and outer styling are not qualified by the AOSP emulator.

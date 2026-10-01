@@ -15,7 +15,9 @@ import android.text.style.StyleSpan
 import android.view.View
 import android.widget.RemoteViews
 import com.khaleel.glance.R
+import com.khaleel.glance.BuildConfig
 import com.khaleel.glance.core.DisplayState
+import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
@@ -95,6 +97,10 @@ class GlucoseNotificationRenderer(
         if (!lockScreenVisible) {
             builder.setPublicVersion(buildRedactedPublicVersion())
         }
+        // Use only genuine same-person history. Samsung chooses the large icon's placement.
+        if (!promoted && lockScreenVisible) {
+            NotificationSparkline.create(state)?.let { builder.setLargeIcon(it) }
+        }
 
         if (promoted) {
             builder.setStyle(Notification.BigTextStyle().bigText(emphasizedReading(content.bigText)))
@@ -153,8 +159,11 @@ class GlucoseNotificationRenderer(
 
     private fun customView(layoutId: Int, expanded: Boolean): RemoteViews =
         RemoteViews(appContext.packageName, layoutId).apply {
+            val demo = BuildConfig.DEBUG && state.person?.displayName?.startsWith("DEMO · ") == true
             setTextViewText(R.id.notification_primary, content.prominent)
-            setTextViewText(R.id.notification_unit, content.prominentUnit.orEmpty())
+            setTextViewText(R.id.notification_unit, content.prominentUnit?.let {
+                if (demo) "$it\nDEMO" else it
+            }.orEmpty())
             setViewVisibility(
                 R.id.notification_unit,
                 if (content.prominentUnit == null) View.GONE else View.VISIBLE,
@@ -164,14 +173,20 @@ class GlucoseNotificationRenderer(
                 R.id.notification_arrow,
                 if (content.prominentArrow == null) View.GONE else View.VISIBLE,
             )
-            setTextViewText(R.id.notification_delta, content.prominentDelta.orEmpty())
-            setViewVisibility(
-                R.id.notification_delta,
-                if (content.prominentDelta == null) View.GONE else View.VISIBLE,
-            )
+            // The compact reference is one clean arrow/value/unit row. Details belong below
+            // it when expanded; error/old-reading states still show their explanatory line.
+            val fresh = state.freshness == ReadingFreshness.FRESH && state.monitoringEnabled &&
+                state.runtime == RuntimeState.RUNNING &&
+                state.connection in listOf(ConnectionState.READY, ConnectionState.FETCHING)
+            setViewVisibility(R.id.notification_detail, if (!expanded && fresh) View.GONE else View.VISIBLE)
+            if (!expanded && !fresh) {
+                setTextViewTextSize(R.id.notification_primary, android.util.TypedValue.COMPLEX_UNIT_SP, 20f)
+                setTextViewTextSize(R.id.notification_arrow, android.util.TypedValue.COMPLEX_UNIT_SP, 20f)
+            }
             setTextViewText(
                 R.id.notification_detail,
-                if (expanded) content.expandedDetail else content.compactDetail,
+                if (expanded) content.expandedDetail else
+                    if (demo) "DEMO · ${content.compactDetail}" else content.compactDetail,
             )
         }
 

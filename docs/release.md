@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `16`, and versionName
-`0.15.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `17`, and versionName
+`0.16.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.15.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.16.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -144,3 +144,21 @@ Primary references (checked 2026-09-30):
 - https://developer.android.com/reference/android/provider/Settings#ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS
 - https://developer.android.com/about/versions/14/behavior-changes-all
 - https://www.samsung.com/uk/support/mobile-devices/how-to-use-the-now-bar-on-the-lock-screen-of-your-samsung-galaxy-device/
+
+## Reference card layout (0.16.0)
+
+Turn off **Status chip Live Update** to use the custom card matching the owner's
+reference: trend arrow, lighter large reading, then unit. Fresh compact cards
+have one clean row; expand for the source reading time, person, trend, recent
+change and connection notes. Old/error cards retain their explicit status and
+last-reading details. Android owns the shell, background, icon placement and
+expand control; Samsung's exact appearance needs a device check.
+
+A small purple graph thumbnail uses only genuine, same-person numeric samples
+from the three hours ending at the current source measurement. It requires at
+least two samples, leaves gaps over fifteen minutes unconnected, and never
+manufactures history. Nonfresh/stopped/special states omit it. Hidden lock-screen
+values suppress the original numeric icon, thumbnail and chip text even while
+unlocked. The numeric status icon uses a lighter condensed face, retaining
+mg/dL, mmol/L and stale fallbacks. Live Update remains available with Android's
+standard layout; existing display-mode preferences are preserved.

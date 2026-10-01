@@ -37,7 +37,7 @@ object GlucoseStatusIcon {
         val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
-            typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
+            typeface = Typeface.create("sans-serif-condensed", Typeface.NORMAL)
             textSize = 88f
         }
         val bounds = Rect()

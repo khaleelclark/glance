@@ -32,7 +32,7 @@ class NotificationContentFormatterTest {
         assertEquals("mg/dL", content.prominentUnit)
         assertEquals("→", content.prominentArrow)
         assertEquals("Patrick · 10:42 AM", content.compactDetail)
-        assertFalse(content.expandedDetail.contains("Trend:"))
+        assertTrue(content.expandedDetail.contains("Trend: steady"))
     }
 
     @Test
@@ -187,6 +187,7 @@ class NotificationContentFormatterTest {
         val mg = formatter.format(currentState, GlucoseUnit.MG_DL)
         assertEquals("78 mg/dL → (-8)", mg.text)
         assertEquals("(-8)", mg.prominentDelta)
+        assertTrue(mg.expandedDetail.contains("Change (-8) over 1 min"))
         val mmol = formatter.format(currentState, GlucoseUnit.MMOL_L)
         assertEquals("(-0.5)", mmol.prominentDelta)
     }

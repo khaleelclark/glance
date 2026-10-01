@@ -11,58 +11,45 @@
         android:orientation="horizontal">
 
         <TextView
+            android:id="@+id/notification_arrow"
+            style="@style/TextAppearance.Compat.Notification.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:includeFontPadding="false"
+            android:fontFamily="sans-serif"
+            android:maxLines="1"
+            android:textSize="44sp" />
+
+        <TextView
             android:id="@+id/notification_primary"
             style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:fontFamily="sans-serif-condensed-black"
+            android:includeFontPadding="false"
+            android:fontFamily="sans-serif-light"
             android:maxLines="1"
-            android:textSize="48sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/notification_arrow"
-            style="@style/TextAppearance.Compat.Notification.Title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:fontFamily="sans-serif-black"
-            android:textSize="48sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/notification_delta"
-            style="@style/TextAppearance.Compat.Notification.Title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="7dp"
-            android:textSize="32sp"
-            android:textStyle="bold" />
+            android:textSize="48sp" />
 
         <TextView
             android:id="@+id/notification_unit"
             style="@style/TextAppearance.Compat.Notification.Info"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:textSize="12sp" />
+            android:layout_marginStart="8dp"
+            android:includeFontPadding="false"
+            android:maxLines="2"
+            android:textSize="16sp" />
     </LinearLayout>
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/notification_detail"
+        style="@style/TextAppearance.Compat.Notification.Info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/notification_detail"
-            style="@style/TextAppearance.Compat.Notification.Info"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:maxLines="2"
-            android:textSize="12sp" />
-
-    </LinearLayout>
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:textSize="12sp" />
 </LinearLayout>

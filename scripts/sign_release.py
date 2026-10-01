@@ -46,6 +46,8 @@ def main() -> int:
     run(
         str(ROOT / "gradlew"), ":app:clean", ":app:testDebugUnitTest",
         ":app:lintDebug", ":app:lintRelease", ":app:assembleRelease",
+        ":wear:clean", ":wear:testDebugUnitTest", ":wear:lintDebug",
+        ":wear:lintRelease", ":wear:assembleRelease",
         "--no-daemon", "--no-build-cache", env=build_env,
     )
     if run("git", "status", "--porcelain").strip() or run("git", "rev-parse", "HEAD").strip() != source_commit:
@@ -63,6 +65,14 @@ def main() -> int:
     if test_count == 0 or failures:
         print("Unit test evidence is missing or incomplete.", file=sys.stderr)
         return 1
+    watch_rows = [ET.parse(path).getroot() for path in
+                  sorted((ROOT / "wear/build/test-results/testDebugUnitTest").glob("TEST-*.xml"))]
+    watch_tests = sum(int(row.get("tests", "0")) for row in watch_rows)
+    watch_failures = sum(int(row.get("failures", "0")) + int(row.get("errors", "0")) +
+                         int(row.get("skipped", "0")) for row in watch_rows)
+    if watch_tests == 0 or watch_failures:
+        print("Watch unit test evidence is missing or incomplete.", file=sys.stderr)
+        return 1
     lint_warnings = 0
     for variant in ("debug", "release"):
         lint_path = ROOT / "app" / "build" / "reports" / f"lint-results-{variant}.xml"
@@ -71,6 +81,13 @@ def main() -> int:
             print(f"{variant} lint contains errors.", file=sys.stderr)
             return 1
         lint_warnings += sum(issue.get("severity") == "Warning" for issue in issues)
+    watch_lint_warnings = 0
+    for variant in ("debug", "release"):
+        issues = ET.parse(ROOT / "wear/build/reports" / f"lint-results-{variant}.xml").getroot().findall("issue")
+        if any(issue.get("severity") in ("Error", "Fatal") for issue in issues):
+            print(f"Watch {variant} lint contains errors.", file=sys.stderr)
+            return 1
+        watch_lint_warnings += sum(issue.get("severity") == "Warning" for issue in issues)
 
     password = PASSWORD_FILE.read_text(encoding="utf-8").strip()
     if not password:
@@ -119,11 +136,46 @@ def main() -> int:
             },
         }
         (OUT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        (OUT_DIR / f"glance-{version_name}-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        watch_unsigned = ROOT / "wear/build/outputs/apk/release/wear-release-unsigned.apk"
+        watch_badging = run(str(APT), "dump", "badging", str(watch_unsigned))
+        watch_package = re.search(r"^package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'", watch_badging, re.M)
+        if not watch_package or watch_package.groups() != package.groups():
+            raise RuntimeError("Phone and watch package/version metadata do not match")
+        watch_apk = OUT_DIR / f"glance-{version_name}-watch.apk"
+        watch_temp = watch_apk.with_suffix(".apk.tmp")
+        try:
+            run(str(APK_SIGNER), "sign", "--ks", str(KEYSTORE), "--ks-key-alias", "glance-personal",
+                "--ks-pass", "env:GLANCE_SIGNING_PASSWORD", "--key-pass", "env:GLANCE_SIGNING_PASSWORD",
+                "--out", str(watch_temp), str(watch_unsigned), env=env)
+            watch_verification = run(str(APK_SIGNER), "verify", "--verbose", "--print-certs", str(watch_temp))
+            watch_fingerprint = re.search(r"Signer #1 certificate SHA-256 digest: ([0-9a-f]+)", watch_verification)
+            if not watch_fingerprint or watch_fingerprint.group(1) != fingerprint_match.group(1):
+                raise RuntimeError("Phone and watch signers do not match")
+            watch_temp.replace(watch_apk)
+        finally:
+            watch_temp.unlink(missing_ok=True)
+        watch_manifest = {
+            "applicationId": "com.khaleel.glance", "versionCode": version_code, "versionName": version_name,
+            "apk": watch_apk.name, "apkSha256": hashlib.sha256(watch_apk.read_bytes()).hexdigest(),
+            "certificateSha256": manifest["certificateSha256"], "sourceCommit": source_commit,
+            "companion": "Requires same-signer Glance phone app and Android Wear OS pairing",
+            "tested": {
+                "unitTests": f"passed: {watch_tests} tests, 0 failures/errors/skips",
+                "lintDebugRelease": f"passed: 0 errors, {watch_lint_warnings} total warnings",
+                "emulator": "not run for this exact source commit; see docs/watch-validation.md",
+                "GalaxyWatch7": "not tested",
+            },
+        }
+        (OUT_DIR / f"glance-{version_name}-watch-manifest.json").write_text(json.dumps(watch_manifest, indent=2) + "\n", encoding="utf-8")
         print("Signed and verified: " + str(out_apk))
         print("APK SHA-256: " + sha256)
         print("Certificate SHA-256: " + manifest["certificateSha256"])
         print("Source commit: " + source_commit)
         print(f"Verification: {test_count} tests; 0 lint errors")
+        print("Signed and verified watch: " + str(watch_apk))
+        print("Watch APK SHA-256: " + watch_manifest["apkSha256"])
+        print(f"Watch verification: {watch_tests} tests; 0 lint errors")
         return 0
     finally:
         temporary.unlink(missing_ok=True)

@@ -30,6 +30,9 @@ data class Reduction(
 )
 
 object WatchCacheReducer {
+    fun failedPersistence(attempted: WatchCacheState): WatchCacheState =
+        attempted.copy(snapshot = null, revoked = true, watchNotificationsOptIn = false)
+
     fun reduce(
         current: WatchCacheState,
         incoming: SnapshotEnvelope,

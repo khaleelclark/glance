@@ -1,6 +1,7 @@
 package com.khaleel.glance.wear.data
 
 import android.content.Context
+import android.annotation.SuppressLint
 import com.khaleel.glance.wear.complication.ComplicationPublisher
 import com.khaleel.glance.wear.notification.WatchNotificationController
 import com.khaleel.glance.wear.shared.WatchStatus
@@ -20,6 +21,7 @@ object WatchRuntime {
     val state: StateFlow<WatchCacheState> = mutableState.asStateFlow()
 
     @Volatile private var initialized = false
+    @SuppressLint("StaticFieldLeak") // Store is initialized with applicationContext only.
     private lateinit var store: WatchSnapshotStore
 
     fun initialize(context: Context) {
@@ -47,7 +49,10 @@ object WatchRuntime {
             ReductionDecision.ACCEPTED -> null
         }
         if (rejected != null) return@synchronized rejected
-        if (!store.commit(reduction.state)) return@synchronized ApplyResult.PERSIST_FAILED
+        if (!store.commit(reduction.state)) {
+            failClosedLocked(context, reduction.state)
+            return@synchronized ApplyResult.PERSIST_FAILED
+        }
         mutableState.value = reduction.state
         val tombstone = incoming.snapshot.status == WatchStatus.HIDDEN ||
             incoming.snapshot.status == WatchStatus.STOPPED
@@ -74,7 +79,10 @@ object WatchRuntime {
         val current = mutableState.value
         if (current.sourceNode != sourceNode) return@synchronized ApplyResult.WRONG_SOURCE
         val cleared = current.copy(snapshot = null, revoked = true)
-        if (!store.commit(cleared)) return@synchronized ApplyResult.PERSIST_FAILED
+        if (!store.commit(cleared)) {
+            failClosedLocked(context, cleared)
+            return@synchronized ApplyResult.PERSIST_FAILED
+        }
         mutableState.value = cleared
         publishLocked(context.applicationContext, tombstone = true)
         ApplyResult.ACCEPTED
@@ -83,10 +91,20 @@ object WatchRuntime {
     fun setWatchNotificationOptIn(context: Context, enabled: Boolean): Boolean = synchronized(monitor) {
         initialize(context)
         val changed = mutableState.value.copy(watchNotificationsOptIn = enabled)
-        if (!store.commit(changed)) return@synchronized false
+        if (!store.commit(changed)) {
+            failClosedLocked(context, changed)
+            return@synchronized false
+        }
         mutableState.value = changed
         publishLocked(context.applicationContext, tombstone = false)
         true
+    }
+
+    private fun failClosedLocked(context: Context, attempted: WatchCacheState) {
+        val hidden = WatchCacheReducer.failedPersistence(attempted)
+        mutableState.value = hidden
+        if (!store.commit(hidden)) store.remove()
+        publishLocked(context.applicationContext, tombstone = true)
     }
 
     private fun publishLocked(context: Context, tombstone: Boolean) {
@@ -97,8 +115,9 @@ object WatchRuntime {
             val timestamped = current.copy(lastComplicationPushMillis = now)
             if (store.commit(timestamped)) {
                 mutableState.value = timestamped
-                runCatching { ComplicationPublisher.requestUpdate(context) }
             }
+            // Privacy clearing must still be requested when cache persistence fails.
+            runCatching { ComplicationPublisher.requestUpdate(context) }
         }
     }
 

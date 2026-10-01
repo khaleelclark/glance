@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.play.services.wearable)
-    implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
+    implementation(libs.wear.complications)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
 }

@@ -70,3 +70,10 @@ then add it from the phone's widget picker. It adapts to smaller sizes and both
 themes without scrolling. Android Auto use requires Google's car-widget feature
 to be available on the phone/car; availability on the target car is unverified.
 See [docs/car-widget.md](docs/car-widget.md) for setup and limits.
+# Galaxy Watch companion
+
+Glance 0.19.0 adds a Wear OS companion app, a glucose/source-trend text
+complication and optional silent watch notification. It uses readings from the
+phone; it does not sign in or fetch separately. Watch sharing starts off.
+See [watch setup and sideloading](docs/watch.md) and
+[watch verification](docs/watch-validation.md).

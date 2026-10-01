@@ -6,15 +6,15 @@ import android.content.SharedPreferences
 import com.khaleel.glance.wear.shared.WatchSnapshot
 import com.khaleel.glance.wear.shared.WatchStatus
 
-class WatchSnapshotStore(context: Context) {
+class WatchSnapshotStore(private val context: Context) {
     private val preferences: SharedPreferences = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
 
-    fun load(): WatchCacheState {
+    fun load(): WatchCacheState = runCatching {
         val source = preferences.getString(KEY_SOURCE, null)?.takeIf { it.isNotBlank() }
         val revision = preferences.getLong(KEY_REVISION, 0)
         val hasSnapshot = preferences.getBoolean(KEY_HAS_SNAPSHOT, false)
         val snapshot = if (hasSnapshot) loadSnapshot() else null
-        return WatchCacheState(
+        WatchCacheState(
             sourceNode = source,
             lastRevision = revision.coerceAtLeast(0),
             snapshot = snapshot,
@@ -22,11 +22,13 @@ class WatchSnapshotStore(context: Context) {
             watchNotificationsOptIn = preferences.getBoolean(KEY_NOTIFICATION_OPT_IN, false),
             lastComplicationPushMillis = preferences.getLong(KEY_LAST_COMPLICATION_PUSH, 0).coerceAtLeast(0),
         )
-    }
+    }.getOrElse { WatchCacheState(revoked = true) }
+
+    fun remove(): Boolean = runCatching { context.deleteSharedPreferences(FILE_NAME) }.getOrDefault(false)
 
     /** Synchronous checked commit: callers must not publish state when this returns false. */
     @SuppressLint("UseKtx") // The synchronous result is part of the fail-closed publication contract.
-    fun commit(state: WatchCacheState): Boolean {
+    fun commit(state: WatchCacheState): Boolean = runCatching {
         val editor = preferences.edit()
             .putLong(KEY_REVISION, state.lastRevision)
             .putBoolean(KEY_REVOKED, state.revoked)
@@ -47,8 +49,8 @@ class WatchSnapshotStore(context: Context) {
                 .putString(KEY_TREND, snapshot.trend)
                 .putBoolean(KEY_PHONE_NOTIFICATIONS, snapshot.notificationsEnabled)
         }
-        return editor.commit()
-    }
+        editor.commit()
+    }.getOrDefault(false)
 
     private fun loadSnapshot(): WatchSnapshot? = runCatching {
         WatchSnapshot(

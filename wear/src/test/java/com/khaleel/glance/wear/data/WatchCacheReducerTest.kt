@@ -77,6 +77,17 @@ class WatchCacheReducerTest {
         )
     }
 
+    @Test fun `failed persistence clears health data and keeps late callback barrier`() {
+        val attempted = WatchCacheState(sourceNode = "phone", lastRevision = 12,
+            snapshot = tombstone(12), watchNotificationsOptIn = true)
+        val hidden = WatchCacheReducer.failedPersistence(attempted)
+        assertTrue(hidden.revoked)
+        assertEquals(null, hidden.snapshot)
+        assertEquals(false, hidden.watchNotificationsOptIn)
+        assertEquals(ReductionDecision.OLD_REVISION,
+            WatchCacheReducer.reduce(hidden, envelope("phone", reading(11)), false).decision)
+    }
+
     private fun envelope(source: String, snapshot: WatchSnapshot) = SnapshotEnvelope(source, snapshot)
 
     private fun reading(revision: Long, value: String = "112", sentAt: Long = NOW) = WatchSnapshot(

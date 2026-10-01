@@ -119,6 +119,7 @@ fun GlanceWearScreen(cache: WatchCacheState) {
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(Modifier.height(24.dp))
+        if (BuildConfig.DEBUG) Text("DEMO · SYNTHETIC", textAlign = TextAlign.Center)
         Text(
             text = presentation.heading,
             style = MaterialTheme.typography.titleMedium,

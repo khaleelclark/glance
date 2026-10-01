@@ -3,6 +3,7 @@ package com.khaleel.glance.wear.complication
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Intent
+import androidx.wear.watchface.complications.data.TimeRange
 import androidx.wear.watchface.complications.data.ComplicationData
 import androidx.wear.watchface.complications.data.ComplicationType
 import androidx.wear.watchface.complications.data.LongTextComplicationData
@@ -40,7 +41,7 @@ class GlanceComplicationService : ComplicationDataSourceService() {
             listener.onComplicationData(null)
         } else {
             val entries = formatted.frames.mapNotNull { frame ->
-                val data = dataFor(request.complicationType, frame.shortText, frame.longText, frame.shortTitle)
+                val data = dataFor(request.complicationType, frame.shortText, frame.longText, frame.shortTitle, frame.endMillis)
                     ?: return@mapNotNull null
                 TimelineEntry(
                     TimeInterval(
@@ -60,22 +61,35 @@ class GlanceComplicationService : ComplicationDataSourceService() {
         shortText: String,
         longText: String,
         shortTitle: String = "",
+        expiresAtMillis: Long = 0,
     ): ComplicationData? = when (type) {
-        ComplicationType.SHORT_TEXT -> shortData(shortText, shortTitle)
-        ComplicationType.LONG_TEXT -> longData(longText.ifBlank { shortText })
+        ComplicationType.SHORT_TEXT -> shortData(
+            when (shortText) {
+                "Open phone" -> "Phone"
+                "Check phone" -> "Check"
+                "Time unknown" -> "No time"
+                else -> shortText
+            }, shortTitle, expiresAtMillis = expiresAtMillis, description = longText.ifBlank { shortText },
+        )
+        ComplicationType.LONG_TEXT -> longData(longText.ifBlank { shortText }, expiresAtMillis = expiresAtMillis)
         else -> null
     }
 
-    private fun shortData(text: String, title: String, preview: Boolean = false): ComplicationData {
-        val builder = ShortTextComplicationData.Builder(plain(text), plain("Glance $text"))
-        if (title.isNotBlank()) builder.setTitle(plain(title))
+    private fun shortData(text: String, title: String, preview: Boolean = false, expiresAtMillis: Long = 0,
+                          description: String = text): ComplicationData {
+        val builder = ShortTextComplicationData.Builder(plain(text), plain("Glance $description"))
+        if (com.khaleel.glance.wear.BuildConfig.DEBUG) builder.setTitle(plain("DEMO"))
+        else if (title.isNotBlank()) builder.setTitle(plain(title))
         if (!preview) builder.setTapAction(openAppIntent())
+        if (expiresAtMillis > 0) builder.setValidTimeRange(TimeRange.before(Instant.ofEpochMilli(expiresAtMillis)))
         return builder.build()
     }
 
-    private fun longData(text: String, preview: Boolean = false): ComplicationData {
-        val builder = LongTextComplicationData.Builder(plain(text), plain(text))
+    private fun longData(text: String, preview: Boolean = false, expiresAtMillis: Long = 0): ComplicationData {
+        val label = if (com.khaleel.glance.wear.BuildConfig.DEBUG) "DEMO · $text" else text
+        val builder = LongTextComplicationData.Builder(plain(label), plain(label))
         if (!preview) builder.setTapAction(openAppIntent())
+        if (expiresAtMillis > 0) builder.setValidTimeRange(TimeRange.before(Instant.ofEpochMilli(expiresAtMillis)))
         return builder.build()
     }
 

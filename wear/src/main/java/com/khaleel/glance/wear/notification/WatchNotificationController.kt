@@ -52,7 +52,7 @@ class WatchNotificationController(private val context: Context) {
         )
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_glance_wear)
-            .setContentTitle(content.title)
+            .setContentTitle(if (com.khaleel.glance.wear.BuildConfig.DEBUG) "DEMO · ${content.title}" else content.title)
             .setContentText(content.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content.text))
             .setContentIntent(contentIntent)

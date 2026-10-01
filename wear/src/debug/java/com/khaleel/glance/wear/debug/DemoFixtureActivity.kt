@@ -31,8 +31,21 @@ class DemoFixtureActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WatchRuntime.initialize(this)
         intent.getStringExtra(EXTRA_STATUS)?.let { raw ->
-            runCatching { WatchStatus.valueOf(raw) }.getOrNull()?.let(::applySynthetic)
+            runCatching { WatchStatus.valueOf(raw) }.getOrNull()?.let({ applySynthetic(it, intent.getIntExtra("demo_age_minutes", 1)) })
         }
+        if (intent.hasExtra("demo_opt_in")) {
+            WatchRuntime.setWatchNotificationOptIn(this, intent.getBooleanExtra("demo_opt_in", false))
+        }
+        val current = WatchRuntime.state.value
+        val presentation = com.khaleel.glance.wear.shared.WatchPresentation.from(current.snapshot, System.currentTimeMillis())
+        val timeline = com.khaleel.glance.wear.complication.WearComplicationFormatter.format(current.snapshot, System.currentTimeMillis())
+        val notifications = getSystemService(android.app.NotificationManager::class.java).activeNotifications
+        val report = org.json.JSONObject().put("status", presentation.heading)
+            .put("hasValue", presentation.value.isNotEmpty()).put("fresh", presentation.fresh)
+            .put("hasArrow", presentation.arrow.isNotEmpty()).put("revoked", current.revoked)
+            .put("notificationCount", notifications.count { it.id == 2101 })
+            .put("timelineFrames", timeline.frames.size).put("safeDefault", timeline.defaultText == "Open phone" || !presentation.fresh)
+        java.io.File(filesDir, "watch-probe.json").writeText(report.toString())
         setContent {
             MaterialTheme {
                 Column(
@@ -56,8 +69,8 @@ class DemoFixtureActivity : ComponentActivity() {
         val reading = status == WatchStatus.READING
         val requestedNotification = intent.getBooleanExtra(EXTRA_PHONE_NOTIFICATIONS, true)
         val snapshot = WatchSnapshot(
-            revision = WatchRuntime.state.value.lastRevision + 1,
-            sentAtMillis = now,
+            revision = intent.getLongExtra("demo_revision", WatchRuntime.state.value.lastRevision + 1),
+            sentAtMillis = now - intent.getIntExtra("demo_transport_minutes", 0) * 60_000L,
             status = status,
             measuredAtMillis = if (reading) now - ageMinutes * 60_000L else 0,
             value = if (reading) "123" else "",

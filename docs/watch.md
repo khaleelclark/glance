@@ -1,0 +1,103 @@
+# Glance on Galaxy Watch / Wear OS
+
+Owner target: Galaxy Watch7, Wear OS 6, One UI Watch 8.0. This is a companion
+to the phone app, not a separate LibreLinkUp client. The owner's requested scope
+adds a watch app, glucose/trend complication and optional watch notification to
+the original phone-only baseline.
+
+## Data and privacy
+
+The phone remains the only account/session and polling owner. The watch receives
+the current formatted glucose value, selected unit, source arrow/description,
+measurement timestamp and a small status projection. No login credentials,
+tokens, names, account IDs, connection IDs or history are sent. Phone settings
+control **Watch readings** and **Watch notification**, both initially off. Watch
+sharing is separate from lock-screen values and Widget values: enabling it
+permits visible readings on the watch face, including ambient mode.
+
+Phone and watch use the same package and signing certificate. Play services
+Data Layer transfers the projection through the paired Android/Wear OS link.
+It can use Google's end-to-end encrypted cloud relay when Bluetooth is absent;
+this is not a direct-Bluetooth-only promise. The watch has no LibreLinkUp account
+and cannot continue fetching independently when the phone stops monitoring.
+
+Stop, sign-out, person changes and sharing-off enqueue a content-free replacement
+on the same DataItem. A single serial publisher orders it after an in-flight old
+update. The watch rejects older revisions. Revocation cannot reach a disconnected
+or powered-off watch immediately. A five-minute transport lease bounds cached
+reading display; old measurement timestamps independently remove current-value
+presentation at five minutes. Neither phone receipt time nor a duplicate source
+response resets measurement freshness. Turning the watch sharing grant off uses
+a checked write and, if necessary, removal of its dedicated grant file. If all
+storage operations fail, rendering is blocked in the current process and the UI
+directs the owner to turn off or remove Glance on the watch before restarting.
+
+## Install the companion
+
+Upgrade the phone with `glance-0.19.0-personal.apk`. Install
+`glance-0.19.0-watch.apk` on the watch, signed with the same personal key. There
+is no Play Store listing or automatic store installation in this personal build.
+For sideloading, enable Developer options and Wireless debugging on the watch,
+use the watch's pairing code and pairing address with `adb pair`, then its
+separate debugging address/port with `adb connect`. For example:
+
+```sh
+adb pair WATCH_IP:PAIRING_PORT
+adb connect WATCH_IP:DEBUG_PORT
+adb -s WATCH_IP:DEBUG_PORT install -r release/glance-0.19.0-watch.apk
+```
+
+Use the addresses and ports actually shown on the watch; they can differ. The
+pairing code is entered locally into adb, not pasted into Chat. Disable wireless
+debugging when finished. Existing phone installation and LibreLinkUp settings
+are preserved by the same-key phone upgrade.
+
+Open Glance on the watch. On the phone, enable **Watch readings** in Settings and
+start monitoring. The watch app shows the value/unit, source arrow, and reading
+time, or an explicit stopped/waiting/hidden/old-data state. A long-expired sync
+shows an instruction to open the phone rather than a cached glucose number.
+
+## Complication and notifications
+
+Edit a watch face with a text complication slot, choose **Glance glucose**, and
+save. Both short and long text slots are supported; the watch face controls the
+rendered layout and may omit optional title fields. Tap the complication to open
+Glance. No progress gauge is invented for glucose. Source LOW/HIGH and unknown
+trend are represented honestly.
+
+Complication requests follow Wear OS's five-minute average guidance. A timeline
+and expiry remove a current-looking number when the reading or phone lease
+expires, even while Glance is not executing. A complication can briefly show a
+status while awaiting its next permitted update; the watch app reads the newest
+received projection when open. Actual Samsung face update/expiry behavior needs
+the owner check. This is not a guaranteed one-minute complication update.
+
+The AndroidX persistence-policy setter is restricted to its library; Glance uses
+public validity ranges and timelines instead. The watch face may cache complication
+data, so the five-minute display bound depends on the face honoring those ranges.
+This is a display-expiry policy, not a promise to erase the face's private cache.
+
+For the silent watch card, enable **Watch notification** on the phone and enable
+notifications inside the watch app, granting the watch's notification permission
+when requested. It updates one local silent card, with an absolute measurement
+time and bounded expiry. It is not an alarm or a guarantee of permanent
+undismissability. The existing threshold alerts retain their phone channel and
+Galaxy Wearable bridging choices; there is no blanket notification bridge
+disable and no second watch alert engine or fetch worker.
+
+## Build and limits
+
+`./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest :app:assembleDebug
+:wear:assembleDebug` builds and tests both modules. `python3 scripts/sign_release.py`
+does clean unit/lint/release verification and signs both packages using the
+existing key outside the repository. Source and signing metadata are in the
+release manifests. Physical Watch7 pairing, face rendering, wrist/ambient
+presentation, disconnected timing and battery measurements remain separate
+qualification checks. See [watch-validation.md](watch-validation.md).
+
+Official references checked 2026-10-01:
+
+- [Data Layer transport and package/signature security](https://developer.android.com/training/wearables/data/overview)
+- [Complication service, timelines and push updates](https://developer.android.com/training/wearables/complications/exposing-data)
+- [Native and bridged watch notifications](https://developer.android.com/training/wearables/notifications)
+- [Ongoing/non-clearable phone cards are not bridged](https://developer.android.com/training/wearables/notifications/bridger)

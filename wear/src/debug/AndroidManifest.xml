@@ -3,7 +3,7 @@
     <application>
         <activity
             android:name=".debug.DemoFixtureActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="DEMO synthetic fixture"
             android:taskAffinity="" />
     </application>

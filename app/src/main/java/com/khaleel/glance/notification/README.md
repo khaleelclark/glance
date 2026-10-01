@@ -22,10 +22,14 @@ selected unit by default. Nonfresh, special, absent, stopped, and unrenderably
 long values use the Glance icon. The user can disable numeric icons. Public
 versions always retain the ordinary icon. Android controls tint and icon size.
 
-Ongoing and NO_CLEAR protect the monitoring card from Clear all. Android 14+
-may allow an individual swipe while unlocked. The existing generation-checked
-dismissal handler and explicit restore action remain; no automatic repost loop
-is added.
+Ongoing and NO_CLEAR request protection from Clear all on both card variants.
+The owner reports Samsung clearing the card anyway. The explicit personal-build
+retention choice (default on in 0.18) restores the regular card on a valid current
+session delete intent. It checks generation, enabled state and RUNNING runtime.
+There is no new scheduler or fetch, and no automatic re-promotion after dismissal.
+Turning retention off restores the earlier persistent-suppression behavior.
+Stop/force-stop still stop the session; Samsung Now bar admission is unverified.
+See docs/notification-0.18-validation.md for actual verification limits.
 
 The standard custom view uses a heavy condensed glucose face and heavy arrow in
 both compact and expanded layouts. Its system-template fallback also bolds the

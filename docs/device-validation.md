@@ -112,3 +112,14 @@ Actual Android Auto widget discovery/placement, sideload restrictions, Samsung
 scaling, real account parity, overnight scheduling and physical battery use
 remain **not run**. Google's next-generation Android Auto widget rollout must
 be available before this mobile widget can be selected in the car.
+
+## 0.18.0 monitoring-card retention
+
+See [notification-0.18-validation.md](notification-0.18-validation.md) for the
+owner-requested retention choice and posting diagnostics. The API 36 synthetic
+foreground session passed real Clear-all and sideways-swipe tests, retention-off
+dismissal, old-generation rejection and Stop. A dismissed card is restored as
+a regular card with no new promotion request. This emulator cannot qualify
+promotion or Samsung Now bar display. The owner reports Android promotion on
+0.17.0, with no visible chip and both Clear/swipe removing the card; testing the
+0.18 recovery behavior on that phone remains outstanding.

@@ -1,0 +1,13 @@
+{
+  "sdk": "36",
+  "checks": {
+    "original_and_public_clear_protection": true,
+    "old_generation_ignored": true,
+    "clear_all_removes_disposable_but_retains_glance": true,
+    "real_swipe_restores_regular_card": true,
+    "retention_off_respects_real_swipe": true,
+    "stop_removes_card_and_no_restoration": true
+  },
+  "promotion_on_emulator": false,
+  "samsung_now_bar": "not tested"
+}

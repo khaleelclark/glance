@@ -153,7 +153,8 @@ class MainActivity : ComponentActivity() {
                     "Events retained: " + diagnostic.eventCount + "\n" +
                     "Next allowed fetch: " + (display.nextAllowedFetch ?: "now") + "\n" +
                     "Notification permission: " + setupState.notificationPermission + "\n" +
-                    "Live Update: " + LiveUpdateSupport.status(this)
+                    "Live Update: " + LiveUpdateSupport.status(this) + "\n" +
+                    LiveUpdateSupport.diagnostics(this)
                 AlertDialog(
                     onDismissRequest = { showDiagnostics = false },
                     title = { Text("Diagnostics") },
@@ -208,6 +209,7 @@ class MainActivity : ComponentActivity() {
             settings.numericStatusIcon,
             LiveUpdateSupport.status(this),
             app.widgetPreferences.valuesVisible,
+            NotificationVisibility.keepVisible(this),
         )
     }
 
@@ -333,7 +335,16 @@ class MainActivity : ComponentActivity() {
             renderSettingsChange()
         },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },
-        onEnhancedNotificationChanged = { controller.settings.enhancedNotification = it; renderSettingsChange() },
+        onEnhancedNotificationChanged = {
+            controller.settings.enhancedNotification = it
+            if (it) NotificationVisibility.restore(this)
+            renderSettingsChange()
+        },
+        onKeepNotificationVisibleChanged = {
+            NotificationVisibility.setKeepVisible(this, it)
+            if (it && controller.display.value.monitoringEnabled) app.showCurrentNotification()
+            refreshSettings()
+        },
         onNumericStatusIconChanged = { controller.settings.numericStatusIcon = it; renderSettingsChange() },
         onOpenLiveUpdateSettings = {
             val liveSettings = LiveUpdateSupport.settingsIntent(this)

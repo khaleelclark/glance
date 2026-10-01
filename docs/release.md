@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `18`, and versionName
-`0.17.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `19`, and versionName
+`0.18.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.17.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.18.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -132,10 +132,11 @@ duplicate number; the numeric icon applies to the regular card. The bitmap has
 padding for OEM icon scaling, but Samsung decimal/three-digit readability still
 needs the owner's check. Android's lock-screen privacy settings still apply.
 
-The monitoring notification sets ongoing and NO_CLEAR: Clear all leaves it in
-place. Android 14 and newer can still permit an individual dismissal while
-unlocked. Glance respects that dismissal and offers Show notification again;
-it does not repost a dismissed card in a loop or impersonate a call/alarm.
+The monitoring notification requests ongoing and NO_CLEAR on both its original
+and redacted public versions. Stock Android excludes it from Clear all, but the
+owner reports Samsung removing it even through Clear. Android 14 and newer can
+also permit an individual swipe while unlocked. See the 0.18 retention choice
+below; an app cannot make every OEM surface impossible to dismiss.
 
 Primary references (checked 2026-09-30):
 
@@ -187,3 +188,34 @@ check the absolute measurement time. Host refreshes are best effort.
 See [car-widget.md](car-widget.md) for official references, setup and verification
 limits. Actual Android Auto dashboard hosting, Samsung appearance, live source
 parity and screen-off/battery qualification require the owner's device tests.
+
+## Notification retention (0.18.0)
+
+The owner reported on 0.17.0 that both Clear and a sideways swipe removed the
+card, although Android reported it promoted. **Keep monitoring card visible**
+now starts enabled in this personal build, reflecting the owner's explicit
+request to retain the card. While the current session is running, a valid
+delete intent restores the same silent regular glucose card with the latest
+controller state. It does not restart monitoring, fetch data, or repeatedly
+request promotion. After dismissal the regular layout remains in use across
+process recreation; an explicit Start/Resume, Show notification again, or
+switching Live Update off/on can request promotion again.
+
+Turn retention off to retain the previous behavior: dismissal suppresses the
+card until an explicit restore. Stop monitoring, sign-out, system Stop and
+force-stop remain stop controls. Android/Samsung can still remove a card briefly,
+block notifications, or prevent delivery of its delete intent; this is recovery,
+not an unremovable notification guarantee.
+
+Diagnostics now shows the posted ongoing, Clear-all protection, foreground and
+promoted flags, whether chip text/custom layout was supplied, channel importance,
+and retention state. It exports no chip contents or patient details. If Glance's
+lock-screen values are hidden, it deliberately supplies no numeric chip text.
+Android promotion alone does not establish Samsung Now bar admission. The Now
+bar still requires an owner check and can be enabled for Glance if Samsung lists
+it under Settings → Lock screen and AOD → Now bar → View more.
+
+See [notification-0.18-validation.md](notification-0.18-validation.md) for bounded
+verification. This choice supersedes the baseline's manual-only dismissal
+restoration for this personal build; dismissed Live Updates return as regular
+cards rather than being re-promoted automatically.

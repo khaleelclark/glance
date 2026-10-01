@@ -68,6 +68,7 @@ class GlucoseNotificationRenderer(
 
     fun build(): Notification {
         val promoted = enhanced &&
+            !NotificationVisibility.regularAfterDismissal(appContext) &&
             state.monitoringEnabled &&
             state.runtime == RuntimeState.RUNNING &&
             LiveUpdateSupport.canRequest(appContext)
@@ -210,7 +211,9 @@ class GlucoseNotificationRenderer(
             .setShowWhen(false)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
         if (Build.VERSION.SDK_INT >= 36) builder.setShortCriticalText("")
-        return builder.build()
+        return builder.build().apply {
+            if (state.monitoringEnabled) flags = flags or Notification.FLAG_NO_CLEAR
+        }
     }
 
     companion object {

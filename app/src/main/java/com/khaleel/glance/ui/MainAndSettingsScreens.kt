@@ -251,9 +251,11 @@ internal fun SettingsScreen(
                 checked = settings.numericStatusIcon,
                 onCheckedChange = callbacks.onNumericStatusIconChanged,
             )
-            Text(
-                "The monitoring card stays when you tap Clear all. Android 14 or newer may still let you swipe it away; use Show notification again to restore it.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            SettingSwitch(
+                title = "Keep monitoring card visible",
+                detail = "Restore the regular glucose card after clearing or swiping while monitoring is active. A dismissed Live Update returns as the regular card. Stop monitoring to remove it. Android can still remove the card briefly or block notifications.",
+                checked = settings.keepNotificationVisible,
+                onCheckedChange = callbacks.onKeepNotificationVisibleChanged,
             )
         }
 

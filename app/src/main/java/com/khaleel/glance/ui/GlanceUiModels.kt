@@ -57,6 +57,7 @@ data class UserSettingsUi(
     val numericStatusIcon: Boolean = true,
     val liveUpdateStatus: String = "Android decides whether to promote the monitoring notification.",
     val widgetValuesVisible: Boolean = false,
+    val keepNotificationVisible: Boolean = true,
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -93,4 +94,5 @@ data class GlanceCallbacks(
     val onDeleteLocalData: () -> Unit,
     val onSignOut: () -> Unit,
     val onWidgetValuesChanged: (Boolean) -> Unit = {},
+    val onKeepNotificationVisibleChanged: (Boolean) -> Unit = {},
 )

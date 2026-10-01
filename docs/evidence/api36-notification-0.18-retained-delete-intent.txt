@@ -1,0 +1,12 @@
+Monitoring card posted: true
+Ongoing flag: true
+Clear-all protection flag: true
+Foreground-service flag: true
+Public clear-all protection flag: true
+Promotion requested: false
+Promoted flag: false
+Chip text supplied: false
+Custom layout supplied: true
+Monitoring channel importance: 2
+Keep card visible: true
+Regular card after dismissal: true

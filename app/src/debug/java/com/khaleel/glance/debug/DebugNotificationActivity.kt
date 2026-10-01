@@ -32,6 +32,31 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode == "notification-probe") {
+            java.io.File(context.filesDir, "notification-probe.txt").writeText(
+                com.khaleel.glance.notification.LiveUpdateSupport.diagnostics(context)
+            )
+            return
+        }
+        if (mode == "notification-retention") {
+            com.khaleel.glance.notification.NotificationVisibility.setKeepVisible(
+                context, intent.getBooleanExtra("keep", true)
+            )
+            return
+        }
+        if (mode == "notification-restore") {
+            (context.applicationContext as com.khaleel.glance.GlanceApplication)
+                .showCurrentNotification(restore = true)
+            return
+        }
+        if (mode == "dismiss-active") {
+            val generation = MonitoringService.currentActionGeneration ?: return
+            context.sendBroadcast(Intent(context, com.khaleel.glance.notification.NotificationDismissReceiver::class.java)
+                .setAction(com.khaleel.glance.notification.NotificationDismissReceiver.ACTION_DISMISSED)
+                .putExtra(com.khaleel.glance.notification.NotificationDismissReceiver.EXTRA_GENERATION,
+                    intent.getLongExtra("generation", generation)))
+            return
+        }
         if (mode == "live-api-check" && android.os.Build.VERSION.SDK_INT >= 36) {
             val manager = context.getSystemService(android.app.NotificationManager::class.java)
             GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).createChannel()

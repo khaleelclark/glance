@@ -40,23 +40,30 @@ class DebugNotificationActivity : Activity() {
         }
         if (mode == "watch-probe") {
             val app = context.applicationContext as com.khaleel.glance.GlanceApplication
-            val items = com.google.android.gms.tasks.Tasks.await(
-                com.google.android.gms.wearable.Wearable.getDataClient(context).dataItems,
-                10, java.util.concurrent.TimeUnit.SECONDS)
-            try {
-                val snapshot = items.firstOrNull { it.uri.path == com.khaleel.glance.wear.shared.WatchSnapshot.PATH }
-                    ?.let { com.khaleel.glance.wear.shared.WatchDataMap.decode(
-                        com.google.android.gms.wearable.DataMapItem.fromDataItem(it).dataMap) }
-                val result = org.json.JSONObject()
-                    .put("sharing", app.watchPreferences.valuesVisible)
-                    .put("notifications", app.watchPreferences.notificationsEnabled)
-                    .put("dataItemPresent", snapshot != null)
-                    .put("status", snapshot?.status?.name ?: "ABSENT")
-                    .put("hasValue", !snapshot?.value.isNullOrEmpty())
-                    .put("hasMeasurement", (snapshot?.measuredAtMillis ?: 0) > 0)
-                    .put("payloadValid", snapshot?.valid() ?: false)
-                java.io.File(context.filesDir, "watch-probe.json").writeText(result.toString())
-            } finally { items.release() }
+            Thread {
+                runCatching {
+                    val items = com.google.android.gms.tasks.Tasks.await(
+                        com.google.android.gms.wearable.Wearable.getDataClient(context).dataItems,
+                        10, java.util.concurrent.TimeUnit.SECONDS)
+                    try {
+                        val snapshot = items.firstOrNull { it.uri.path == com.khaleel.glance.wear.shared.WatchSnapshot.PATH }
+                            ?.let { com.khaleel.glance.wear.shared.WatchDataMap.decode(
+                                com.google.android.gms.wearable.DataMapItem.fromDataItem(it).dataMap) }
+                        val result = org.json.JSONObject()
+                            .put("sharing", app.watchPreferences.valuesVisible)
+                            .put("notifications", app.watchPreferences.notificationsEnabled)
+                            .put("dataItemPresent", snapshot != null)
+                            .put("status", snapshot?.status?.name ?: "ABSENT")
+                            .put("hasValue", !snapshot?.value.isNullOrEmpty())
+                            .put("hasMeasurement", (snapshot?.measuredAtMillis ?: 0) > 0)
+                            .put("payloadValid", snapshot?.valid() ?: false)
+                        java.io.File(context.filesDir, "watch-probe.json").writeText(result.toString())
+                    } finally { items.release() }
+                }.onFailure {
+                    java.io.File(context.filesDir, "watch-probe.json").writeText(
+                        org.json.JSONObject().put("transportAvailable", false).toString())
+                }
+            }.start()
             return
         }
         if (mode == "privacy-legacy-seed") {

@@ -1,0 +1,152 @@
+{
+  "device": "Wear OS 6 API36 x86_64 emulator",
+  "synthetic": true,
+  "checks": {
+    "fresh": {
+      "status": "Glance",
+      "hasValue": true,
+      "fresh": true,
+      "hasArrow": true,
+      "revoked": false,
+      "notificationCount": 1,
+      "timelineFrames": 2,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "stable_card_update": {
+      "status": "Glance",
+      "hasValue": true,
+      "fresh": true,
+      "hasArrow": true,
+      "revoked": false,
+      "notificationCount": 1,
+      "timelineFrames": 2,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "delayed_historical": {
+      "status": "Delayed",
+      "hasValue": true,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": false,
+      "notificationCount": 1,
+      "timelineFrames": 1,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "expired_transport": {
+      "status": "Open phone",
+      "hasValue": false,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": false,
+      "notificationCount": 0,
+      "timelineFrames": 0,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "future_measurement": {
+      "status": "Time unknown",
+      "hasValue": false,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": false,
+      "notificationCount": 1,
+      "timelineFrames": 0,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "phone_notification_off": {
+      "status": "Glance",
+      "hasValue": true,
+      "fresh": true,
+      "hasArrow": true,
+      "revoked": false,
+      "notificationCount": 0,
+      "timelineFrames": 2,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 0
+    },
+    "watch_opt_out": {
+      "status": "Glance",
+      "hasValue": true,
+      "fresh": true,
+      "hasArrow": true,
+      "revoked": false,
+      "notificationCount": 0,
+      "timelineFrames": 2,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "permission_denied": {
+      "status": "Glance",
+      "hasValue": true,
+      "fresh": true,
+      "hasArrow": true,
+      "revoked": false,
+      "notificationCount": 0,
+      "timelineFrames": 2,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 0
+    },
+    "hidden_tombstone": {
+      "status": "Hidden",
+      "hasValue": false,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": true,
+      "notificationCount": 0,
+      "timelineFrames": 0,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 0
+    },
+    "late_reading_rejected": {
+      "status": "Hidden",
+      "hasValue": false,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": true,
+      "notificationCount": 0,
+      "timelineFrames": 0,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 0
+    },
+    "process_recreation_keeps_revocation": {
+      "status": "Hidden",
+      "hasValue": false,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": true,
+      "notificationCount": 0,
+      "timelineFrames": 0,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 0
+    },
+    "explicit_newer_grant": {
+      "status": "Glance",
+      "hasValue": true,
+      "fresh": true,
+      "hasArrow": true,
+      "revoked": false,
+      "notificationCount": 1,
+      "timelineFrames": 2,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 1
+    },
+    "stopped": {
+      "status": "Stopped",
+      "hasValue": false,
+      "fresh": false,
+      "hasArrow": false,
+      "revoked": true,
+      "notificationCount": 0,
+      "timelineFrames": 0,
+      "safeDefault": true,
+      "notificationCountAtActivityStart": 0
+    }
+  },
+  "allPassed": true,
+  "pairedDataLayer": "not tested",
+  "GalaxyWatch7": "not tested"
+}

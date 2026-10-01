@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -31,7 +32,7 @@ class DemoFixtureActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WatchRuntime.initialize(this)
         intent.getStringExtra(EXTRA_STATUS)?.let { raw ->
-            runCatching { WatchStatus.valueOf(raw) }.getOrNull()?.let({ applySynthetic(it, intent.getIntExtra("demo_age_minutes", 1)) })
+            runCatching { WatchStatus.valueOf(raw) }.getOrNull()?.let { applySynthetic(it, intent.getIntExtra("demo_age_minutes", 1)) }
         }
         if (intent.hasExtra("demo_opt_in")) {
             WatchRuntime.setWatchNotificationOptIn(this, intent.getBooleanExtra("demo_opt_in", false))
@@ -48,17 +49,19 @@ class DemoFixtureActivity : ComponentActivity() {
         java.io.File(filesDir, "watch-probe.json").writeText(report.toString())
         setContent {
             MaterialTheme {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text("DEMO · SYNTHETIC", textAlign = TextAlign.Center)
-                    Text(probe, textAlign = TextAlign.Center)
-                    Button(onClick = { applySynthetic(WatchStatus.READING) }) { Text("Fresh") }
-                    Button(onClick = { applySynthetic(WatchStatus.READING, ageMinutes = 7) }) { Text("Delayed") }
-                    Button(onClick = { applySynthetic(WatchStatus.ACTION_REQUIRED) }) { Text("Check phone") }
-                    Button(onClick = { applySynthetic(WatchStatus.HIDDEN) }) { Text("Tombstone") }
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text("DEMO · SYNTHETIC", textAlign = TextAlign.Center)
+                        Text(probe, textAlign = TextAlign.Center)
+                        Button(onClick = { applySynthetic(WatchStatus.READING) }) { Text("Fresh") }
+                        Button(onClick = { applySynthetic(WatchStatus.READING, ageMinutes = 7) }) { Text("Delayed") }
+                        Button(onClick = { applySynthetic(WatchStatus.ACTION_REQUIRED) }) { Text("Check phone") }
+                        Button(onClick = { applySynthetic(WatchStatus.HIDDEN) }) { Text("Tombstone") }
+                    }
                 }
             }
         }

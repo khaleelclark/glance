@@ -1,0 +1,6 @@
+{
+  "pairedTransport": "not tested",
+  "phoneEmulatorLocalDataApiAvailable": false,
+  "reason": "Unpaired Google APIs phone image returned unavailable Data Layer; no companion pairing configured",
+  "nativeWatchFixtures": "synthetic only"
+}

@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `17`, and versionName
-`0.16.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `18`, and versionName
+`0.17.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.16.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.17.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -162,3 +162,27 @@ values suppress the original numeric icon, thumbnail and chip text even while
 unlocked. The numeric status icon uses a lighter condensed face, retaining
 mg/dL, mmol/L and stale fallbacks. Live Update remains available with Android's
 standard layout; existing display-mode preferences are preserved.
+
+## Phone and car widget (0.17.0)
+
+Enable **Widget values** in Glance Settings; readings on widgets are visible to
+anyone who can see the phone/car screen, including while the phone is locked.
+This choice is separate from lock-screen notification privacy and defaults off.
+Sign-out turns it off. Add **Glance glucose** using the phone widget picker.
+For Android Auto, add it in the car-widget picker if that feature is offered;
+Google's rollout controls availability. This is a mobile AppWidget prepared for
+car hosts, not a separately qualified Android Auto app or an overlay over Maps.
+
+The card uses the existing monitoring session and encrypted selected-person
+data. It has no second network scheduler. Its measurement time always remains
+visible; fresh values have a source arrow, actual change interval when available,
+and a four-hour graph in larger sizes. Compact/large-font sizes omit the graph
+before hiding essential reading information. Delayed, stale, missing, stopped,
+wrong-person and action-required states do not appear as a fresh numeric card.
+Source gaps over 15 minutes are not joined; missing history is not fabricated.
+Android may retain a widget's last rendered view if the app cannot execute, so
+check the absolute measurement time. Host refreshes are best effort.
+
+See [car-widget.md](car-widget.md) for official references, setup and verification
+limits. Actual Android Auto dashboard hosting, Samsung appearance, live source
+parity and screen-off/battery qualification require the owner's device tests.

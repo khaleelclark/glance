@@ -207,6 +207,7 @@ class MainActivity : ComponentActivity() {
             app.alertPreferences.config(),
             settings.numericStatusIcon,
             LiveUpdateSupport.status(this),
+            app.widgetPreferences.valuesVisible,
         )
     }
 
@@ -251,6 +252,7 @@ class MainActivity : ComponentActivity() {
 
     private fun stopMonitoring() {
         controller.setMonitoringEnabled(false)
+        app.widgetRenderer.redact()
         stopService(Intent(this, MonitoringService::class.java))
         app.hideCurrentNotification()
         app.alertEngine.clearNotifications()
@@ -259,6 +261,7 @@ class MainActivity : ComponentActivity() {
 
     private fun renderSettingsChange() {
         if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
+        app.updateWidgets()
         refreshSettings()
     }
 
@@ -384,9 +387,16 @@ class MainActivity : ComponentActivity() {
             if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
         },
         onSignOut = { signOut() },
+        onWidgetValuesChanged = {
+            app.widgetPreferences.valuesVisible = it
+            if (!it) app.widgetRenderer.redact()
+            app.updateWidgets()
+            refreshSettings()
+        },
     )
 
     private fun signOut() {
+        app.widgetPreferences.valuesVisible = false
         stopMonitoring()
         controller.signOut()
         app.alertPreferences.clear()

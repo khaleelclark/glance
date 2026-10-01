@@ -92,3 +92,23 @@ card uses an arrow/reading/unit row, a lighter numeric status icon, and an
 actual-source history thumbnail. Source time/status remain available when
 expanded. Existing Live Update and privacy choices are retained. Samsung
 placement and outer styling are not qualified by the AOSP emulator.
+
+## 0.17.0 phone/car widget
+
+See [car-widget.md](car-widget.md) for the platform decision and setup. The
+API 36.0 Google APIs x86_64 AVD uses a debug-only Android AppWidgetHost, not
+Android Auto or a Samsung device. Source fixtures are labeled DEMO and absent
+from release classes/manifests. Phone/car sharing requires its own opt-in.
+
+The focused release evidence records source formatting, hidden/stopped/wrong-
+person/old states, light/dark themes, mg/dL and mmol/L, 180×110 through 360×260 dp
+sizes, and 1.0×/1.5× font scale. Larger sizes show the actual-source four-hour
+graph; compact sizes retain the reading, unit and source time. Real-provider
+checks observe existing controller updates, privacy/unit changes, Stop and
+account clearing. The signed upgrade and final build/review results are recorded
+in the release manifest and evidence bundle rather than inferred from fixtures.
+
+Actual Android Auto widget discovery/placement, sideload restrictions, Samsung
+scaling, real account parity, overnight scheduling and physical battery use
+remain **not run**. Google's next-generation Android Auto widget rollout must
+be available before this mobile widget can be selected in the car.

@@ -56,6 +56,7 @@ data class UserSettingsUi(
     val alerts: AlertConfig = AlertConfig.defaults(),
     val numericStatusIcon: Boolean = true,
     val liveUpdateStatus: String = "Android decides whether to promote the monitoring notification.",
+    val widgetValuesVisible: Boolean = false,
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -91,4 +92,5 @@ data class GlanceCallbacks(
     val onOpenDiagnostics: () -> Unit,
     val onDeleteLocalData: () -> Unit,
     val onSignOut: () -> Unit,
+    val onWidgetValuesChanged: (Boolean) -> Unit = {},
 )

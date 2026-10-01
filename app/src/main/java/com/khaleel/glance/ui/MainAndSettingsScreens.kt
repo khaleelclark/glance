@@ -257,6 +257,17 @@ internal fun SettingsScreen(
             )
         }
 
+        SettingsSection("Widgets") {
+            SettingSwitch(
+                title = "Widget values",
+                detail = "Show readings and history on phone and car widgets, including while the phone is locked. Anyone who can see those screens can see the readings. This is separate from notification privacy.",
+                checked = settings.widgetValuesVisible,
+                onCheckedChange = callbacks.onWidgetValuesChanged,
+            )
+            Text("Add Glance glucose from your phone's widget picker. For the car, select it in Android Auto's widget settings if available. Car widgets depend on your Android Auto version and rollout.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
         SettingsSection("Glucose alerts") {
             AlertSettings(
                 settings.alerts,

@@ -1,0 +1,4 @@
+<resources>
+    <string name="glucose_widget_name">Glance glucose</string>
+    <string name="glucose_widget_description">Glucose, source trend, measurement time and recent history. Enable Widget values in Glance Settings. Car use requires Android Auto widget support.</string>
+</resources>

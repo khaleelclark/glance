@@ -27,12 +27,35 @@ import okhttp3.OkHttpClient
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.SourceResult
 import java.util.concurrent.TimeUnit
+import com.khaleel.glance.widget.WidgetUpdates
+import com.khaleel.glance.widget.WidgetPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class GlanceApplication : Application(), MonitoringDependencyProvider {
     override fun onCreate() {
         super.onCreate()
         // Register all four categories before the user opens Android notification settings.
         alertNotifier.ensureChannels()
+        // Observe the existing state, including stop/sign-out/person-switch transitions.
+        // Widgets have no network poller and never start monitoring on their own.
+        widgetScope.launch {
+            controller.display.collect {
+                if (BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Display update: ${it.runtime.name}, monitoring=${it.monitoringEnabled}")
+                widgetRenderer.render()
+            }
+        }.invokeOnCompletion {
+            if (BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Display observer ended: ${it?.javaClass?.simpleName ?: "normal"}")
+        }
+    }
+
+    private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val widgetPreferences by lazy { WidgetPreferences(this) }
+    val widgetRenderer by lazy { WidgetUpdates(this) }
+    fun updateWidgets() {
+        widgetScope.launch { widgetRenderer.render() }
     }
 
     private val diagnosticStore by lazy { DiagnosticsStore(this) }

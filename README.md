@@ -48,7 +48,8 @@ The LibreLinkUp interface is unofficial. Live account behavior and Samsung backg
 On Samsung Android 16, Glance requests a Live Update when permitted. Settings
 shows its observed status and links to Android's promotion controls. Also
 check Samsung's Now bar and Glance Live notifications settings. The fresh
-glucose number can serve as the small icon in either display mode. Clear all
+glucose number can serve as the small icon in regular mode; promoted chips use
+the Glance icon beside the value. Clear all
 keeps the monitoring card; Android 14+ may still allow individual swipes.
 
 The regular notification follows the owner's reference: trend arrow, lighter
@@ -56,3 +57,10 @@ large reading, unit, and a genuine three-hour history thumbnail when available.
 Expand for source time, person, trend and connection information. Turn off
 **Status chip Live Update** for this layout; Android owns promoted layouts and
 Samsung controls the notification shell and icon placement.
+
+The Glance glucose widget adds a large source reading, trend, measurement time,
+actual change interval and four-hour history. Enable **Widget values** in Settings,
+then add it from the phone's widget picker. It adapts to smaller sizes and both
+themes without scrolling. Android Auto use requires Google's car-widget feature
+to be available on the phone/car; availability on the target car is unverified.
+See [docs/car-widget.md](docs/car-widget.md) for setup and limits.

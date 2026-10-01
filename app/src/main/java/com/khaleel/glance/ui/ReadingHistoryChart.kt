@@ -30,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.input.pointer.pointerInput
@@ -40,7 +43,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.khaleel.glance.alerts.AlertConfig
 import com.khaleel.glance.core.GlucoseFormat
+import com.khaleel.glance.core.GlucoseFormat.label
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import java.time.Duration
@@ -98,8 +103,10 @@ internal fun ReadingHistoryChart(
     locale: Locale,
     selectedTime: Long?,
     onSelectedTimeChange: (Long) -> Unit,
+    alerts: AlertConfig = AlertConfig.defaults(),
 ) {
     val points = chartPoints(history, connectionId, now)
+    val limits = chartLimits(alerts)
     var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.875) }
     var viewportSpan by rememberSaveable(connectionId) { mutableStateOf(0.125) }
     val viewport = ChartViewport(viewportStart, viewportSpan)
@@ -125,32 +132,48 @@ internal fun ReadingHistoryChart(
             } else {
                 val minPoint = points.minBy { it.valueMgDl!! }
                 val maxPoint = points.maxBy { it.valueMgDl!! }
-                val low = minPoint.valueMgDl!!
-                val high = maxPoint.valueMgDl!!
-                val padding = maxOf(15.0, (high - low) * 0.15)
-                val bottom = (low - padding).coerceAtLeast(0.0)
-                val top = high + padding
+                val bottom = chartBottomMgDl
+                val top = chartTopMgDl
+                val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                val lowColor = if (dark) Color(0xFFFF6B6B) else Color(0xFFC62828)
+                val highColor = if (dark) Color(0xFFFFB74D) else Color(0xFFB85C00)
                 val lineColor = MaterialTheme.colorScheme.primary
                 val gridColor = MaterialTheme.colorScheme.outlineVariant
                 val selectedColor = MaterialTheme.colorScheme.tertiary
+                fun valueColor(valueMgDl: Double): Color = when (limits.band(valueMgDl)) {
+                    ChartBand.LOW -> lowColor
+                    ChartBand.HIGH -> highColor
+                    ChartBand.IN_RANGE -> lineColor
+                }
+                val limitLegend = "Low: ${axisValue(limits.lowMgDl, points[0], unit, locale)} ${unit.label} · " +
+                    "High: ${axisValue(limits.highMgDl, points[0], unit, locale)} ${unit.label}"
+                val scaleLegend = "Scale: ${axisValue(bottom, points[0], unit, locale)}–" +
+                    "${axisValue(top, points[0], unit, locale)} ${unit.label}"
                 val timeTicks = chartTimeTicks(now, zoneId, viewport.span)
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
-                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. Use one finger for readings, two fingers to pan, and pinch to zoom."
+                    "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. Red below Low; orange above High. Use one finger for readings, two fingers to pan, and pinch to zoom."
 
                 Text(
                     "One finger: inspect readings. Two fingers: move through time. Pinch: zoom in or out.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(limitLegend, style = MaterialTheme.typography.bodySmall)
+                Text("Red below Low · Orange above High", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (limits.overlaps) Text("Low and High graph limits overlap; red takes priority.",
+                    style = MaterialTheme.typography.bodySmall)
+                if (limits.lowMgDl !in bottom..top || limits.highMgDl !in bottom..top) {
+                    Text("A limit is outside the graph scale. $scaleLegend.", style = MaterialTheme.typography.bodySmall)
+                }
                 Row(Modifier.fillMaxWidth()) {
-                    Column(
-                        Modifier.width(48.dp).height(chartHeight),
-                        verticalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(axisValue(top, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
-                        Text(axisValue((top + bottom) / 2, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
-                        Text(axisValue(bottom, points[0], unit, locale), style = MaterialTheme.typography.labelSmall)
+                    Box(Modifier.width(48.dp).height(chartHeight)) {
+                        for (value in chartAxisValues(limits)) {
+                            val y = 16.dp + (chartHeight - 32.dp) * chartYFraction(value).toFloat() - 8.dp
+                            Text(axisValue(value, points[0], unit, locale), Modifier.offset(y = y),
+                                style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                     BoxWithConstraints(Modifier.weight(1f)) {
                         val chartWidth = maxWidth
@@ -220,29 +243,60 @@ internal fun ReadingHistoryChart(
                                     },
                             ) {
                                 val inset = 16.dp.toPx()
-                                val offsets = points.map { plotOffset(it, now, size, bottom, top, inset, viewport) }
-                                clipRect {
-                                    for (fraction in listOf(0f, 0.5f, 1f)) {
-                                        val y = inset + (size.height - 2 * inset) * fraction
-                                        drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
+                                val offsets = points.map { plotOffset(it, now, size, inset, viewport) }
+                                fun y(value: Double): Float = inset + (size.height - 2 * inset) * chartYFraction(value).toFloat()
+                                val plotBottom = size.height - inset
+                                val lowY = y(limits.lowMgDl).coerceIn(inset, plotBottom)
+                                val highY = y(limits.highMgDl).coerceIn(inset, plotBottom)
+                                clipRect(top = inset, bottom = plotBottom) {
+                                    drawRect(highColor.copy(alpha = 0.08f), Offset(0f, inset), Size(size.width, minOf(highY, lowY) - inset))
+                                    drawRect(lowColor.copy(alpha = 0.08f), Offset(0f, lowY), Size(size.width, plotBottom - lowY))
+                                    for (value in listOf(top, bottom)) {
+                                        drawLine(gridColor, Offset(0f, y(value)), Offset(size.width, y(value)), strokeWidth = 1.dp.toPx())
                                     }
                                     for (tick in timeTicks) {
                                         val x = size.width * viewport.xFraction(timeFraction(tick, now))
-                                        drawLine(gridColor, Offset(x, inset), Offset(x, size.height - inset), strokeWidth = 1.dp.toPx())
+                                        drawLine(gridColor, Offset(x, inset), Offset(x, plotBottom), strokeWidth = 1.dp.toPx())
                                     }
-                                    offsets.zipWithNext().forEachIndexed { index, (left, right) ->
-                                        if (Duration.between(points[index].measuredAt, points[index + 1].measuredAt) <= gapLimit) {
-                                            drawLine(lineColor, left, right, strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                                    for ((value, color) in listOf(limits.lowMgDl to lowColor, limits.highMgDl to highColor)) {
+                                        if (value in bottom..top) drawLine(color, Offset(0f, y(value)), Offset(size.width, y(value)), strokeWidth = 1.dp.toPx())
+                                    }
+                                    fun trace(color: Color) {
+                                        offsets.zipWithNext().forEachIndexed { index, (left, right) ->
+                                            if (Duration.between(points[index].measuredAt, points[index + 1].measuredAt) <= gapLimit) {
+                                                drawLine(color, left, right, strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                                            }
                                         }
                                     }
+                                    trace(lineColor)
+                                    clipRect(bottom = highY) { trace(highColor) }
+                                    // Color clipping changes only presentation, never source observations.
+                                    clipRect(top = lowY) { trace(lowColor) }
                                     offsets.getOrNull(selectedIndex)?.let { offset ->
-                                        drawLine(
-                                            selectedColor,
-                                            Offset(offset.x, inset),
-                                            Offset(offset.x, size.height - inset),
-                                            strokeWidth = 1.dp.toPx(),
-                                        )
-                                        drawCircle(selectedColor, radius = 6.dp.toPx(), center = offset)
+                                        drawLine(selectedColor, Offset(offset.x, inset), Offset(offset.x, plotBottom), strokeWidth = 1.dp.toPx())
+                                        if (points[selectedIndex].valueMgDl!! in bottom..top) {
+                                            drawCircle(valueColor(points[selectedIndex].valueMgDl!!), radius = 6.dp.toPx(), center = offset)
+                                        }
+                                    }
+                                }
+                                // Out-of-scale source values get edge arrows, never a fabricated 40/350 reading.
+                                clipRect {
+                                    points.forEachIndexed { index, reading ->
+                                        val value = reading.valueMgDl!!
+                                        if (value !in bottom..top) {
+                                            val x = offsets[index].x
+                                            val above = value > top
+                                            val edgeY = if (above) inset else plotBottom
+                                            val radius = if (index == selectedIndex) 6.dp.toPx() else 3.dp.toPx()
+                                            val inward = if (above) radius * 2 else -radius * 2
+                                            val marker = Path().apply {
+                                                moveTo(x, edgeY)
+                                                lineTo(x - radius, edgeY + inward)
+                                                lineTo(x + radius, edgeY + inward)
+                                                close()
+                                            }
+                                            drawPath(marker, valueColor(value))
+                                        }
                                     }
                                 }
                             }
@@ -285,7 +339,14 @@ internal fun ReadingHistoryChart(
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Selected reading", style = MaterialTheme.typography.labelMedium)
-                            Text(GlucoseFormat.withUnit(reading, unit, locale), style = MaterialTheme.typography.headlineSmall)
+                            Text(GlucoseFormat.withUnit(reading, unit, locale), style = MaterialTheme.typography.headlineSmall,
+                                color = valueColor(reading.valueMgDl!!))
+                            when (limits.band(reading.valueMgDl)) {
+                                ChartBand.LOW -> Text("Below Low limit", style = MaterialTheme.typography.bodySmall)
+                                ChartBand.HIGH -> Text("Above High limit", style = MaterialTheme.typography.bodySmall)
+                                ChartBand.IN_RANGE -> Unit
+                            }
+                            if (reading.valueMgDl !in bottom..top) Text("Outside graph scale · $scaleLegend", style = MaterialTheme.typography.bodySmall)
                             Text(timeFormat.format(reading.measuredAt), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -309,13 +370,11 @@ private fun plotOffset(
     reading: Reading,
     now: Instant,
     size: Size,
-    bottom: Double,
-    top: Double,
     inset: Float,
     viewport: ChartViewport,
 ): Offset {
     val x = size.width * viewport.xFraction(timeFraction(reading.measuredAt, now))
-    val yFraction = ((top - reading.valueMgDl!!) / (top - bottom)).toFloat().coerceIn(0f, 1f)
+    val yFraction = chartYFraction(reading.valueMgDl!!).toFloat()
     return Offset(x, inset + (size.height - 2 * inset) * yFraction)
 }
 

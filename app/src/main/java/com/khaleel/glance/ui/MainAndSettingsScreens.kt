@@ -74,7 +74,7 @@ internal fun MainReadingScreen(
             Column(Modifier.weight(0.58f).fillMaxHeight().verticalScroll(rememberScrollState())) {
                 ReadingHistoryChart(
                     displayState.history, displayState.person?.id, settings.unit, now, zoneId, locale,
-                    selectedChartTime, { selectedChartTime = it },
+                    selectedChartTime, { selectedChartTime = it }, alerts = settings.alerts,
                 )
             }
         }
@@ -83,7 +83,7 @@ internal fun MainReadingScreen(
             MainReadingSummary(displayState, settings, callbacks, text, now, onOpenSettings)
             ReadingHistoryChart(
                 displayState.history, displayState.person?.id, settings.unit, now, zoneId, locale,
-                selectedChartTime, { selectedChartTime = it },
+                selectedChartTime, { selectedChartTime = it }, alerts = settings.alerts,
             )
         }
     }

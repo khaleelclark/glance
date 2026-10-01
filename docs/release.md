@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `23`, and versionName
-`0.19.2`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `24`, and versionName
+`0.19.3`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.19.2-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.19.3-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -68,7 +68,11 @@ application ID and signer for every upgrade; increment versionCode.
    collapsible card. The main screen has a 24-hour timeline of validated source
    samples: use one finger to inspect exact readings, two fingers to browse
    time, and pinch to change the visible window from one to 24 hours.
-   **Show 24 hours** and **Latest 3 hours** reset the view. The current reading places the
+   **Show 24 hours** and **Latest 3 hours** reset the view. Its vertical scale
+   stays at 40–350 mg/dL, converted to the selected unit. Low/High lines follow
+   enabled ordinary alert settings, falling back independently to 70/240 when
+   off. Below Low is red; above High is orange. Edge arrows mark readings outside
+   the scale, and the selected-reading card always retains the actual value. The current reading places the
    value, unit, and trend arrow together, with a plain-language trend below;
    landscape places the graph beside it. Settings has color presets, a
    touchable color wheel, brightness slider, and a custom six-digit hex field; light and dark themes

@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "oneFingerScrubsWithoutPanningOrParentScrolling": true,
+    "twoFingerPinchZoomsIn": true,
+    "twoFingerDragPansToEarlierReadings": true,
+    "liftingOneFingerDoesNotSwitchFromPanToScrub": true,
+    "zoomOutStopsAtTwentyFourHoursAndResetWorks": true,
+    "zoomInStopsAtOneHour": true,
+    "accessibilityZoomActionWorks": true,
+    "fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty": true,
+    "defaultHorizontalLinesAndLowHighTraceColorsRender": true,
+    "outOfScaleSelectionPreservesActualValues": true,
+    "enabledOrdinaryLimitsSyncIndependently": true,
+    "mmolScaleAndLimitsConvertWithIdenticalColorGeometry": true,
+    "darkThemeHorizontalLinesAndLowHighColorsRender": true
+  },
+  "allPassed": true,
+  "GalaxyS25Ultra": "not tested",
+  "liveAccount": "not tested"
+}

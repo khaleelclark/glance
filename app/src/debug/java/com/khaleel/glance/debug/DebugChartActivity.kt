@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -27,6 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.khaleel.glance.alerts.AlertConfig
+import com.khaleel.glance.alerts.AlertKind
+import com.khaleel.glance.alerts.AlertRule
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.Trend
@@ -35,27 +40,39 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import org.json.JSONObject
+import kotlin.math.sin
 
 /** Synthetic-only fixture using the production chart inside a scrolling parent. */
 class DebugChartActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val mode = intent.getStringExtra("mode")
+        val unit = if (mode == "mmol") GlucoseUnit.MMOL_L else GlucoseUnit.MG_DL
+        val alerts = AlertConfig(AlertConfig.defaults().rules + mapOf(
+            AlertKind.LOW to AlertRule(intent.getBooleanExtra("lowEnabled", false), intent.getIntExtra("low", 85)),
+            AlertKind.HIGH to AlertRule(intent.getBooleanExtra("highEnabled", false), intent.getIntExtra("high", 210)),
+        ))
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = if (mode == "dark") darkColorScheme() else lightColorScheme()) {
                 Surface(Modifier.fillMaxSize()) {
                     val now = remember { Instant.parse("2026-10-01T12:00:00Z") }
                     val points = remember {
                         (0..288).map { step ->
+                            val value = if (mode == null) (90 + step % 60).toDouble() else when (step) {
+                                252 -> 25.0
+                                288 -> if (mode == "below") 25.0 else 380.0
+                                else -> 175 + 125 * sin(step / 5.0)
+                            }
                             Reading("synthetic", now.minusSeconds((288 - step) * 300L),
-                                (90 + step % 60).toDouble(), (90 + step % 60).toDouble(),
+                                value, value,
                                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
                         }
                     }
                     var selected by remember { mutableStateOf<Long?>(null) }
                     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState())) {
                         Text("DEMO · chart gesture test")
-                        ReadingHistoryChart(points, "synthetic", GlucoseUnit.MG_DL, now,
-                            ZoneId.of("UTC"), Locale.US, selected, { selected = it })
+                        ReadingHistoryChart(points, "synthetic", unit, now,
+                            ZoneId.of("UTC"), Locale.US, selected, { selected = it }, alerts = alerts)
                         Text("DEMO selected: $selected")
                         Column(Modifier.height(600.dp)) { Text("DEMO · page scroll space") }
                     }
@@ -145,6 +162,7 @@ class ChartGestureInstrumentation : Instrumentation() {
             check(hours() == 2.0)
             checks.put("accessibilityZoomActionWorks", true)
             click("Latest 3 hours")
+            limitChecks(checks)
             targetContext.filesDir.resolve("chart-gesture-probe.json").writeText(
                 JSONObject().put("synthetic", true).put("device", "API 36 emulator")
                     .put("checks", checks).put("allPassed", true).toString(2))
@@ -154,6 +172,77 @@ class ChartGestureInstrumentation : Instrumentation() {
                 putString("failure", error.stackTraceToString()); putString("checks", checks.toString())
             })
         }
+    }
+
+    private fun launchLimits(mode: String = "limits", lowEnabled: Boolean = false, highEnabled: Boolean = false) {
+        startActivitySync(Intent(targetContext, DebugChartActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            .putExtra("mode", mode).putExtra("lowEnabled", lowEnabled).putExtra("highEnabled", highEnabled))
+        settle()
+    }
+
+    private fun texts(): List<String> = nodes(uiAutomation.rootInActiveWindow).mapNotNull { it.text?.toString() }
+
+    private fun limitChecks(checks: JSONObject) {
+        launchLimits()
+        check("Low: 70 mg/dL · High: 240 mg/dL" in texts())
+        check("350" in texts() && "40" in texts())
+        check(chart().contentDescription.toString().contains("Scale: 40–350 mg/dL"))
+        checks.put("fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty", true)
+        checkColorBands(0xC62828, 0xB85C00)
+        checks.put("defaultHorizontalLinesAndLowHighTraceColorsRender", true)
+        check("380 mg/dL" in texts())
+        check(texts().any { it.startsWith("Outside graph scale") })
+        launchLimits("below")
+        check("25 mg/dL" in texts())
+        check(texts().any { it.startsWith("Outside graph scale") })
+        checks.put("outOfScaleSelectionPreservesActualValues", true)
+        launchLimits(lowEnabled = true, highEnabled = true)
+        check("Low: 85 mg/dL · High: 210 mg/dL" in texts())
+        checkColorBands(0xC62828, 0xB85C00, 85.0, 210.0)
+        launchLimits(lowEnabled = true)
+        check("Low: 85 mg/dL · High: 240 mg/dL" in texts())
+        launchLimits(highEnabled = true)
+        check("Low: 70 mg/dL · High: 210 mg/dL" in texts())
+        checks.put("enabledOrdinaryLimitsSyncIndependently", true)
+        launchLimits("mmol")
+        check("Low: 3.9 mmol/L · High: 13.3 mmol/L" in texts())
+        check("19.4" in texts() && "2.2" in texts())
+        checkColorBands(0xC62828, 0xB85C00)
+        checks.put("mmolScaleAndLimitsConvertWithIdenticalColorGeometry", true)
+        launchLimits("dark")
+        checkColorBands(0xFF6B6B, 0xFFB74D)
+        checks.put("darkThemeHorizontalLinesAndLowHighColorsRender", true)
+    }
+
+    private fun checkColorBands(red: Int, orange: Int, low: Double = 70.0, high: Double = 240.0) {
+        val bounds = Rect().also { chart().getBoundsInScreen(it) }
+        val inset = bounds.height() * 16f / 220
+        val bitmap = checkNotNull(uiAutomation.takeScreenshot())
+        try {
+            fun lineHasColor(value: Double, expected: Int): Boolean {
+                val y = (bounds.top + inset + (bounds.height() - 2 * inset) * (350 - value) / 310).toInt()
+                var hits = 0
+                for (x in bounds.left + 12 until bounds.right - 12 step 5) {
+                    if ((y - 3..y + 3).any { row -> bitmap.getPixel(x, row) and 0xFFFFFF == expected }) hits++
+                }
+                return hits >= bounds.width() / 15
+            }
+            check(lineHasColor(low, red)) { "Low horizontal line pixels missing" }
+            check(lineHasColor(high, orange)) { "High horizontal line pixels missing" }
+            fun traceHasColor(expected: Int, lowBand: Boolean): Boolean {
+                val edge = (bounds.top + inset + (bounds.height() - 2 * inset) * (350 - if (lowBand) low else high) / 310).toInt()
+                val rows = if (lowBand) edge + 8 until (bounds.bottom - inset).toInt() - 8
+                    else (bounds.top + inset).toInt() + 8 until edge - 8
+                var count = 0
+                for (y in rows) for (x in bounds.left + 8 until bounds.right - 8) {
+                    if (bitmap.getPixel(x, y) and 0xFFFFFF == expected) count++
+                }
+                return count > 20
+            }
+            check(traceHasColor(red, true)) { "Low trace pixels missing" }
+            check(traceHasColor(orange, false)) { "High trace pixels missing" }
+        } finally { bitmap.recycle() }
     }
 
     private fun settle() { waitForIdleSync(); SystemClock.sleep(120) }

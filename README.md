@@ -10,7 +10,11 @@ Galaxy S25 Ultra behavior remain unverified.
 The main screen includes a 24-hour graph of validated source samples. Use one finger
 to inspect readings, two fingers to pan through time, and pinch to zoom from
 one hour to the full day. **Show 24 hours** and **Latest 3 hours** reset the view.
-See [gesture verification](docs/chart-gesture-validation.md). The notification shows the current glucose,
+The graph has a fixed 40–350 mg/dL scale, red below Low and orange above High.
+Enabled ordinary Low/High alert settings supply the limits; disabled alerts use
+70/240 mg/dL. Labels follow the selected unit.
+See [gesture verification](docs/chart-gesture-validation.md) and
+[limit verification](docs/chart-limits-validation.md). The notification shows the current glucose,
 trend arrow, and recent change when available; Refresh remains in the app.
 Refresh retries connection failures even while automatic polling is backing off;
 provider rate limits still apply. Stop monitoring and a choice of app colors are available in Settings. Custom

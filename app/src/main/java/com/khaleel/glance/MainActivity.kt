@@ -388,7 +388,7 @@ class MainActivity : ComponentActivity() {
         },
         onSignOut = { signOut() },
         onWidgetValuesChanged = {
-            app.widgetPreferences.valuesVisible = it
+            saveWidgetVisibility(it)
             if (!it) app.widgetRenderer.redact()
             app.updateWidgets()
             refreshSettings()
@@ -396,7 +396,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private fun signOut() {
-        app.widgetPreferences.valuesVisible = false
+        saveWidgetVisibility(false)
         stopMonitoring()
         controller.signOut()
         app.alertPreferences.clear()
@@ -404,6 +404,15 @@ class MainActivity : ComponentActivity() {
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)
         setupState = setupState.copy(step = SetupStep.SIGN_IN)
+    }
+
+    private fun saveWidgetVisibility(visible: Boolean) {
+        runCatching { app.widgetPreferences.valuesVisible = visible }.onFailure {
+            app.widgetRenderer.redact()
+            Toast.makeText(this, if (visible) "Could not save Widget values; readings remain hidden."
+                else "Could not save hidden widget values. Remove the widgets from your phone and car, then try again.",
+                Toast.LENGTH_LONG).show()
+        }
     }
 }
 

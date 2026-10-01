@@ -58,6 +58,7 @@ internal object WidgetContentFormatter {
         val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).withZone(zone)
         val measured = "Reading ${time.format(reading.measuredAt)}"
         val value = GlucoseFormat.value(reading, unit, locale)
+        val numeric = GlucoseFormat.numericValue(reading, unit)
         val freshness = ReadingPolicy.freshness(reading, now)
         if (freshness != ReadingFreshness.FRESH) {
             val label = when (freshness) {
@@ -65,11 +66,11 @@ internal object WidgetContentFormatter {
                 ReadingFreshness.STALE -> "Stale"
                 else -> "Time unknown"
             }
+            val last = listOfNotNull(value, unit.label.takeIf { numeric != null }).joinToString(" ")
             return WidgetContent("Glance · ${person.displayName}", label,
-                measured = "Last: $value ${unit.label} · ${time.format(reading.measuredAt)}",
-                accessibility = "Glance. $label. Last reading $value ${unit.label} at ${time.format(reading.measuredAt)}")
+                measured = "Last: $last · ${time.format(reading.measuredAt)}",
+                accessibility = "Glance. $label. Last reading $last at ${time.format(reading.measuredAt)}")
         }
-        val numeric = GlucoseFormat.numericValue(reading, unit)
         val trend = if (numeric == null) "" else when (reading.trend) {
             Trend.RISING_QUICKLY -> "↑"
             Trend.RISING, Trend.RISING_SLOWLY -> "↗"

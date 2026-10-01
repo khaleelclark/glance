@@ -116,4 +116,19 @@ class WidgetContentTest {
         val content = format(state.copy(history = listOf(previous.copy(measuredAt = reading.measuredAt.minusSeconds(45)))))
         assertEquals("-7 / 45 sec", content.delta)
     }
+
+    @Test fun `old special and unavailable readings never acquire a numeric unit`() {
+        for (special in listOf(SpecialValue.HIGH, SpecialValue.LOW)) {
+            val s = state.copy(reading = reading.copy(specialValue = special))
+            for (minutes in listOf(7L, 18L)) {
+                val content = format(s, at = reading.measuredAt.plusSeconds(minutes * 60))
+                assertFalse(content.measured.contains("mg/dL"))
+                assertFalse(content.accessibility.contains("mg/dL"))
+                assertTrue(content.measured.contains(special.name))
+            }
+        }
+        val invalid = format(state.copy(reading = reading.copy(sourceValue = Double.NaN)),
+            at = reading.measuredAt.plusSeconds(18 * 60))
+        assertFalse(invalid.measured.contains("mg/dL"))
+    }
 }

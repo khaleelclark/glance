@@ -20,7 +20,13 @@ messaging or media category. It does not modify Maps, use overlays, write glucos
 readings to a calendar, add a backend or request calendar access. On older
 dashboards, the weather/media/navigation tiles are system-controlled; Glance
 cannot replace them with this AppWidget. Actual car widget discovery and any
-sideloading restrictions remain device-only checks.
+sideloading restrictions remain device-only checks. Google has not documented
+a widget-specific Android Auto minimum version, manifest category, picker
+setup, sideload admission rule or DHU test flow. The existing dashboard tiles
+and Car App Library categories do not provide a health-widget route. See
+[Android Auto changes](https://developer.android.com/training/cars/whats-new),
+[car testing](https://developer.android.com/training/cars/testing) and
+[DHU scope](https://developer.android.com/training/cars/testing/dhu).
 
 ## Setup
 
@@ -29,7 +35,8 @@ sideloading restrictions remain device-only checks.
 2. In Glance Settings, enable **Widget values**, which explicitly permits
    glucose/history display on phone/car widget surfaces even while locked.
 3. Start monitoring, then add **Glance glucose** from the phone's widget picker.
-   Resize it for the graph. Smaller sizes keep the value, unit and source time.
+   Resize it for the graph. Smaller sizes keep the value, unit, available delta
+   and source time.
 4. On a connected, parked car, inspect Android Auto Settings for its widget
    picker. If available, choose **Glance glucose** there. Google controls placement
    and availability; matching CarPlay's exact dashboard arrangement is not promised.
@@ -43,7 +50,13 @@ network fetch or start monitoring. Main-screen settings changes update placed
 widgets. Data stays in the existing encrypted stores, not in a plaintext widget
 snapshot. Intents carry no account or glucose data. Host-rendered views necessarily
 contain the values only after explicit opt-in. Hidden mode contains no patient
-name, value, measurement time or chart. Sign-out resets the opt-in.
+name, value, measurement time or chart. Sign-out resets the opt-in. Visibility writes check their result. If a write
+fails, the app deletes the visibility preference file to remove any older grant
+without writing a replacement. Unit tests simulate a failed opt-out write and
+recreation and verify the old grant cannot return after that deletion. Failed
+opt-in never enables rendering. If storage prevents both writing and deletion,
+the current process blocks rendering and the UI explicitly tells the user to
+remove placed widgets; it does not report durable success.
 
 Every render recomputes freshness from source time and rejects a current reading
 belonging to another person. Graph history covers the four hours ending at that
@@ -77,13 +90,15 @@ and the pinned 1.2.0 sources were checked for lifecycle behavior.
 Focused unit tests cover privacy, selected identity, source corrections, graph
 window/gaps, unit conversion, actual delta interval, source freshness, stopped and
 connection states. Emulator checks use a debug-only real Android AppWidgetHost
-at different sizes, themes and font scales. Debug fixtures have visible DEMO
+at different sizes, themes and font scales, including 180/240dp in both units at 1.0×/1.5×
+font scale with the actual delta visible. Debug fixtures have visible DEMO
 labels and are absent from release manifests/classes. The evidence bundle and
 release manifest record the delivered source and final observed results.
 
 On 2026-10-01, the API 36.0 Google APIs x86_64 emulator passed the fixture
 content checks and the actual production provider/controller checks: hidden
-mode removed all patient text/chart, unit changes updated the value, stopping
+mode removed all patient text/chart, unit changes updated the value, narrow layouts retained delta, old HIGH/LOW
+labels omitted numeric units, stopping
 removed the current presentation, and account clearing replaced it with Sign in.
 The host listener lifecycle was corrected before these final checks. No actual
 Android Auto display was used.
@@ -91,6 +106,8 @@ Android Auto display was used.
 - [Large synthetic card](evidence/api36-widget-0.17-fresh-large.png)
 - [Dark mmol/L at 1.5× font](evidence/api36-widget-0.17-dark-mmol-largefont.png)
 - [Compact mmol/L at 1.5× font](evidence/api36-widget-0.17-small-mmol-largefont.png)
+- [180dp mg/dL with delta at 1.5× font](evidence/api36-widget-0.17-narrow-180-mgdl-1.5.png)
+- [240dp mmol/L with delta at 1.5× font](evidence/api36-widget-0.17-narrow-240-mmol-1.5.png)
 - [Hidden card](evidence/api36-widget-0.17-hidden.png)
 - [Production provider with synthetic monitored source](evidence/api36-widget-0.17-integration-active.png)
 

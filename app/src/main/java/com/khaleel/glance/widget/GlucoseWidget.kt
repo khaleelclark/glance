@@ -59,22 +59,24 @@ class GlucoseWidget internal constructor(private val snapshot: WidgetContent? = 
 internal fun GlucoseWidgetContent(model: WidgetContent) {
     val size = LocalSize.current
     val context = LocalContext.current
-    val compact = size.height < 160.dp
+    val fontScale = context.resources.configuration.fontScale
+    val compact = size.height < 160.dp || (size.height < 220.dp && fontScale > 1.2f)
     val valueSize = when {
         model.unit.isEmpty() -> if (compact) 18.sp else 26.sp
-        compact -> 28.sp
+        compact -> 22.sp
         size.width < 260.dp -> 36.sp
         else -> 46.sp
     }
-    val unitBesideValue = !compact && size.width >= 260.dp
+    val unitBesideValue = compact || size.width >= 260.dp
+    val deltaBesideValue = !compact && size.width >= 280.dp
     val footer = listOfNotNull(model.note, model.unit.takeIf { it.isNotEmpty() && !unitBesideValue }, model.measured).joinToString(" · ")
-    val fontScale = context.resources.configuration.fontScale
     val footerLines = if (size.width < 280.dp || model.note != null) 2 else 1
-    val neededHeight = (24 + (12 * 1.35f + valueSize.value * 1.2f + 12 * 1.3f * footerLines) * fontScale + 6 + 60).dp
+    val deltaHeight = if (!deltaBesideValue && model.delta != null) 11 * 1.3f else 0f
+    val neededHeight = (24 + (12 * 1.35f + valueSize.value * 1.2f + 12 * 1.3f * footerLines + deltaHeight) * fontScale + 6 + 60).dp
     val graphFits = !compact && size.height >= neededHeight && size.width >= 200.dp
     Column(
         GlanceModifier.fillMaxSize().appWidgetBackground()
-            .background(GlanceTheme.colors.widgetBackground).cornerRadius(20.dp).padding(if (compact) 8.dp else 12.dp)
+            .background(GlanceTheme.colors.widgetBackground).cornerRadius(20.dp).padding(if (compact) 6.dp else 12.dp)
             .semantics { contentDescription = model.accessibility },
     ) {
         if (!compact) Text(model.heading, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp), maxLines = 1)
@@ -88,15 +90,19 @@ internal fun GlucoseWidgetContent(model: WidgetContent) {
             if (model.unit.isNotEmpty() && unitBesideValue) {
                 Spacer(GlanceModifier.width(6.dp))
                 Column {
-                    Text(model.unit, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp), maxLines = 1)
-                    if (size.width >= 280.dp) model.delta?.let {
+                    Text(model.unit, style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = if (compact) 10.sp else 12.sp), maxLines = 1)
+                    if (deltaBesideValue) model.delta?.let {
                         Text(it, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp), maxLines = 1)
                     }
                 }
             }
         }
+        if (!deltaBesideValue) model.delta?.let {
+            Text(it, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant,
+                fontSize = if (compact) 10.sp else 11.sp), maxLines = 1)
+        }
         Text(footer, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant,
-            fontSize = if (compact) 11.sp else 12.sp), maxLines = 2)
+            fontSize = if (compact) 10.sp else 12.sp), maxLines = 2)
         if (graphFits) {
             WidgetHistoryGraph.create(
                 model.samples, GlanceTheme.colors.primary.getColor(context).toArgb(),

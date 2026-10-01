@@ -104,9 +104,9 @@ class DebugWidget : GlanceAppWidget() {
         val selected by selection.collectAsState()
         val mode = selected.first
         val now = Instant.now()
-        val age = when (mode) { "delayed" -> 7L; "stale" -> 18L; else -> 1L }
+        val age = when { mode.startsWith("delayed") -> 7L; mode.startsWith("stale") -> 18L; else -> 1L }
         val reading = Reading("synthetic-widget", now.minusSeconds(age * 60), 130.0, 130.0,
-            GlucoseUnit.MG_DL, if (mode == "special") SpecialValue.HIGH else null,
+            GlucoseUnit.MG_DL, if (mode.contains("special")) SpecialValue.HIGH else null,
             Trend.STEADY, "synthetic-current", now)
         val history = (1..48).filterNot { it in 20..25 }.map { step ->
             val value = if (step == 1) 137.0 else 120 + 18 * sin(step / 6.0)

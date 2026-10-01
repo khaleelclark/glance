@@ -103,7 +103,7 @@ from release classes/manifests. Phone/car sharing requires its own opt-in.
 The focused release evidence records source formatting, hidden/stopped/wrong-
 person/old states, light/dark themes, mg/dL and mmol/L, 180×110 through 360×260 dp
 sizes, and 1.0×/1.5× font scale. Larger sizes show the actual-source four-hour
-graph; compact sizes retain the reading, unit and source time. Real-provider
+graph; compact sizes retain the reading, unit, available delta and source time. Real-provider
 checks observe existing controller updates, privacy/unit changes, Stop and
 account clearing. The signed upgrade and final build/review results are recorded
 in the release manifest and evidence bundle rather than inferred from fixtures.

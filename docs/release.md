@@ -177,7 +177,8 @@ The card uses the existing monitoring session and encrypted selected-person
 data. It has no second network scheduler. Its measurement time always remains
 visible; fresh values have a source arrow, actual change interval when available,
 and a four-hour graph in larger sizes. Compact/large-font sizes omit the graph
-before hiding essential reading information. Delayed, stale, missing, stopped,
+before hiding essential reading information, and retain available delta on
+a separate line at narrow widths. Delayed, stale, missing, stopped,
 wrong-person and action-required states do not appear as a fresh numeric card.
 Source gaps over 15 minutes are not joined; missing history is not fabricated.
 Android may retain a widget's last rendered view if the app cannot execute, so

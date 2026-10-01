@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -123,10 +122,9 @@ internal fun ReadingHistoryChart(
     val timeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(locale).withZone(zoneId)
 
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Glucose history", modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
-            Text("Last 24 hours · source readings", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("History", modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
             if (points.isEmpty()) {
                 Text("The graph will appear after Glance receives readings for this person.")
             } else {
@@ -155,7 +153,7 @@ internal fun ReadingHistoryChart(
                     "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. Red below Low; orange above High. Use one finger for readings, two fingers to pan, and pinch to zoom."
 
                 Text(
-                    "One finger: inspect readings. Two fingers: move through time. Pinch: zoom in or out.",
+                    "1 finger: inspect · 2 fingers: pan · Pinch: zoom",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -336,7 +334,7 @@ internal fun ReadingHistoryChart(
                     TextButton(onClick = { setViewport(ChartViewport()) }) { Text("Latest 3 hours") }
                 }
                 selected?.let { reading ->
-                    Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Selected reading", style = MaterialTheme.typography.labelMedium)
                             Text(GlucoseFormat.withUnit(reading, unit, locale), style = MaterialTheme.typography.headlineSmall,

@@ -1,13 +1,22 @@
 package com.khaleel.glance.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,14 +24,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.khaleel.glance.ui.GlanceButton as Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -99,7 +106,7 @@ private fun MainReadingSummary(
     onOpenSettings: () -> Unit,
 ) {
     val reading = text.reading(displayState, settings.unit, now)
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -112,22 +119,22 @@ private fun MainReadingSummary(
                     .semantics { heading() },
                 style = MaterialTheme.typography.headlineMedium,
             )
-            OutlinedButton(onClick = onOpenSettings) { Text("Settings") }
+            TextButton(onClick = onOpenSettings) { Text("Settings") }
         }
 
-        Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (reading == null) {
                     Text("Waiting for first reading", style = MaterialTheme.typography.headlineSmall)
-                    Text("A value will appear after the first successful fetch.")
+                    Text("Waiting for LibreLinkUp.")
                 } else {
                     Text(reading.freshness, style = MaterialTheme.typography.titleMedium)
-                    Row(
+                    FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Bottom,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(reading.value, style = MaterialTheme.typography.displayLarge, modifier = Modifier.alignByBaseline())
                         Text(reading.unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
@@ -174,24 +181,26 @@ private fun MainReadingSummary(
 
         if (displayState.runtime != RuntimeState.RUNNING) {
             Button(onClick = callbacks.onResumeMonitoring, modifier = Modifier.fillMaxWidth()) {
-                Text(if (displayState.monitoringEnabled) "Try to start monitoring" else "Start monitoring")
+                Text(if (displayState.monitoringEnabled) "Try again" else "Start monitoring")
             }
         }
-        OutlinedButton(
-            onClick = callbacks.onRefresh,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING &&
-                displayState.connection != ConnectionState.SIGN_IN_REQUIRED &&
-                displayState.connection != ConnectionState.TERMS_REQUIRED &&
-                displayState.connection != ConnectionState.CONNECTION_REMOVED &&
-                displayState.connection != ConnectionState.PROTOCOL_ERROR &&
-                displayState.connection != ConnectionState.LOCAL_ERROR &&
-                displayState.connection != ConnectionState.FETCHING,
-        ) {
-            Text(if (displayState.connection == ConnectionState.FETCHING) "Refreshing…" else "Refresh now")
-        }
-        TextButton(onClick = callbacks.onRestoreNotification, modifier = Modifier.fillMaxWidth()) {
-            Text("Show notification again")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = callbacks.onRefresh,
+                modifier = Modifier.weight(1f),
+                enabled = displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING &&
+                    displayState.connection != ConnectionState.SIGN_IN_REQUIRED &&
+                    displayState.connection != ConnectionState.TERMS_REQUIRED &&
+                    displayState.connection != ConnectionState.CONNECTION_REMOVED &&
+                    displayState.connection != ConnectionState.PROTOCOL_ERROR &&
+                    displayState.connection != ConnectionState.LOCAL_ERROR &&
+                    displayState.connection != ConnectionState.FETCHING,
+            ) {
+                Text(if (displayState.connection == ConnectionState.FETCHING) "Refreshing…" else "Refresh")
+            }
+            TextButton(onClick = callbacks.onRestoreNotification, modifier = Modifier.weight(1f)) {
+                Text("Restore card")
+            }
         }
     }
 }
@@ -221,39 +230,42 @@ internal fun SettingsScreen(
 
         SettingsSection("Display") {
             Text("Units", style = MaterialTheme.typography.titleMedium)
-            UnitChoice(GlucoseUnit.MG_DL, settings.unit, callbacks.onUnitChanged)
-            UnitChoice(GlucoseUnit.MMOL_L, settings.unit, callbacks.onUnitChanged)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChoiceOption("mg/dL", settings.unit == GlucoseUnit.MG_DL, Modifier.weight(1f)) { callbacks.onUnitChanged(GlucoseUnit.MG_DL) }
+                ChoiceOption("mmol/L", settings.unit == GlucoseUnit.MMOL_L, Modifier.weight(1f)) { callbacks.onUnitChanged(GlucoseUnit.MMOL_L) }
+            }
             HorizontalDivider()
             AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
-            HorizontalDivider()
+        }
+
+        SettingsSection("Notifications") {
             SettingSwitch(
                 title = "Lock-screen values",
+                summary = "Anyone can see the name and reading while locked.",
                 detail = "Show the person's name, glucose value, and reading time on the lock screen.",
                 checked = settings.showOnLockScreen,
                 onCheckedChange = callbacks.onLockScreenVisibilityChanged,
             )
             SettingSwitch(
                 title = "Status chip Live Update",
+                summary = "Android's plain card. Turn off for the graph card.",
                 detail = "Requests a status chip on Android 16 or newer. Samsung decides whether to show it in the Now bar. Turn off for the arrow, reading and unit card with a small history graph. Live Update uses Android's layout.",
                 checked = settings.enhancedNotification,
                 onCheckedChange = callbacks.onEnhancedNotificationChanged,
             )
-            Text(settings.liveUpdateStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = callbacks.onOpenLiveUpdateSettings, modifier = Modifier.fillMaxWidth()) {
-                Text("Live Update settings")
-            }
-            Text(
-                "Samsung: Settings → Lock screen and AOD → Now bar → Live notifications. Enable Glance if listed, and allow its lock-screen notifications.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            HelpDetails("Live Update status", settings.liveUpdateStatus +
+                "\nSamsung: Settings → Lock screen and AOD → Now bar → Live notifications.")
+            TextButton(onClick = callbacks.onOpenLiveUpdateSettings) { Text("Live Update settings") }
             SettingSwitch(
                 title = "Glucose number icon",
+                summary = "Show fresh values in the status bar; requires lock-screen values.",
                 detail = "Show the current reading as the regular notification icon. Older readings use the Glance icon. Hidden lock-screen values also hide the number icon and Live Update chip value, including while unlocked. Live Updates use the Glance icon beside the chip value.",
                 checked = settings.numericStatusIcon,
                 onCheckedChange = callbacks.onNumericStatusIconChanged,
             )
             SettingSwitch(
-                title = "Keep monitoring card visible",
+                title = "Keep notification",
+                summary = "Restore after clearing while monitoring.",
                 detail = "Restore the regular glucose card after clearing or swiping while monitoring is active. A dismissed Live Update returns as the regular card. Stop monitoring to remove it. Android can still remove the card briefly or block notifications.",
                 checked = settings.keepNotificationVisible,
                 onCheckedChange = callbacks.onKeepNotificationVisibleChanged,
@@ -263,31 +275,31 @@ internal fun SettingsScreen(
         SettingsSection("Widgets") {
             SettingSwitch(
                 title = "Widget values",
+                summary = "Readings are visible on phone/car widgets, even while locked.",
                 detail = "Show readings and history on phone and car widgets, including while the phone is locked. Anyone who can see those screens can see the readings. This is separate from notification privacy.",
                 checked = settings.widgetValuesVisible,
                 onCheckedChange = callbacks.onWidgetValuesChanged,
             )
-            Text("Add Glance glucose from your phone's widget picker. For the car, select it in Android Auto's widget settings if available. Car widgets depend on your Android Auto version and rollout.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HelpDetails("Widget setup", "Add Glance glucose from your phone's widget picker. For the car, select it in Android Auto's widget settings if available. Car widgets depend on your Android Auto version and rollout.")
         }
 
         SettingsSection("Galaxy Watch") {
             SettingSwitch(
                 title = "Watch readings",
+                summary = "Anyone looking at the watch can see the reading.",
                 detail = "Share the current reading with Glance on your Wear OS watch, including its watch-face complication. Anyone who can see the watch can see the reading. Separate from phone lock-screen privacy.",
                 checked = settings.watchValuesVisible,
                 onCheckedChange = callbacks.onWatchValuesChanged,
             )
             SettingSwitch(
                 title = "Watch notification",
+                summary = "One silent card on the watch; enable there too.",
                 detail = "Show one silent glucose card on the watch while sharing and monitoring. Also enable notifications in the Glance watch app. Existing glucose alerts keep their Android/Galaxy Wearable settings.",
                 checked = settings.watchNotificationsEnabled,
                 onCheckedChange = callbacks.onWatchNotificationsChanged,
             )
-            Text("Install Glance on your watch, then choose Glance glucose in a text complication slot. Tap it to open the watch app. The phone must keep monitoring; the watch does not sign in or fetch separately.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Without new phone sync, readings hide after five minutes. Turning sharing off clears connected watches; a disconnected watch may retain its last reading until that limit.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Readings hide after 5 minutes without phone sync.", style = MaterialTheme.typography.bodyMedium)
+            HelpDetails("Watch setup", "Install Glance on your watch, then choose Glance glucose in a text complication slot. Tap it to open the watch app. The phone must keep monitoring; the watch does not sign in or fetch separately. Turning sharing off clears connected watches; a disconnected watch may retain its last reading for up to five minutes.")
             Text(settings.watchSyncStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
@@ -303,19 +315,22 @@ internal fun SettingsScreen(
 
         SettingsSection("Monitoring") {
             Text("Refresh cadence", style = MaterialTheme.typography.titleMedium)
-            IntervalChoice(1, settings.intervalMinutes, callbacks.onIntervalChanged)
-            IntervalChoice(5, settings.intervalMinutes, callbacks.onIntervalChanged)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChoiceOption("1 minute", settings.intervalMinutes == 1, Modifier.weight(1f)) { callbacks.onIntervalChanged(1) }
+                ChoiceOption("5 minutes", settings.intervalMinutes == 5, Modifier.weight(1f)) { callbacks.onIntervalChanged(5) }
+            }
             Text(
                 if (settings.intervalMinutes == 1) {
-                    "One minute gives faster updates and uses more network and battery."
+                    "Faster updates · more battery use."
                 } else {
-                    "Five minutes uses less network and may show readings as delayed between checks."
+                    "Less battery use · readings may show as delayed."
                 },
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             HorizontalDivider()
             SettingSwitch(
                 title = "Resume after restart",
+                summary = "Resume after unlock. Reopen after a force-stop.",
                 detail = "Resume after the first unlock when Android allows it. A force-stopped app still needs to be opened.",
                 checked = settings.resumeAfterBoot,
                 onCheckedChange = callbacks.onResumeAfterBootChanged,
@@ -333,7 +348,7 @@ internal fun SettingsScreen(
 
         SettingsSection("Account") {
             OutlinedButton(onClick = callbacks.onChangePerson, modifier = Modifier.fillMaxWidth()) {
-                Text("Change selected person")
+                Text("Change person")
             }
             OutlinedButton(onClick = callbacks.onReconnect, modifier = Modifier.fillMaxWidth()) {
                 Text("Reconnect LibreLinkUp")
@@ -382,85 +397,76 @@ internal fun SettingsScreen(
 private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
     var draft by rememberSaveable(selectedHex) { mutableStateOf(selectedHex) }
     val normalized = ThemeAccent.normalize(draft)
-    Text("App color", style = MaterialTheme.typography.titleMedium)
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ThemeAccent.presets.forEach { preset ->
-            FilterChip(
-                selected = selectedHex.equals(preset.hex, ignoreCase = true),
-                onClick = { onSelect(preset.hex) },
-                label = { Text(preset.name) },
-                leadingIcon = { Text("●", color = ThemeAccent.color(preset.hex)) },
-            )
+    var colorExpanded by rememberSaveable { mutableStateOf(false) }
+    TextButton(onClick = { colorExpanded = !colorExpanded }, modifier = Modifier.fillMaxWidth().semantics {
+        stateDescription = if (colorExpanded) "Expanded" else "Collapsed"
+    }) { Text(if (colorExpanded) "App color −" else "App color +") }
+    if (colorExpanded) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ThemeAccent.presets.forEach { preset ->
+                FilterChip(
+                    selected = selectedHex.equals(preset.hex, ignoreCase = true),
+                    onClick = { onSelect(preset.hex) },
+                    label = { Text(preset.name) },
+                    leadingIcon = { Text("●", color = ThemeAccent.color(preset.hex)) },
+                )
+            }
         }
+        ColorWheelPicker(normalized ?: selectedHex) { draft = it }
+        OutlinedTextField(
+            value = draft,
+            onValueChange = { if (it.length <= 7) draft = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Custom hex color") },
+            placeholder = { Text("#087E82") },
+            singleLine = true,
+            isError = draft.isNotBlank() && normalized == null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+            supportingText = {
+                Text(if (draft.isNotBlank() && normalized == null) "Enter six hex digits, such as #087E82." else "Drag the wheel or enter a hex color, then apply.")
+            },
+        )
+        Button(
+            onClick = { normalized?.let(onSelect) },
+            enabled = normalized != null && normalized != selectedHex,
+        ) { Text("Apply color") }
+        Text(
+            "Very light or dark colors are adjusted to keep text and the graph readable.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
-    ColorWheelPicker(normalized ?: selectedHex) { draft = it }
-    OutlinedTextField(
-        value = draft,
-        onValueChange = { if (it.length <= 7) draft = it },
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text("Custom hex color") },
-        placeholder = { Text("#087E82") },
-        singleLine = true,
-        isError = draft.isNotBlank() && normalized == null,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-        supportingText = {
-            Text(if (draft.isNotBlank() && normalized == null) "Enter six hex digits, such as #087E82." else "Drag the wheel or enter a hex color, then apply.")
-        },
-    )
-    Button(
-        onClick = { normalized?.let(onSelect) },
-        enabled = normalized != null && normalized != selectedHex,
-    ) { Text("Apply color") }
-    Text(
-        "Very light or dark colors are adjusted to keep text and the graph readable.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
-            content()
+    var expanded by rememberSaveable(title) { mutableStateOf(title == "Display") }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button) { expanded = !expanded }
+            .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" },
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(title, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
+            Text(if (expanded) "−" else "+", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (expanded) content()
     }
 }
 
 @Composable
-private fun UnitChoice(value: GlucoseUnit, selected: GlucoseUnit, onSelect: (GlucoseUnit) -> Unit) {
-    val label = if (value == GlucoseUnit.MG_DL) "mg/dL" else "mmol/L"
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect(value) },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = value == selected, onClick = { onSelect(value) })
-        Text(label)
-    }
-}
-
-@Composable
-private fun IntervalChoice(value: Int, selected: Int, onSelect: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect(value) },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = value == selected, onClick = { onSelect(value) })
-        Text(if (value == 1) "Every minute" else "Every 5 minutes")
+private fun ChoiceOption(label: String, selected: Boolean, modifier: Modifier, onSelect: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Row(modifier.heightIn(min = 48.dp)
+        .background(if (selected) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background, shape)
+        .border(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, shape)
+        .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+        .padding(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -468,21 +474,25 @@ private fun IntervalChoice(value: Int, selected: Int, onSelect: (Int) -> Unit) {
 private fun SettingSwitch(
     title: String,
     detail: String,
+    summary: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) },
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth().heightIn(min = 48.dp)
+                .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = checked, onCheckedChange = null)
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        HelpDetails("About $title", detail)
     }
 }
 

@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `24`, and versionName
-`0.19.3`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `25`, and versionName
+`0.20.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.19.3-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.20.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -250,3 +250,21 @@ complication selection and notification permission. Phone monitoring owns all
 LibreLinkUp requests. Watch7 / Wear OS6 / One UI Watch8.0 was reported by the
 owner; physical watch qualification remains pending. Existing successfully
 saved lock-screen grants persist through this upgrade.
+
+## 0.20.0 presentation refresh
+
+The phone UI uses neutral surfaces, custom type/shape defaults and compact
+controls. The current reading and history are flat sections rather than nested
+cards. Settings groups expand on tap; Display opens initially. App color still
+contains every preset, the wheel/brightness controls and the hex field. Short
+setting summaries remain visible when their group is open, with original longer
+explanations behind About/Setup buttons. Lock-screen/widget/watch privacy
+consequences remain beside their controls. Alerts, cadence, restart, permissions,
+battery links, account controls and destructive confirmations are retained.
+Android Back closes Settings. No persisted settings migration was added.
+
+The LibreLinkUp adapter, poller, alerts, notification layouts, widget/watch
+runtime and chart math/gestures are unchanged. Existing Live Update preferences
+are respected; turn Status chip Live Update off for the regular graph card.
+See [UI refresh validation](ui-refresh-validation.md) for synthetic checks and
+physical-device boundaries. The watch needs no reinstall for this UI change.

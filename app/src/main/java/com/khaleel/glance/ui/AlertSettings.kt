@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,18 +53,11 @@ internal fun AlertSettings(
     onOpenNotificationSettings: () -> Unit,
 ) {
     var expandedName by rememberSaveable { mutableStateOf<String?>(null) }
-    Text(
-        "Alerts are off until you enable them. Each alert has its own Android notification category for sound and priority.",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Text("Each alert is optional. Sound is set in Android.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedButton(onClick = onOpenNotificationSettings, modifier = Modifier.fillMaxWidth()) {
-        Text("All Android notification categories")
+        Text("Android alert settings")
     }
-    Text(
-        "On Samsung, if categories are hidden, enable Settings → Notifications → Advanced settings → Manage notification categories for each app.",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodySmall,
-    )
+    HelpDetails("Alert setup", "Each alert has its own Android category for sound and priority. On Samsung, if categories are hidden, enable Settings → Notifications → Advanced settings → Manage notification categories for each app.")
     AlertKind.entries.forEach { kind ->
         val rule = config[kind]
         Row(

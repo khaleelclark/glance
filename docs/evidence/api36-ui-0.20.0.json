@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "freshValueTimestampAndGraphVisible": true,
+    "compactActionsDispatchOnce": true,
+    "colorWheelAndHexRemainAvailableWithoutSideEffects": true,
+    "privacySummaryAndExpandableHelpWithoutToggle": true,
+    "settingToggleHasCheckedSemanticsAndDispatchesOnce": true,
+    "allSettingsSectionsAndRepresentativeControlsReachable": true,
+    "destructiveConfirmationAndCancelPreserved": true,
+    "systemBackReturnsToMainAndUnitChoiceRetained": true,
+    "staleLabelAndSuppressedCurrentTrendPreserved": true,
+    "offlineMessageRemainsVisible": true,
+    "signInFieldsAndEncryptedStorageNoticeReachable": true,
+    "darkMainRenders": true,
+    "largeFontReadingUnitsAndSettingsReachable": true,
+    "landscapeReadingAndGraphRender": true
+  },
+  "allPassed": true,
+  "liveAccount": "not tested",
+  "GalaxyS25Ultra": "not tested",
+  "settingsPersistence": "fixture callbacks only; actual persistence not exercised"
+}

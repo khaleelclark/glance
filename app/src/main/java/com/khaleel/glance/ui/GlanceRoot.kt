@@ -1,5 +1,6 @@
 package com.khaleel.glance.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,11 +42,13 @@ fun GlanceRoot(
         if (setupState.step != SetupStep.COMPLETE) settingsVisible = false
     }
 
+    BackHandler(enabled = settingsVisible && setupState.step == SetupStep.COMPLETE) { settingsVisible = false }
+
     val darkTheme = isSystemInDarkTheme()
     val colorScheme = remember(settings.accentHex, darkTheme) {
         ThemeAccent.scheme(settings.accentHex, darkTheme)
     }
-    MaterialTheme(colorScheme = colorScheme) {
+    MaterialTheme(colorScheme = colorScheme, typography = GlanceTypography, shapes = GlanceShapes) {
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Box(Modifier.fillMaxSize()) {
                 when (setupState.step) {

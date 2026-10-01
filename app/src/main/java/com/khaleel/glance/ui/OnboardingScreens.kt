@@ -13,12 +13,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import com.khaleel.glance.ui.GlanceButton as Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -53,10 +53,10 @@ internal fun SignInScreen(accountState: AccountUiState, onSignIn: (Credentials) 
     ScreenColumn {
         Text("Glance", style = MaterialTheme.typography.headlineLarge)
         Text(
-            "Keep a shared glucose reading in your notifications.",
+            "A shared reading, at a glance.",
             style = MaterialTheme.typography.titleLarge,
         )
-        Text("Sign in with the LibreLinkUp follower account that receives the shared readings.")
+        Text("Use your LibreLinkUp follower account.")
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -105,7 +105,7 @@ internal fun SignInScreen(accountState: AccountUiState, onSignIn: (Credentials) 
             }
         }
         Text(
-            "After sign-in, Glance stores your credentials encrypted on this phone to reconnect.",
+            "Sign-in is stored encrypted on this phone.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -117,7 +117,7 @@ internal fun ConnectionScreen(state: ConnectionSetupUiState, callbacks: GlanceCa
     val selected = state.connections.firstOrNull { it.id == state.selectedConnectionId }
     ScreenColumn {
         Text("Choose a shared person", style = MaterialTheme.typography.headlineMedium)
-        Text("Confirm the person whose reading should appear. Glance never chooses automatically.")
+        Text("Choose whose readings to follow.")
         if (state.loading) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.height(24.dp), strokeWidth = 2.dp)
@@ -176,7 +176,7 @@ internal fun NotificationSetupScreen(
     val preview = text.notificationPreview(displayState, settings, now)
     ScreenColumn {
         Text("Set up notifications", style = MaterialTheme.typography.headlineMedium)
-        Text("The ongoing notification is Glance's main feature. Routine reading updates stay silent.")
+        Text("Keep readings in your notifications. Updates are silent.")
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Preview", style = MaterialTheme.typography.labelLarge)
@@ -271,19 +271,20 @@ internal fun ScreenColumn(content: @Composable androidx.compose.foundation.layou
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         content = content,
     )
 }
 
 @Composable
 internal fun StatusMessage(text: String, isError: Boolean = false) {
-    Card(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth()) {
         Text(
             text = text,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
-                .padding(16.dp)
+                .padding(vertical = 4.dp)
                 .semantics { contentDescription = text },
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
         )

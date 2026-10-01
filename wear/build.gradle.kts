@@ -34,6 +34,9 @@ android {
 }
 
 dependencies {
+    constraints {
+        implementation(libs.fragment) { because("Wearable Play services must not downgrade permission handling to Fragment 1.0") }
+    }
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)

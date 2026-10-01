@@ -43,13 +43,21 @@ def main() -> int:
     source_commit = run("git", "rev-parse", "HEAD").strip()
     build_env = os.environ.copy()
     build_env.setdefault("ANDROID_HOME", str(SDK))
-    run(
+    OUT_DIR.mkdir(exist_ok=True)
+    build_log = OUT_DIR / "clean-build.log"
+    try:
+        build_output = run(
         str(ROOT / "gradlew"), ":app:clean", ":app:testDebugUnitTest",
         ":app:lintDebug", ":app:lintRelease", ":app:assembleRelease",
         ":wear:clean", ":wear:testDebugUnitTest", ":wear:lintDebug",
         ":wear:lintRelease", ":wear:assembleRelease",
         "--no-daemon", "--no-build-cache", env=build_env,
-    )
+        )
+    except subprocess.CalledProcessError as error:
+        build_log.write_text((error.stdout or "") + (error.stderr or ""), encoding="utf-8")
+        print("Release build failed; see " + str(build_log), file=sys.stderr)
+        return 1
+    build_log.write_text(build_output, encoding="utf-8")
     if run("git", "status", "--porcelain").strip() or run("git", "rev-parse", "HEAD").strip() != source_commit:
         print("Source changed during the release build.", file=sys.stderr)
         return 1

@@ -126,7 +126,13 @@ class GlucoseNotificationRenderer(
     fun post() {
         if (NotificationVisibility.isDismissed(appContext)) return
         createChannel()
-        notificationManager.notify(NOTIFICATION_ID, build())
+        post(build())
+    }
+
+    /** Allows the application publication gate to cover just the final host update. */
+    fun post(notification: Notification) {
+        if (NotificationVisibility.isDismissed(appContext)) return
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     fun hide() {

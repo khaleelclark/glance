@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `19`, and versionName
-`0.18.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `20`, and versionName
+`0.18.1`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.18.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.18.1-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -189,7 +189,7 @@ See [car-widget.md](car-widget.md) for official references, setup and verificati
 limits. Actual Android Auto dashboard hosting, Samsung appearance, live source
 parity and screen-off/battery qualification require the owner's device tests.
 
-## Notification retention (0.18.0)
+## Notification retention (0.18.1)
 
 The owner reported on 0.17.0 that both Clear and a sideways swipe removed the
 card, although Android reported it promoted. **Keep monitoring card visible**
@@ -219,3 +219,9 @@ See [notification-0.18-validation.md](notification-0.18-validation.md) for bound
 verification. This choice supersedes the baseline's manual-only dismissal
 restoration for this personal build; dismissed Live Updates return as regular
 cards rather than being re-promoted automatically.
+
+In 0.18.1, notification cancellation and publication share a generation gate.
+Stop, sign-out and person change cancel last when a publication is already in
+flight, and reject callbacks prepared before cancellation. Dismissal also
+invalidates a pending promoted card. The settings switch retains its previous
+accepted choice and reports an error when persistence fails.

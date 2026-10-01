@@ -85,13 +85,13 @@ class MonitoringService : Service() {
             }
         }
 
+        activeGeneration = actionGeneration
+        currentActionGeneration = actionGeneration
         if (!promoteToForeground(deps, actionGeneration)) {
             stopSelf(startId)
             return START_NOT_STICKY
         }
 
-        activeGeneration = actionGeneration
-        currentActionGeneration = actionGeneration
         val activeCoordinator = coordinator ?: PollCoordinator(deps, serviceScope).also { coordinator = it }
         activeCoordinator.start(actionGeneration)
         if (action == ACTION_REFRESH) activeCoordinator.requestRefresh()

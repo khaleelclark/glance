@@ -6,7 +6,9 @@
     "clear_all_removes_disposable_but_retains_glance": true,
     "real_swipe_restores_regular_card": true,
     "retention_off_respects_real_swipe": true,
-    "stop_removes_card_and_no_restoration": true
+    "stop_removes_card_and_no_restoration": true,
+    "person-change_rejects_old_delete_intent": true,
+    "sign-out_rejects_old_delete_intent": true
   },
   "promotion_on_emulator": false,
   "samsung_now_bar": "not tested"

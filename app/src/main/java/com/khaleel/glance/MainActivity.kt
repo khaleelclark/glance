@@ -340,9 +340,14 @@ class MainActivity : ComponentActivity() {
             if (it) NotificationVisibility.restore(this)
             renderSettingsChange()
         },
-        onKeepNotificationVisibleChanged = {
-            NotificationVisibility.setKeepVisible(this, it)
-            if (it && controller.display.value.monitoringEnabled) app.showCurrentNotification()
+        onKeepNotificationVisibleChanged = { visible ->
+            runCatching { NotificationVisibility.setKeepVisible(this, visible) }
+                .onSuccess {
+                    if (visible && controller.display.value.monitoringEnabled) app.showCurrentNotification()
+                }.onFailure {
+                    Toast.makeText(this, "Could not save notification setting; previous choice retained.",
+                        Toast.LENGTH_LONG).show()
+                }
             refreshSettings()
         },
         onNumericStatusIconChanged = { controller.settings.numericStatusIcon = it; renderSettingsChange() },

@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +38,18 @@ def shade():
     return ET.fromstring(adb("shell", "cat", "/sdcard/glance-retention.xml"))
 
 
+def posted_probe(label):
+    # Android can defer foreground-service presentation. Observe it before dismissal checks.
+    deadline = time.monotonic() + 25
+    while True:
+        shade()
+        result = probe(label)
+        if result["Monitoring card posted"] == "true":
+            return result
+        if time.monotonic() >= deadline:
+            raise RuntimeError("Foreground card was not posted within 25 seconds: " + str(result))
+
+
 def swipe_glance():
     root = shade()
     for node in root.iter("node"):
@@ -65,7 +78,7 @@ def main():
         fixture("notification-restore")
         shade()
         shade()
-        before = probe("before")
+        before = posted_probe("before")
         assert before["Monitoring card posted"] == "true", before
         assert before["Clear-all protection flag"] == "true", before
         assert before["Public clear-all protection flag"] == "true", before
@@ -108,10 +121,20 @@ def main():
         fixture("notification-retention", "--ez", "keep", "true")
         fixture("notification-restore")
         fixture("service-pause")
-        fixture("dismiss-active")
+        fixture("dismiss-saved")
         stopped = probe("stopped")
         assert stopped["Monitoring card posted"] == "false", stopped
         checks["stop_removes_card_and_no_restoration"] = True
+        for mode, label in (("service-stop-person", "person-change"), ("service-stop-account", "sign-out")):
+            fixture("service-demo")
+            adb("shell", "am", "start", "-W", "-n", "com.khaleel.glance/.MainActivity")
+            fixture("notification-restore")
+            shade()
+            assert posted_probe(label + "-before")["Monitoring card posted"] == "true"
+            fixture(mode)
+            fixture("dismiss-saved")
+            assert probe(label)["Monitoring card posted"] == "false"
+            checks[label + "_rejects_old_delete_intent"] = True
         (EVIDENCE / "api36-notification-0.18-retention.json").write_text(
             json.dumps({"sdk": adb("shell", "getprop", "ro.build.version.sdk").strip(),
                         "checks": checks, "promotion_on_emulator": False,

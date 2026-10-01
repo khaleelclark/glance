@@ -19,6 +19,10 @@ import com.khaleel.glance.monitoring.MonitoringPresentation
 import com.khaleel.glance.monitoring.MonitoringService
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import com.khaleel.glance.notification.NotificationVisibility
+import com.khaleel.glance.notification.NotificationPublication
+import com.khaleel.glance.notification.NotificationDismissal
+import com.khaleel.glance.notification.DismissalAction
+import com.khaleel.glance.core.RuntimeState
 import android.app.Notification
 import android.app.Service
 import android.app.ActivityManager
@@ -85,6 +89,8 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         )
     }
 
+    private val notificationPublication = NotificationPublication()
+
     private val notifications = object : MonitoringNotifications {
         private fun renderer(presentation: MonitoringPresentation) =
             GlucoseNotificationRenderer(
@@ -101,16 +107,41 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             renderer(presentation).apply { createChannel() }.build()
 
         override fun render(presentation: MonitoringPresentation) {
-            renderer(presentation).post()
+            val generation = notificationPublication.generation()
+            val unit = controller.settings.unit
+            val lockScreenVisible = controller.settings.showOnLockScreen
+            val enhanced = controller.settings.enhancedNotification
+            val numericIcon = controller.settings.numericStatusIcon
+            val regularAfterDismissal = NotificationVisibility.regularAfterDismissal(this@GlanceApplication)
+            val output = GlucoseNotificationRenderer(
+                this@GlanceApplication, presentation.display, unit, lockScreenVisible, enhanced,
+                presentation.actionGeneration.takeIf { it != 0L }, numericStatusIcon = numericIcon,
+            )
+            output.createChannel()
+            val notification = output.build()
+            notificationPublication.publish(generation, {
+                controller.display.value == presentation.display &&
+                    presentation.display.monitoringEnabled &&
+                    presentation.display.runtime != RuntimeState.STOPPED &&
+                    (presentation.display.runtime != RuntimeState.RUNNING ||
+                        MonitoringService.currentActionGeneration == presentation.actionGeneration) &&
+                    controller.settings.unit == unit &&
+                    controller.settings.showOnLockScreen == lockScreenVisible &&
+                    controller.settings.enhancedNotification == enhanced &&
+                    controller.settings.numericStatusIcon == numericIcon &&
+                    NotificationVisibility.regularAfterDismissal(this@GlanceApplication) == regularAfterDismissal
+            }) { output.post(notification) }
         }
 
         override fun hide() {
-            GlucoseNotificationRenderer(
-                this@GlanceApplication,
-                controller.display.value,
-                controller.settings.unit,
-                controller.settings.showOnLockScreen,
-            ).hide()
+            notificationPublication.clear {
+                GlucoseNotificationRenderer(
+                    this@GlanceApplication,
+                    controller.display.value,
+                    controller.settings.unit,
+                    controller.settings.showOnLockScreen,
+                ).hide()
+            }
             alertEngine.clearNotifications()
         }
     }
@@ -139,6 +170,42 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
 
     fun hideCurrentNotification() = notifications.hide()
 
+    /** A delayed delete callback cannot republish across a cancellation or a new session. */
+    fun onNotificationDismissed(actionGeneration: Long) {
+        val generation = notificationPublication.generation()
+        val state = controller.display.value
+        val keepVisible = NotificationVisibility.keepVisible(this)
+        fun action() = NotificationDismissal.action(
+            actionGeneration, MonitoringService.currentActionGeneration,
+            controller.display.value.monitoringEnabled,
+            controller.display.value.runtime == RuntimeState.RUNNING,
+            NotificationVisibility.keepVisible(this),
+        )
+        val dismissedAction = action()
+        if (dismissedAction == DismissalAction.IGNORE) return
+        val unit = controller.settings.unit
+        val lockScreenVisible = controller.settings.showOnLockScreen
+        val numericIcon = controller.settings.numericStatusIcon
+        val output = GlucoseNotificationRenderer(
+            this, state, unit, lockScreenVisible, enhanced = false,
+            actionGeneration = actionGeneration, numericStatusIcon = numericIcon,
+        )
+        val notification = if (dismissedAction == DismissalAction.RESTORE_REGULAR) {
+            output.createChannel()
+            output.build()
+        } else null
+        notificationPublication.publish(generation, {
+            action() == dismissedAction && controller.display.value == state &&
+                NotificationVisibility.keepVisible(this) == keepVisible &&
+                controller.settings.unit == unit &&
+                controller.settings.showOnLockScreen == lockScreenVisible &&
+                controller.settings.numericStatusIcon == numericIcon
+        }, invalidatePending = true) {
+            NotificationVisibility.dismiss(this)
+            if (notification != null) output.post(notification)
+        }
+    }
+
     /** A Task Manager Stop is an explicit stop, even if persisted intent was enabled. */
     fun honorExplicitSystemStop() {
         val latest = getSystemService(ActivityManager::class.java)
@@ -149,6 +216,6 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         if (latest.timestamp <= prefs.getLong("last_handled_user_stop", 0L)) return
         prefs.edit().putLong("last_handled_user_stop", latest.timestamp).apply()
         controller.setMonitoringEnabled(false)
-        alertEngine.clearNotifications()
+        hideCurrentNotification()
     }
 }

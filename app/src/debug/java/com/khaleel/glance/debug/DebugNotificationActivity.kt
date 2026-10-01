@@ -49,8 +49,11 @@ class DebugNotificationActivity : Activity() {
                 .showCurrentNotification(restore = true)
             return
         }
-        if (mode == "dismiss-active") {
-            val generation = MonitoringService.currentActionGeneration ?: return
+        if (mode == "dismiss-active" || mode == "dismiss-saved") {
+            val generation = if (mode == "dismiss-saved") {
+                context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE)
+                    .getLong("dismiss_generation", Long.MIN_VALUE)
+            } else MonitoringService.currentActionGeneration ?: return
             context.sendBroadcast(Intent(context, com.khaleel.glance.notification.NotificationDismissReceiver::class.java)
                 .setAction(com.khaleel.glance.notification.NotificationDismissReceiver.ACTION_DISMISSED)
                 .putExtra(com.khaleel.glance.notification.NotificationDismissReceiver.EXTRA_GENERATION,
@@ -142,11 +145,15 @@ class DebugNotificationActivity : Activity() {
             MonitoringService.start(context)
             return
         }
-        if (mode == "service-pause") {
-            (context.applicationContext as com.khaleel.glance.GlanceApplication).controller
-                .setMonitoringEnabled(false)
+        if (mode in listOf("service-pause", "service-stop-person", "service-stop-account")) {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit()
+                .putLong("dismiss_generation", MonitoringService.currentActionGeneration ?: Long.MIN_VALUE).commit()
+            app.controller.setMonitoringEnabled(false)
             context.stopService(Intent(context, MonitoringService::class.java))
-            GlucoseNotificationRenderer(context, emptyState(), GlucoseUnit.MG_DL, false).hide()
+            app.hideCurrentNotification()
+            if (mode == "service-stop-person") app.controller.clearSelectedPerson()
+            if (mode == "service-stop-account") app.controller.signOut()
             return
         }
         if (mode == "hide") {

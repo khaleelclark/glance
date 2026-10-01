@@ -1,6 +1,7 @@
-# Glance 0.18.0 notification retention
+# Glance 0.18.1 notification retention
 
-Base: clean main `3fc28032b180516b711cf1778b4283d701f61026`.
+Retention base: `3fc28032b180516b711cf1778b4283d701f61026`.
+Race-fix base: clean main `a3a8281` (0.18.0).
 The exact delivered revision and APK hash belong in the signed release manifest.
 
 The owner reported on the S25 Ultra with Glance 0.17.0 that Diagnostics indicated
@@ -17,13 +18,17 @@ personal build. It does not make OS-controlled notifications impossible to remov
 
 | Check | Result | Evidence / limitation |
 |---|---|---|
-| Unit tests | Pass, initial 122 tests; zero failures/errors/skips | Three policy cases cover retained active sessions, optional manual restoration, old generations, disabled monitoring and stopped runtime. Clean signing re-runs the suite. |
+| Unit tests | Pass, 129 tests; zero failures/errors/skips | Existing dismissal policy cases plus four controlled publication tests and three storage tests. Clean signing re-runs the suite. |
+| Cancellation/publication ordering | Pass | Controlled receiver pause after early validation rejects publication after Stop, sign-out and person-change cancellation, including ABA; overlapping notify/cancel leaves the host clear. Final session check rejects stopped/superseded actions. |
+| No delayed re-promotion | Pass | Dismissal advances the publication generation, rejecting pending promoted builds after regular restoration. |
+| Failed retention save | Pass | Simulated commit failure mutates preference memory but preserves the accepted choice; successful persistence/recreation and later retry are covered. UI reports failure with a Toast. |
 | API 36 foreground card flags | Pass | [Before](evidence/api36-notification-0.18-before.txt) has ongoing, NO_CLEAR and foreground flags; its redacted public version also has NO_CLEAR. |
 | Real emulator Clear all | Pass | A disposable shell DEMO notification was removed while the active Glance card remained; [probe](evidence/api36-notification-0.18-clear-all.txt). |
 | Real emulator sideways swipe, retention on | Pass | Delete intent delivered; same ID 1001 regular card restored, suppression false, promotion request false. [Probe](evidence/api36-notification-0.18-retained-swipe.txt), [DEMO screenshot](evidence/api36-notification-0.18-retained.png). |
 | Real emulator swipe, retention off | Pass | [Probe](evidence/api36-notification-0.18-manual-dismissal.txt) shows card absent and suppression true. |
 | Old-generation delete intent | Pass | Explicit debug callback with generation -1 leaves dismissal state unchanged; [probe](evidence/api36-notification-0.18-stale-delete-intent.txt). |
-| Stop after restoration | Pass | [Probe](evidence/api36-notification-0.18-stopped.txt) has no posted card; later debug dismissal action cannot restart the stopped session. |
+| Stop after restoration | Pass | [Probe](evidence/api36-notification-0.18-stopped.txt) has no posted card after a delete callback carrying the saved pre-Stop generation. |
+| Person change / sign-out | Pass | [Person change](evidence/api36-notification-0.18-person-change.txt) and [sign-out](evidence/api36-notification-0.18-sign-out.txt) show no posted card after clearing and delivery of the saved active-session delete intent. |
 | Promoted construction / Samsung Now bar | Not qualified | This API 36 image does not allow promotion. The owner's 0.17 promotion report does not establish Samsung chip admission or visibility. |
 | Galaxy S25 Ultra Clear/swipe on 0.18 | Not run | Owner must install the same-key upgrade and check both paths. Restore depends on the OEM delivering the delete intent; a brief disappearance can still occur. |
 | Real account, overnight and power | Not run for this change | No new network worker, cadence or polling ownership change. Only synthetic data used here. |
@@ -33,8 +38,8 @@ install the debug APK, grant POST_NOTIFICATIONS, then run
 `python3 scripts/validate_notification_retention.py emulator-5556`.
 The driver refuses physical devices and non-debug apps; it clears its DEMO account
 in a finally block. It does not operate on the owner's phone. Startup opens the
-main screen before checking the foreground card to account for platform rendering
-and service initialization. The recorded checks are in
+main screen and observes the posted card for up to 25 seconds before checking
+dismissal, accounting for Android foreground-service presentation deferral. The recorded checks are in
 [retention.json](evidence/api36-notification-0.18-retention.json).
 
 Diagnostics exports posting facts only, including flags, channel importance,
@@ -47,6 +52,15 @@ hidden API, device-admin/accessibility exemption, or second notification is used
 Android/Samsung still own promotion, status-bar/Now bar admission, dismissal,
 notification permission and rendering. The retention choice is recovery while a
 user-started monitoring session is active, not a claim to override those controls.
+
+The 0.18.1 application uses one process-scoped publication monitor and generation
+for final state/privacy validation, notify, and cancellation. Building stays
+outside the monitor. Cancellation invalidates pending work before calling the
+host; if notify is already in flight, cancellation waits and clears it last.
+Dismissal validates the current running action generation again under the same
+monitor before changing dismissal state or posting a regular card. All production
+notification render/hide paths use this gate. This fixes the review's Stop and
+account/person-change restoration race without another scheduler or service.
 
 Primary references:
 

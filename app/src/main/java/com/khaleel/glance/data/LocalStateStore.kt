@@ -7,6 +7,7 @@ import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
+import com.khaleel.glance.notification.LockScreenPrivacy
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -101,12 +102,13 @@ interface SettingsPersistence {
 
 class UserSettings(context: Context) : SettingsPersistence {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    private val lockScreenPrivacy = LockScreenPrivacy(context)
     override var unit: GlucoseUnit
         get() = runCatching { GlucoseUnit.valueOf(prefs.getString("unit", GlucoseUnit.MG_DL.name)!!) }.getOrDefault(GlucoseUnit.MG_DL)
         set(value) = prefs.edit().putString("unit", value.name).apply()
     override var showOnLockScreen: Boolean
-        get() = prefs.getBoolean("lock_visible", false)
-        set(value) = prefs.edit().putBoolean("lock_visible", value).apply()
+        get() = lockScreenPrivacy.visible
+        set(value) { lockScreenPrivacy.visible = value }
     override var enhancedNotification: Boolean
         // A stored choice still wins; new installs and users who never changed this switch
         // request the status chip when Android supports promotion.
@@ -131,5 +133,10 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getLong("next_allowed_fetch", 0L).takeIf { it > 0 }?.let(Instant::ofEpochMilli)
         set(value) = prefs.edit().putLong("next_allowed_fetch", value?.toEpochMilli() ?: 0L).commit().let { require(it) }
 
-    override fun clear() { prefs.edit().clear().commit() }
+    override fun clear() {
+        // Privacy failure must not prevent credentials and patient caches from being cleared.
+        // The UI attempts revocation explicitly and reports failure before signing out.
+        runCatching { lockScreenPrivacy.visible = false }
+        prefs.edit().clear().commit()
+    }
 }

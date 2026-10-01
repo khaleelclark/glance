@@ -227,3 +227,11 @@ invalidates a pending promoted card. The settings switch retains its previous
 accepted choice and reports an error when persistence fails.
 Lock-screen value changes share that gate, invalidate pending public cards,
 and clear the current monitoring and alert cards before a private replacement.
+
+This upgrade starts **Show readings on lock screen** off, including when the old
+version had it on. Re-enable it in Settings only if you want public readings.
+The separate checked privacy store then preserves successful choices on later
+upgrades. A failed save leaves current rendering hidden and can delete just that
+grant to revoke it durably. If both saving and deletion fail, Glance reports the
+failure and directs you to Android's lock-screen notification controls before
+restarting; it does not claim to have saved the hidden choice.

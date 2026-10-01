@@ -330,7 +330,7 @@ class MainActivity : ComponentActivity() {
         },
         onUnitChanged = { controller.settings.unit = it; renderSettingsChange() },
         onLockScreenVisibilityChanged = {
-            app.setLockScreenValuesVisible(it)
+            saveLockScreenVisibility(it)
             renderSettingsChange()
         },
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },
@@ -411,6 +411,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private fun signOut() {
+        saveLockScreenVisibility(false)
         saveWidgetVisibility(false)
         stopMonitoring()
         controller.signOut()
@@ -426,6 +427,14 @@ class MainActivity : ComponentActivity() {
             app.widgetRenderer.redact()
             Toast.makeText(this, if (visible) "Could not save Widget values; readings remain hidden."
                 else "Could not save hidden widget values. Remove the widgets from your phone and car, then try again.",
+                Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun saveLockScreenVisibility(visible: Boolean) {
+        runCatching { app.setLockScreenValuesVisible(visible) }.onFailure {
+            Toast.makeText(this, if (visible) "Could not save lock-screen values; readings remain hidden."
+                else "Could not save lock-screen privacy. Hide Glance notifications on the lock screen in Android settings before restarting, then try again.",
                 Toast.LENGTH_LONG).show()
         }
     }

@@ -32,6 +32,28 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode == "privacy-legacy-seed") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            app.controller.setMonitoringEnabled(false)
+            context.stopService(Intent(context, MonitoringService::class.java))
+            app.hideCurrentNotification()
+            check(context.deleteSharedPreferences(com.khaleel.glance.notification.LockScreenPrivacy.PREFS))
+            check(context.getSharedPreferences("settings", Context.MODE_PRIVATE).edit()
+                .putBoolean("lock_visible", true).putString("unit", GlucoseUnit.MMOL_L.name)
+                .putInt("interval_minutes", 5).commit())
+            return
+        }
+        if (mode == "privacy-storage-probe") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            val result = org.json.JSONObject()
+                .put("lockScreenHidden", !app.controller.settings.showOnLockScreen)
+                .put("legacyGrantPresent", context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                    .getBoolean("lock_visible", false))
+                .put("unitPreserved", app.controller.settings.unit == GlucoseUnit.MMOL_L)
+                .put("intervalPreserved", app.controller.settings.intervalMinutes == 5)
+            java.io.File(context.filesDir, "privacy-storage-probe.json").writeText(result.toString())
+            return
+        }
         if (mode == "notification-probe") {
             java.io.File(context.filesDir, "notification-probe.txt").writeText(
                 com.khaleel.glance.notification.LiveUpdateSupport.diagnostics(context)

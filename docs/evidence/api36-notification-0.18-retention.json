@@ -1,6 +1,7 @@
 {
   "sdk": "36",
   "checks": {
+    "legacy_grant_not_reimported_after_process_recreation_other_settings_preserved": true,
     "original_and_public_clear_protection": true,
     "old_generation_ignored": true,
     "clear_all_removes_disposable_but_retains_glance": true,

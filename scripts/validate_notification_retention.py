@@ -77,6 +77,14 @@ def main():
     checks = {}
     try:
         fixture("demo-clear")
+        fixture("privacy-legacy-seed")
+        adb("shell", "am", "force-stop", "com.khaleel.glance")
+        fixture("privacy-storage-probe")
+        legacy = json.loads(adb("shell", "run-as", "com.khaleel.glance", "cat", "files/privacy-storage-probe.json"))
+        assert all(legacy.values()), legacy
+        (EVIDENCE / "api36-notification-0.18-legacy-privacy.json").write_text(json.dumps(legacy, indent=2) + "\n")
+        checks["legacy_grant_not_reimported_after_process_recreation_other_settings_preserved"] = True
+        fixture("demo-clear")
         fixture("notification-retention", "--ez", "keep", "true")
         fixture("service-demo")
         adb("shell", "am", "start", "-W", "-n", "com.khaleel.glance/.MainActivity")

@@ -128,3 +128,8 @@ final session validation and pending promotion invalidation. Three storage tests
 cover the retention choice's failed-save handling and persistence. Notification
 and alert overlap tests ensure a lock-screen privacy change waits for an
 in-flight publication and clears it before accepting the hidden choice.
+Six storage tests cover lock-screen opt-in/revocation, read and write failure,
+deletion fallback, successful recreation and explicitly reported total failure.
+The first upgrade to the checked privacy store requires a fresh lock-screen
+opt-in; unrelated preferences are preserved. Real simultaneous disk-write and
+deletion failure across process death still requires physical verification.

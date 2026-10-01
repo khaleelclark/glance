@@ -3,6 +3,7 @@
 Retention base: `3fc28032b180516b711cf1778b4283d701f61026`.
 Race-fix base: clean main `a3a8281` (0.18.0).
 Privacy-transition fix base: clean main `a27fca0`.
+Privacy persistence fix base: clean main `953d939`.
 The exact delivered revision and APK hash belong in the signed release manifest.
 
 The owner reported on the S25 Ultra with Glance 0.17.0 that Diagnostics indicated
@@ -19,11 +20,13 @@ personal build. It does not make OS-controlled notifications impossible to remov
 
 | Check | Result | Evidence / limitation |
 |---|---|---|
-| Unit tests | Pass, 131 tests; zero failures/errors/skips | Existing dismissal policy cases plus five controlled publication tests, three storage tests and one alert/privacy overlap test. Clean signing re-runs the suite. |
+| Unit tests | Pass, 138 tests; zero failures/errors/skips | Five controlled publication tests, three retention-storage tests, six lock-screen privacy-storage tests and alert overlap/failure-clear tests. Clean signing re-runs the suite. |
 | Cancellation/publication ordering | Pass | Controlled receiver pause after early validation rejects publication after Stop, sign-out and person-change cancellation, including ABA; overlapping notify/cancel leaves the host clear. Final session check rejects stopped/superseded actions. |
 | No delayed re-promotion | Pass | Dismissal advances the publication generation, rejecting pending promoted builds after regular restoration. |
 | Failed retention save | Pass | Simulated commit failure mutates preference memory but preserves the accepted choice; successful persistence/recreation and later retry are covered. UI reports failure with a Toast. |
 | Lock-screen privacy transition ordering | Pass | The choice cannot change after an in-flight final privacy check and before notify. Clearing and changing the preference share the notification publication monitor, invalidate pending public cards and also serialize against alert delivery. Controlled overlap tests cover both card and alert publication. |
+| Durable privacy revocation | Pass for simulated storage failures | Synchronous commit is checked. Failed opt-out removes only the dedicated privacy grant and recreation remains hidden; failed opt-in/read hides values. If commit and deletion both fail, the current process stays hidden and the UI reports failure rather than claiming durable success. |
+| Legacy grant / actual process recreation | Pass on API 36 | The debug fixture seeds the legacy visible preference, recreates the process, and observes hidden lock-screen values with unit and interval still preserved; [boolean evidence](evidence/api36-notification-0.18-legacy-privacy.json). |
 | API 36 foreground card flags | Pass | [Before](evidence/api36-notification-0.18-before.txt) has ongoing, NO_CLEAR and foreground flags; its redacted public version also has NO_CLEAR. |
 | Real emulator Clear all | Pass | A disposable shell DEMO notification was removed while the active Glance card remained; [probe](evidence/api36-notification-0.18-clear-all.txt). |
 | Real emulator sideways swipe, retention on | Pass | Delete intent delivered; same ID 1001 regular card restored, suppression false, promotion request false. [Probe](evidence/api36-notification-0.18-retained-swipe.txt), [DEMO screenshot](evidence/api36-notification-0.18-retained.png). |
@@ -68,6 +71,18 @@ Lock-screen setting changes also acquire the monitor, cancel the old card before
 changing the choice, and reject every earlier build. AlertEngine serializes the
 same choice with its delivery and clears existing alert cards. The replacement
 monitoring card is then built with the updated privacy setting outside the gate.
+
+Lock-screen values now use the separate `lock_screen_privacy` grant, default off.
+The old `settings.lock_visible` value is deliberately never imported: otherwise a
+deleted grant could be silently restored from the legacy preference. The first
+upgrade to this store therefore hides lock-screen values until a fresh explicit
+opt-in; later upgrades retain a successfully saved grant. Unit, monitoring intent,
+cooldowns and other preferences are not deleted by the privacy fallback. A total
+write-and-delete failure cannot promise durable revocation after process death:
+the UI tells the owner to hide Glance lock-screen notifications in Android settings
+before restarting. Sign-out still clears account data when revocation fails, and
+alerts are cleared even if the privacy update throws. Genuine filesystem failure
+on the target phone remains unverified.
 
 Primary references:
 

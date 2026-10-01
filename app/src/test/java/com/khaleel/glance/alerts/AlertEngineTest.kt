@@ -13,6 +13,7 @@ import com.khaleel.glance.core.Trend
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
@@ -120,6 +121,19 @@ class AlertEngineTest {
         }
     }
 
+    @Test fun failedPrivacyPersistenceStillClearsExistingAlerts() {
+        val delivery = MemoryDelivery()
+        val reading = reading(305.0, start)
+        val live = display(reading)
+        val engine = AlertEngine(MemoryStore(), delivery, MutableClock(start), { live }, { true })
+        engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, true)
+        assertEquals(1, delivery.posted.size)
+        assertThrows(java.io.IOException::class.java) {
+            engine.changePrivacy { throw java.io.IOException("synthetic failed revocation") }
+        }
+        assertEquals(1, delivery.clears)
+    }
+
     private fun reading(value: Double, time: Instant) = Reading(
         person.id, time, value, value, GlucoseUnit.MG_DL, null, Trend.STEADY, null, time,
     )
@@ -141,6 +155,7 @@ class AlertEngineTest {
 
     private class MemoryDelivery : AlertDelivery {
         var allowed = true
+        var clears = 0
         var lastVisibleOnLockScreen: Boolean? = null
         val posted = mutableListOf<AlertKind>()
         override fun ensureChannels() = Unit
@@ -149,7 +164,7 @@ class AlertEngineTest {
             posted += kind
             lastVisibleOnLockScreen = showOnLockScreen
         }
-        override fun clear() = Unit
+        override fun clear() { clears++ }
     }
 
     private class MutableClock(var now: Instant) : Clock {

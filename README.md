@@ -54,6 +54,9 @@ while monitoring is running, a delivered dismissal callback restores the same
 silent regular card after Clear or swipe. Turn it off for manual restoration.
 Stop and sign-out clear the card. Samsung delivery and Now bar admission still
 need a phone check; see [notification validation](docs/notification-0.18-validation.md).
+This upgrade starts lock-screen values hidden because its checked privacy store
+requires a new explicit opt-in. Re-enable them in Settings if wanted; successful
+choices in the new store are retained on later upgrades.
 
 The regular notification follows the owner's reference: trend arrow, lighter
 large reading, unit, and a genuine three-hour history thumbnail when available.

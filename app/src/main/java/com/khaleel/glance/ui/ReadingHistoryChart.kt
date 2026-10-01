@@ -6,6 +6,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -348,7 +349,7 @@ internal fun ReadingHistoryChart(
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(14.dp)).padding(4.dp),
+                Row(Modifier.fillMaxWidth().selectableGroup().background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(14.dp)).padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (hours in listOf(6, 12, 24)) {
                         val target = ChartViewport.latest(hours)

@@ -74,8 +74,17 @@ class DebugUiActivity : ComponentActivity() {
                 onOpenLiveUpdateSettings = { event("liveUpdateSettings") },
                 onAccentHexChanged = { settings = settings.copy(accentHex = it); event("accent") },
                 onAlertRuleChanged = { kind, rule ->
-                    settings = settings.copy(alerts = com.khaleel.glance.alerts.AlertConfig(settings.alerts.rules + (kind to rule)))
-                    event("alert")
+                    if (mode == "alertSaveFailure") {
+                        // Simulate the production host rejecting a save and keeping
+                        // the authoritative config unchanged. Debug/synthetic only.
+                        event("alertRejected")
+                    } else {
+                        settings = settings.copy(alerts = com.khaleel.glance.alerts.AlertConfig(settings.alerts.rules + (kind to rule)))
+                        java.io.File(filesDir, "ui-alert.json").writeText(JSONObject()
+                            .put("kind", kind.name).put("thresholdMgDl", rule.thresholdMgDl)
+                            .put("cooldownMinutes", rule.cooldownMinutes).put("enabled", rule.enabled).toString())
+                        event("alert")
+                    }
                 }, onAlertSoundChanged = { event("sound") },
                 onResumeAfterBootChanged = { settings = settings.copy(resumeAfterBoot = it); event("boot") },
                 onChangePerson = { event("changePerson") }, onReconnect = { event("reconnect") },

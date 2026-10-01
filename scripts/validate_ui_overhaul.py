@@ -100,10 +100,10 @@ def main():
         checks['consolidatedNotificationHelpHasNoSideEffects']=True
         # Tabs stay in view even after scrolling a long page and reset page position.
         scroll_to('Resume after restart');assert visible('Everyday') and visible('More')
-        tap('Alerts',True);assert visible('Glucose alerts') and visible('Edit limit')
+        tap('Alerts',True);assert visible('Glucose alerts') and visible('Edit alert') and visible('Sound & priority')
         checks['fixedTabsAndPagePositionPreserved']=True
         screenshot('settings-alerts')
-        tap('Edit limit',True);scroll_to('Repeat cooldown')
+        tap('Edit alert',True);scroll_to('Repeat cooldown')
         n=next(n for n in nodes() if n.get('class')=='android.widget.NumberPicker')
         x1,y1,x2,y2=map(int,re.findall(r'\d+',n.get('bounds')))
         x=(x1+x2)//2;mid=(y1+y2)//2
@@ -115,6 +115,13 @@ def main():
         adb('shell','input','tap',str((tx1+tx2)//2),str((ty1+ty2)//2));settle()
         assert events().get('alert',0)>before
         checks['alertWheelChangeDispatchesBeforePageExit']=True
+        assert events().get('alert',0)-before<=2,events()
+        checks['alertWheelFlingCoalescesSaveCallbacks']=True
+        saved=json.loads(adb('shell','run-as','com.khaleel.glance','cat','files/ui-alert.json'))
+        tap('Alerts',True)
+        assert visible('At or below '+format(saved['thresholdMgDl']/18.0182,'.1f')+' mmol/L')
+        checks['alertWheelLastValueRetainedAfterPageExit']=True
+        tap('More',True)
         assert visible('Appearance') and visible('Custom color')
         before=events();tap('Custom color',True);scroll_to('Hex color')
         assert visible('Hex color') and events()==before
@@ -161,7 +168,7 @@ def main():
         adb('shell','settings','put','system','user_rotation',original_rotation)
         adb('shell','settings','put','system','accelerometer_rotation',original_auto)
         adb('shell','cmd','uimode','night','yes' if 'yes' in original_mode else 'no')
-        result={'synthetic':True,'device':'API 36 emulator','checks':checks,'allPassed':len(checks)==20 and all(checks.values()),'liveAccount':'not tested','GalaxyS25Ultra':'not tested','settingsPersistence':'fixture callbacks only; actual persistence not exercised'}
+        result={'synthetic':True,'device':'API 36 emulator','checks':checks,'allPassed':len(checks)==22 and all(checks.values()),'liveAccount':'not tested','GalaxyS25Ultra':'not tested','settingsPersistence':'fixture callbacks only; actual persistence not exercised'}
         (EVIDENCE/'api36-ui-0.21.0.json').write_text(json.dumps(result,indent=2)+'\n')
     assert result['allPassed'],result
     print(json.dumps(checks))

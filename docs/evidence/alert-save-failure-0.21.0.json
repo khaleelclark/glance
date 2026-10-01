@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "checks": {
+    "rejectedToggleRestoresAuthoritativeRule": true,
+    "rejectedWheelSaveRestoresAuthoritativeThreshold": true,
+    "collapsedRowMatchesAuthoritativeRule": true,
+    "successfulToggleRetainsSavedRule": true,
+    "successfulWheelSaveCoalescesAndSurvivesPageExit": true
+  },
+  "allPassed": true,
+  "scope": "production Compose UI; debug callback rejects saves; no real disk failure injected"
+}

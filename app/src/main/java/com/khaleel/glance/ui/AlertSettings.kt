@@ -18,8 +18,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -40,6 +43,7 @@ import com.khaleel.glance.alerts.AlertKind
 import com.khaleel.glance.alerts.AlertRule
 import com.khaleel.glance.core.GlucoseUnit
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun AlertSettings(
@@ -56,7 +60,57 @@ internal fun AlertSettings(
     }
     HelpDetails("Alert setup", "Each alert has its own Android category for sound and priority. On Samsung, if categories are hidden, enable Settings → Notifications → Advanced settings → Manage notification categories for each app.")
     AlertKind.entries.forEach { kind ->
-        val rule = config[kind]
+        AlertRuleControls(kind, config, unit, expandedName == kind.name,
+            onExpand = { expandedName = if (expandedName == kind.name) null else kind.name },
+            onRuleChange = onRuleChange, onSoundChange = onSoundChange)
+        if (kind != AlertKind.URGENT_HIGH) HorizontalDivider()
+    }
+}
+
+@Composable
+private fun AlertRuleControls(
+    kind: AlertKind,
+    config: AlertConfig,
+    unit: GlucoseUnit,
+    expanded: Boolean,
+    onExpand: () -> Unit,
+    onRuleChange: (AlertKind, AlertRule) -> Unit,
+    onSoundChange: (AlertKind) -> Unit,
+) {
+        val savedRule = config[kind]
+        var rule by remember { mutableStateOf(savedRule) }
+        var pendingRule by remember { mutableStateOf<AlertRule?>(null) }
+        var saveAttempt by remember { mutableIntStateOf(0) }
+        val currentOnRuleChange by rememberUpdatedState(onRuleChange)
+        fun flush() {
+            val pending = pendingRule ?: return
+            pendingRule = null
+            try {
+                currentOnRuleChange(kind, pending)
+            } finally {
+                // The synchronous host refreshes authoritative config even on
+                // failure. An unchanged rule must still reset optimistic UI.
+                saveAttempt++
+            }
+        }
+        fun stage(next: AlertRule) {
+            rule = next
+            // Do not compare to a composition's potentially outdated savedRule
+            // when input follows a completed save before recomposition.
+            pendingRule = next
+        }
+        // Keep every notch in local state; the checked host save runs only after
+        // quiet input or an explicit exit, never once per fling callback.
+        LaunchedEffect(savedRule, saveAttempt) {
+            if (pendingRule == null) rule = savedRule
+        }
+        LaunchedEffect(pendingRule) {
+            if (pendingRule != null) {
+                delay(300)
+                flush()
+            }
+        }
+        DisposableEffect(Unit) { onDispose { flush() } }
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -71,29 +125,31 @@ internal fun AlertSettings(
             }
             Switch(
                 checked = rule.enabled,
-                onCheckedChange = { onRuleChange(kind, rule.copy(enabled = it)) },
+                onCheckedChange = { stage(rule.copy(enabled = it)); flush() },
                 modifier = Modifier.semantics { contentDescription = "Enable ${kind.label} alert" },
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(
-                onClick = { expandedName = if (expandedName == kind.name) null else kind.name },
+                onClick = onExpand,
                 modifier = Modifier.weight(1f),
             ) {
-                Text(if (expandedName == kind.name) "Done" else "Edit limit", textAlign = TextAlign.Center)
+                Text(if (expanded) "Done" else "Edit alert", textAlign = TextAlign.Center)
             }
             TextButton(
                 onClick = { onSoundChange(kind) },
                 modifier = Modifier.weight(1f).semantics {
                     contentDescription = "Open ${kind.label} notification category in Android settings"
                 },
-            ) { Text("Sound", textAlign = TextAlign.Center) }
+            ) { Text("Sound & priority", textAlign = TextAlign.Center) }
         }
-        if (expandedName == kind.name) {
-            AlertRuleEditor(kind, rule, config, unit, onRuleChange)
+        if (expanded) {
+            val currentFlush by rememberUpdatedState(::flush)
+            DisposableEffect(Unit) { onDispose { currentFlush() } }
+            AlertRuleEditor(kind, rule, config, unit,
+                onThresholdChange = { stage(rule.copy(thresholdMgDl = it)) },
+                onCooldownChange = { stage(rule.copy(cooldownMinutes = it)) })
         }
-        if (kind != AlertKind.URGENT_HIGH) HorizontalDivider()
-    }
 }
 
 @Composable
@@ -102,7 +158,8 @@ private fun AlertRuleEditor(
     rule: AlertRule,
     config: AlertConfig,
     unit: GlucoseUnit,
-    onRuleChange: (AlertKind, AlertRule) -> Unit,
+    onThresholdChange: (Int) -> Unit,
+    onCooldownChange: (Int) -> Unit,
 ) {
     val (minimum, maximum) = when (kind) {
         AlertKind.URGENT_LOW -> 40 to config[AlertKind.LOW].thresholdMgDl
@@ -111,8 +168,8 @@ private fun AlertRuleEditor(
         AlertKind.URGENT_HIGH -> config[AlertKind.HIGH].thresholdMgDl to 400
     }
     val thresholdValues = remember(minimum, maximum, unit) { thresholdWheelValues(minimum, maximum, unit) }
-    val currentRule by rememberUpdatedState(rule)
-    val currentOnRuleChange by rememberUpdatedState(onRuleChange)
+    val currentOnThresholdChange by rememberUpdatedState(onThresholdChange)
+    val currentOnCooldownChange by rememberUpdatedState(onCooldownChange)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             "${if (kind.isLow) "Alert at or below" else "Alert at or above"} ${thresholdText(rule.thresholdMgDl, unit)}",
@@ -123,7 +180,7 @@ private fun AlertRuleEditor(
             selectedValue = rule.thresholdMgDl,
             unitLabel = unit.label,
             description = "${kind.label} glucose threshold",
-            onValueSelected = { currentOnRuleChange(kind, currentRule.copy(thresholdMgDl = it)) },
+            onValueSelected = { currentOnThresholdChange(it) },
         )
         Text("Repeat cooldown: ${rule.cooldownMinutes} minutes", style = MaterialTheme.typography.titleMedium)
         ValueWheel(
@@ -131,7 +188,7 @@ private fun AlertRuleEditor(
             selectedValue = rule.cooldownMinutes,
             unitLabel = "min",
             description = "${kind.label} alert repeat cooldown",
-            onValueSelected = { currentOnRuleChange(kind, currentRule.copy(cooldownMinutes = it)) },
+            onValueSelected = { currentOnCooldownChange(it) },
         )
     }
 }

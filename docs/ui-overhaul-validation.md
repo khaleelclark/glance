@@ -28,8 +28,11 @@ readings without scrolling the parent. Two-finger gestures do not change the
 selection simply on first-down. Accessibility exposes actual visible times and
 returns false when zoom/time clamping leaves the viewport unchanged. Coincident
 limit lines now paint Low/red last. Special source values never become exact
-numeric plot points. Alert wheel changes dispatch immediately so leaving a
-page cannot discard a pending debounced save.
+numeric plot points. Alert wheel changes update local UI immediately and save
+after 300 ms of quiet input. Closing the editor or leaving its page flushes any
+pending change; toggles save immediately with the staged threshold/cooldown.
+Every completed save attempt resynchronizes the editor with authoritative
+config, including rejected saves whose config stays unchanged.
 
 Notification renderer, polling, credentials/preferences formats, alert engine,
 widgets and watch runtime are unchanged. The phone/watch version bump is
@@ -60,6 +63,17 @@ summary clarifications (number-icon privacy dependency and notification
 restoration while monitoring) followed the native run; those callbacks and
 behaviors are unchanged. The native run precedes the documentation/evidence
 commit and is not an exact-head post-commit run.
+
+The subsequent alert-save correction has a separate bounded regression check:
+`python3 -B scripts/validate_alert_save_failure.py emulator-5560`.
+It uses production Compose screens with a debug-only callback that rejects
+saves while leaving authoritative config unchanged. Before the fix, a rejected
+wheel change left 71 mg/dL displayed against a saved 70 mg/dL threshold.
+The check covers rejected toggles/wheel changes, the collapsed row, successful
+toggles, and coalesced successful wheel saves when leaving the page. Its result
+is recorded separately in `docs/evidence/alert-save-failure-0.21.0.json`.
+This injects a rejected host callback, not a physical storage failure. The
+correction also passed debug assembly and all 175 phone JVM tests.
 
 Final clean JVM tests, debug/release lint, signed APK hashes/certificate/source
 are in ignored release manifests/build log. Signed upgrade acceptance/launch is

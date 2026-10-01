@@ -22,13 +22,16 @@ import java.time.Instant
 /** Snapshot rendering avoids a 45-second Glance/WorkManager session for every source update. */
 class WidgetUpdates(private val app: GlanceApplication) {
     private val gate = Mutex()
+    private val publication = WidgetPublication()
     private val manager get() = AppWidgetManager.getInstance(app)
     private fun ids() = manager.getAppWidgetIds(ComponentName(app, GlucoseWidgetReceiver::class.java))
 
     /** Clear the host's old sensitive view before an opt-out or identity transition. */
     fun redact() {
         runCatching {
-            manager.updateAppWidget(ids(), RemoteViews(app.packageName, R.layout.widget_redacted))
+            publication.redact {
+                manager.updateAppWidget(ids(), RemoteViews(app.packageName, R.layout.widget_redacted))
+            }
         }.onFailure {
             android.util.Log.w("GlanceWidget", "Widget redaction failed: ${it.javaClass.simpleName}")
         }
@@ -42,6 +45,7 @@ class WidgetUpdates(private val app: GlanceApplication) {
                     for (id in ids()) {
                         if (com.khaleel.glance.BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Snapshot composition started")
                         if (manager.getAppWidgetInfo(id) == null) continue
+                        val generation = publication.generation()
                         val state = app.controller.display.value
                         val unit = app.controller.settings.unit
                         val visible = app.widgetPreferences.valuesVisible
@@ -52,13 +56,15 @@ class WidgetUpdates(private val app: GlanceApplication) {
                         )
                         // A person switch, opt-out or newer state may arrive during composition.
                         // Never publish its preceding snapshot after that transition.
-                        if (state != app.controller.display.value || unit != app.controller.settings.unit ||
-                            visible != app.widgetPreferences.valuesVisible || account != app.controller.hasAccount) {
+                        val published = publication.publish(generation, stillCurrent = {
+                            state == app.controller.display.value && unit == app.controller.settings.unit &&
+                                visible == app.widgetPreferences.valuesVisible && account == app.controller.hasAccount
+                        }) { manager.updateAppWidget(id, views) }
+                        if (!published) {
                             redact()
                             if (com.khaleel.glance.BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Snapshot discarded after transition")
                             continue
                         }
-                        manager.updateAppWidget(id, views)
                         if (com.khaleel.glance.BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Snapshot published")
                     }
                 }

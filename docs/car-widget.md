@@ -79,7 +79,11 @@ with bounded `goAsync` work. It avoids Glance's default 45-second SessionWorker
 on each CGM update. It has no widget actions requiring a live composition. Each
 render compares state, privacy, account and units before publication; a transition
 during rendering discards and redacts the preceding snapshot. Privacy opt-out and
-stop actions also synchronously clear the host view. Failures leave a generic
+stop actions also synchronously clear the host view. A shared publication lock orders
+the final snapshot check/host update against redaction, and a generation invalidates
+any composition begun before a clear. Composition runs outside that lock. Controlled
+concurrency tests cover clearing before publication and clearing during a host update.
+Failures leave a generic
 redacted card. Battery impact remains unmeasured on the physical phone.
 
 [Snapshot API](https://developer.android.com/reference/kotlin/androidx/glance/appwidget/package-summary#compose(androidx.glance.appwidget.GlanceAppWidget,android.content.Context,androidx.glance.GlanceId,android.os.Bundle,androidx.compose.ui.unit.DpSize,kotlin.Any))

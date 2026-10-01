@@ -37,6 +37,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.khaleel.glance.wear.WatchPreferences
+import com.khaleel.glance.wear.WatchPublisher
 
 class GlanceApplication : Application(), MonitoringDependencyProvider {
     override fun onCreate() {
@@ -49,6 +51,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             controller.display.collect {
                 if (BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Display update: ${it.runtime.name}, monitoring=${it.monitoringEnabled}")
                 widgetRenderer.render()
+                watchPublisher.refresh()
             }
         }.invokeOnCompletion {
             if (BuildConfig.DEBUG) android.util.Log.d("GlanceWidget", "Display observer ended: ${it?.javaClass?.simpleName ?: "normal"}")
@@ -58,6 +61,8 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val widgetPreferences by lazy { WidgetPreferences(this) }
     val widgetRenderer by lazy { WidgetUpdates(this) }
+    val watchPreferences by lazy { WatchPreferences(this) }
+    val watchPublisher by lazy { WatchPublisher(this, controller, watchPreferences) }
     fun updateWidgets() {
         widgetScope.launch { widgetRenderer.render() }
     }
@@ -107,6 +112,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             renderer(presentation).apply { createChannel() }.build()
 
         override fun render(presentation: MonitoringPresentation) {
+            watchPublisher.refresh()
             val generation = notificationPublication.generation()
             val unit = controller.settings.unit
             val lockScreenVisible = controller.settings.showOnLockScreen
@@ -134,6 +140,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         }
 
         override fun hide() {
+            watchPublisher.redact()
             notificationPublication.clear { cancelMonitoringNotification() }
             alertEngine.clearNotifications()
         }

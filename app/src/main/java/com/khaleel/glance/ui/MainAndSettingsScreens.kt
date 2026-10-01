@@ -270,6 +270,26 @@ internal fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
+        SettingsSection("Galaxy Watch") {
+            SettingSwitch(
+                title = "Watch readings",
+                detail = "Share the current reading with Glance on your Wear OS watch, including its watch-face complication. Anyone who can see the watch can see the reading. Separate from phone lock-screen privacy.",
+                checked = settings.watchValuesVisible,
+                onCheckedChange = callbacks.onWatchValuesChanged,
+            )
+            SettingSwitch(
+                title = "Watch notification",
+                detail = "Show one silent glucose card on the watch while sharing and monitoring. Also enable notifications in the Glance watch app. Existing glucose alerts keep their Android/Galaxy Wearable settings.",
+                checked = settings.watchNotificationsEnabled,
+                onCheckedChange = callbacks.onWatchNotificationsChanged,
+            )
+            Text("Install Glance on your watch, then choose Glance glucose in a text complication slot. Tap it to open the watch app. The phone must keep monitoring; the watch does not sign in or fetch separately.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Without new phone sync, readings hide after five minutes. Turning sharing off clears connected watches; a disconnected watch may retain its last reading until that limit.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(settings.watchSyncStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
         SettingsSection("Glucose alerts") {
             AlertSettings(
                 settings.alerts,

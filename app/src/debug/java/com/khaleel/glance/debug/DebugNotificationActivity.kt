@@ -32,6 +32,33 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode == "watch-share") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            app.watchPublisher.setValuesVisible(intent.getBooleanExtra("visible", false))
+            app.watchPublisher.setNotificationsEnabled(intent.getBooleanExtra("notifications", false))
+            return
+        }
+        if (mode == "watch-probe") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            val items = com.google.android.gms.tasks.Tasks.await(
+                com.google.android.gms.wearable.Wearable.getDataClient(context).dataItems,
+                10, java.util.concurrent.TimeUnit.SECONDS)
+            try {
+                val snapshot = items.firstOrNull { it.uri.path == com.khaleel.glance.wear.shared.WatchSnapshot.PATH }
+                    ?.let { com.khaleel.glance.wear.shared.WatchDataMap.decode(
+                        com.google.android.gms.wearable.DataMapItem.fromDataItem(it).dataMap) }
+                val result = org.json.JSONObject()
+                    .put("sharing", app.watchPreferences.valuesVisible)
+                    .put("notifications", app.watchPreferences.notificationsEnabled)
+                    .put("dataItemPresent", snapshot != null)
+                    .put("status", snapshot?.status?.name ?: "ABSENT")
+                    .put("hasValue", !snapshot?.value.isNullOrEmpty())
+                    .put("hasMeasurement", (snapshot?.measuredAtMillis ?: 0) > 0)
+                    .put("payloadValid", snapshot?.valid() ?: false)
+                java.io.File(context.filesDir, "watch-probe.json").writeText(result.toString())
+            } finally { items.release() }
+            return
+        }
         if (mode == "privacy-legacy-seed") {
             val app = context.applicationContext as com.khaleel.glance.GlanceApplication
             app.controller.setMonitoringEnabled(false)

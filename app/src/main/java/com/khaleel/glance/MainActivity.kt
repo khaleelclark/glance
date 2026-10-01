@@ -210,6 +210,9 @@ class MainActivity : ComponentActivity() {
             LiveUpdateSupport.status(this),
             app.widgetPreferences.valuesVisible,
             NotificationVisibility.keepVisible(this),
+            app.watchPreferences.valuesVisible,
+            app.watchPreferences.notificationsEnabled,
+            app.watchPublisher.syncStatus,
         )
     }
 
@@ -255,6 +258,7 @@ class MainActivity : ComponentActivity() {
     private fun stopMonitoring() {
         controller.setMonitoringEnabled(false)
         app.widgetRenderer.redact()
+        app.watchPublisher.redact()
         stopService(Intent(this, MonitoringService::class.java))
         app.hideCurrentNotification()
         app.alertEngine.clearNotifications()
@@ -264,6 +268,7 @@ class MainActivity : ComponentActivity() {
     private fun renderSettingsChange() {
         if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
         app.updateWidgets()
+        app.watchPublisher.refresh()
         refreshSettings()
     }
 
@@ -408,11 +413,22 @@ class MainActivity : ComponentActivity() {
             app.updateWidgets()
             refreshSettings()
         },
+        onWatchValuesChanged = {
+            saveWatchVisibility(it)
+            refreshSettings()
+        },
+        onWatchNotificationsChanged = {
+            runCatching { app.watchPublisher.setNotificationsEnabled(it) }.onFailure {
+                Toast.makeText(this, "Could not save watch notification setting; previous choice retained.", Toast.LENGTH_LONG).show()
+            }
+            refreshSettings()
+        },
     )
 
     private fun signOut() {
         saveLockScreenVisibility(false)
         saveWidgetVisibility(false)
+        saveWatchVisibility(false)
         stopMonitoring()
         controller.signOut()
         app.alertPreferences.clear()
@@ -435,6 +451,14 @@ class MainActivity : ComponentActivity() {
         runCatching { app.setLockScreenValuesVisible(visible) }.onFailure {
             Toast.makeText(this, if (visible) "Could not save lock-screen values; readings remain hidden."
                 else "Could not save lock-screen privacy. Hide Glance notifications on the lock screen in Android settings before restarting, then try again.",
+                Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun saveWatchVisibility(visible: Boolean) {
+        runCatching { app.watchPublisher.setValuesVisible(visible) }.onFailure {
+            Toast.makeText(this, if (visible) "Could not save watch sharing; readings remain hidden."
+                else "Could not save watch privacy. Turn off or remove Glance on the watch before restarting, then try again.",
                 Toast.LENGTH_LONG).show()
         }
     }

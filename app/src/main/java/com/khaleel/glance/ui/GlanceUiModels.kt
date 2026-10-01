@@ -58,6 +58,9 @@ data class UserSettingsUi(
     val liveUpdateStatus: String = "Android decides whether to promote the monitoring notification.",
     val widgetValuesVisible: Boolean = false,
     val keepNotificationVisible: Boolean = true,
+    val watchValuesVisible: Boolean = false,
+    val watchNotificationsEnabled: Boolean = false,
+    val watchSyncStatus: String = "Waiting for watch sync",
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -95,4 +98,6 @@ data class GlanceCallbacks(
     val onSignOut: () -> Unit,
     val onWidgetValuesChanged: (Boolean) -> Unit = {},
     val onKeepNotificationVisibleChanged: (Boolean) -> Unit = {},
+    val onWatchValuesChanged: (Boolean) -> Unit = {},
+    val onWatchNotificationsChanged: (Boolean) -> Unit = {},
 )

@@ -28,7 +28,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     testOptions { unitTests.isReturnDefaultValues = true }
-    sourceSets["main"].java.srcDir("../wear-common/src/main/kotlin")
+    sourceSets["main"].kotlin.srcDir("../wear-common/src/main/kotlin")
 }
 
 dependencies {

@@ -133,3 +133,10 @@ deletion fallback, successful recreation and explicitly reported total failure.
 The first upgrade to the checked privacy store requires a fresh lock-screen
 opt-in; unrelated preferences are preserved. Real simultaneous disk-write and
 deletion failure across process death still requires physical verification.
+
+## 0.19.1 DNS failure and manual refresh recovery
+
+See [refresh-recovery-validation.md](refresh-recovery-validation.md) for the
+focused automated and synthetic API 36 checks. Manual retries can bypass local
+transient backoff while provider rate limits remain enforced. Actual resolver
+changes and the owner's Galaxy phone are not covered by these synthetic tests.

@@ -324,6 +324,10 @@ class MainActivity : ComponentActivity() {
         onRefresh = {
             scope.launch {
                 val result = controller.poll(manual = true)
+                if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.REFRESH_DEBOUNCED) {
+                    android.widget.Toast.makeText(this@MainActivity,
+                        "Please wait a few seconds before refreshing again.", android.widget.Toast.LENGTH_SHORT).show()
+                }
                 controller.updateFreshness()
                 runCatching { app.onPollResult(result) }
                     .onFailure { controller.diagnostics.alertIssue(Instant.now()) }

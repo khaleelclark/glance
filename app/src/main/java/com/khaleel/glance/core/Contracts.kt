@@ -34,7 +34,7 @@ data class SourceSnapshot(val current: Reading, val history: List<Reading> = emp
 
 enum class SourceErrorKind {
     INVALID_CREDENTIALS, AUTH_EXPIRED, TERMS_REQUIRED, RATE_LIMITED,
-    NETWORK, SERVER, CONNECTION_REMOVED, PROTOCOL, NO_READING, STORAGE,
+    NETWORK, SERVER, CONNECTION_REMOVED, PROTOCOL, NO_READING, STORAGE, REFRESH_DEBOUNCED,
 }
 
 data class SourceError(val kind: SourceErrorKind, val retryAfter: Instant? = null)
@@ -74,4 +74,5 @@ data class DisplayState(
     val lastSuccessfulFetch: Instant?,
     val nextAllowedFetch: Instant?,
     val history: List<Reading> = emptyList(),
+    val providerRetryAt: Instant? = null,
 )

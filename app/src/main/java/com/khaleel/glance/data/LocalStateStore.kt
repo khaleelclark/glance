@@ -87,6 +87,10 @@ class LocalStateStore(private val encrypted: SecureFileStore) : PatientPersisten
     override fun clear() { encrypted.delete("patient") }
 }
 
+enum class RetryReason { PROVIDER, TRANSIENT }
+
+data class RetryWindow(val until: Instant, val reason: RetryReason)
+
 interface SettingsPersistence {
     var unit: GlucoseUnit
     var showOnLockScreen: Boolean
@@ -96,7 +100,8 @@ interface SettingsPersistence {
     var intervalMinutes: Int
     var resumeAfterBoot: Boolean
     var monitoringEnabled: Boolean
-    var nextAllowedFetch: Instant?
+    var retryWindow: RetryWindow?
+    val nextAllowedFetch: Instant? get() = retryWindow?.until
     fun clear()
 }
 
@@ -129,9 +134,22 @@ class UserSettings(context: Context) : SettingsPersistence {
     override var monitoringEnabled: Boolean
         get() = prefs.getBoolean("monitoring_enabled", false)
         set(value) = prefs.edit().putBoolean("monitoring_enabled", value).commit().let { require(it) }
-    override var nextAllowedFetch: Instant?
-        get() = prefs.getLong("next_allowed_fetch", 0L).takeIf { it > 0 }?.let(Instant::ofEpochMilli)
-        set(value) = prefs.edit().putLong("next_allowed_fetch", value?.toEpochMilli() ?: 0L).commit().let { require(it) }
+    override var retryWindow: RetryWindow?
+        get() {
+            // Read the reason and deadline from one preference snapshot.
+            val stored = prefs.all
+            val until = ((stored["next_allowed_fetch"] as? Long) ?: 0L).takeIf { it > 0 }
+                ?.let(Instant::ofEpochMilli) ?: return null
+            // Older versions did not record a reason. Preserve a possible provider cooldown.
+            val reason = runCatching {
+                RetryReason.valueOf((stored["retry_reason"] as? String) ?: "PROVIDER")
+            }.getOrDefault(RetryReason.PROVIDER)
+            return RetryWindow(until, reason)
+        }
+        set(value) = prefs.edit()
+            .putLong("next_allowed_fetch", value?.until?.toEpochMilli() ?: 0L)
+            .putString("retry_reason", value?.reason?.name)
+            .commit().let { require(it) }
 
     override fun clear() {
         // Privacy failure must not prevent credentials and patient caches from being cleared.

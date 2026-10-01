@@ -94,8 +94,25 @@ class PollCoordinatorTest {
         )
 
         assertEquals(PollDecision.COOLDOWN, fixture.coordinator.pollIfEligible(PollTrigger.AUTOMATIC, 7L))
-        assertEquals(PollDecision.COOLDOWN, fixture.coordinator.pollIfEligible(PollTrigger.MANUAL, 7L))
+        assertEquals(PollDecision.COMPLETED, fixture.coordinator.pollIfEligible(PollTrigger.MANUAL, 7L))
+        assertEquals(base.plusSeconds(900), fixture.controller.display.value.providerRetryAt)
         assertEquals(0, fixture.source.latestCalls)
+    }
+
+    @Test
+    fun serviceManualRefreshBypassesNetworkBackoffButTimerDoesNot() = runBlocking {
+        var failed = true
+        val fixture = fixture(sourceResult = {
+            if (failed) SourceResult.Failure(SourceError(SourceErrorKind.NETWORK))
+            else SourceResult.Success(reading(patrick))
+        })
+        fixture.coordinator.pollIfEligible(PollTrigger.AUTOMATIC, 7L)
+        failed = false
+        assertEquals(PollDecision.COOLDOWN, fixture.coordinator.pollIfEligible(PollTrigger.AUTOMATIC, 7L))
+        assertEquals(1, fixture.source.latestCalls)
+        assertEquals(PollDecision.COMPLETED, fixture.coordinator.pollIfEligible(PollTrigger.MANUAL, 7L))
+        assertEquals(2, fixture.source.latestCalls)
+        assertNull(fixture.controller.settings.retryWindow)
     }
 
     @Test
@@ -129,7 +146,7 @@ class PollCoordinatorTest {
         val source = FakeSource(sourceResult)
         val settings = MemorySettings().apply {
             monitoringEnabled = true
-            nextAllowedFetch = nextAllowed
+            retryWindow = nextAllowed?.let { com.khaleel.glance.data.RetryWindow(it, com.khaleel.glance.data.RetryReason.PROVIDER) }
         }
         val controller = AppController(
             source = source,
@@ -204,8 +221,8 @@ class PollCoordinatorTest {
         override var intervalMinutes = 1
         override var resumeAfterBoot = true
         override var monitoringEnabled = false
-        override var nextAllowedFetch: Instant? = null
-        override fun clear() { monitoringEnabled = false; nextAllowedFetch = null }
+        override var retryWindow: com.khaleel.glance.data.RetryWindow? = null
+        override fun clear() { monitoringEnabled = false; retryWindow = null }
     }
 
     private class FakeSource(

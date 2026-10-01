@@ -34,8 +34,8 @@ directs the owner to turn off or remove Glance on the watch before restarting.
 
 ## Install the companion
 
-Upgrade the phone with `glance-0.19.0-personal.apk`. Install
-`glance-0.19.0-watch.apk` on the watch, signed with the same personal key. There
+Upgrade the phone with `glance-0.19.1-personal.apk`. Install
+`glance-0.19.1-watch.apk` on the watch, signed with the same personal key. There
 is no Play Store listing or automatic store installation in this personal build.
 For sideloading, enable Developer options and Wireless debugging on the watch,
 use the watch's pairing code and pairing address with `adb pair`, then its
@@ -44,7 +44,7 @@ separate debugging address/port with `adb connect`. For example:
 ```sh
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
-adb -s WATCH_IP:DEBUG_PORT install -r release/glance-0.19.0-watch.apk
+adb -s WATCH_IP:DEBUG_PORT install -r release/glance-0.19.1-watch.apk
 ```
 
 Use the addresses and ports actually shown on the watch; they can differ. The

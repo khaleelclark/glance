@@ -32,6 +32,38 @@ class DebugNotificationActivity : Activity() {
 
     private fun showFixture(context: Context, intent: Intent) {
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        if (mode.startsWith("retry-")) {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            val prefs = context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE)
+            check(prefs.getBoolean("enabled", false) && app.controller.display.value.person?.id == SourceFactory.DEMO_PERSON_ID)
+            when (mode) {
+                "retry-source" -> {
+                    val failure = intent.getStringExtra("failure") ?: "NONE"
+                    check(failure in listOf("NONE", "NETWORK", "SERVER", "RATE_LIMITED"))
+                    check(prefs.edit().putString("source_failure", failure).commit())
+                }
+                "retry-service-refresh" -> MonitoringService.currentActionGeneration?.let {
+                    MonitoringService.refreshPendingIntent(context, it).send()
+                }
+                "retry-legacy-seed" -> check(context.getSharedPreferences("settings", Context.MODE_PRIVATE).edit()
+                    .putLong("next_allowed_fetch", Instant.now().plusSeconds(900).toEpochMilli())
+                    .remove("retry_reason").commit())
+                "retry-probe" -> {
+                    val state = app.controller.display.value
+                    val window = app.controller.settings.retryWindow
+                    val result = org.json.JSONObject()
+                        .put("synthetic", true)
+                        .put("attempts", prefs.getInt("poll_count", 0))
+                        .put("connection", state.connection.name)
+                        .put("retryReason", window?.reason?.name ?: "NONE")
+                        .put("deadlineInFuture", window?.until?.isAfter(Instant.now()) == true)
+                        .put("hasReading", state.reading != null)
+                    java.io.File(context.filesDir, "retry-probe.json").writeText(result.toString())
+                }
+                else -> error("Unknown synthetic retry fixture")
+            }
+            return
+        }
         if (mode == "watch-share") {
             val app = context.applicationContext as com.khaleel.glance.GlanceApplication
             app.watchPublisher.setValuesVisible(intent.getBooleanExtra("visible", false))
@@ -158,7 +190,7 @@ class DebugNotificationActivity : Activity() {
         }
         if (mode == "service-demo") {
             context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit()
-                .putBoolean("enabled", true).putInt("poll_count", 0).commit()
+                .putBoolean("enabled", true).putInt("poll_count", 0).remove("source_failure").commit()
             val controller = (context.applicationContext as com.khaleel.glance.GlanceApplication).controller
             val signedIn = runBlocking {
                 controller.signIn(Credentials(SourceFactory.DEMO_EMAIL, SourceFactory.DEMO_PASSWORD))

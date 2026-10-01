@@ -1,0 +1,17 @@
+{
+  "device": "Android 16 API 36 emulator",
+  "synthetic": true,
+  "checks": {
+    "networkFailureRetainsHistoricalReadingAndAutomaticBackoff": true,
+    "mainRefreshRecoversBeforeNetworkBackoffExpires": true,
+    "serviceRefreshRecoversBeforeServerBackoffExpires": true,
+    "providerCooldownBlocksMainRefresh": true,
+    "providerCooldownSurvivesProcessRecreation": true,
+    "legacyDeadlineWithoutReasonIsConservativelyPreserved": true,
+    "providerWaitExplainsReasonAndTime": true
+  },
+  "allPassed": true,
+  "actualDnsResolver": "not manipulated; typed NETWORK simulated",
+  "GalaxyS25Ultra": "not tested",
+  "liveAccount": "not tested"
+}

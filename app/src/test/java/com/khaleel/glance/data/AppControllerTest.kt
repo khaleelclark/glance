@@ -85,16 +85,155 @@ class AppControllerTest {
         assertEquals(1, source.latestCalls)
     }
 
-    @Test fun networkFailurePersistsRetryDeadlineAndBlocksManualRefresh() = runBlocking {
-        val source = FakeSource { _, _ -> SourceResult.Failure(SourceError(SourceErrorKind.NETWORK)) }
+    @Test fun fixedDnsCanRefreshWhileAutomaticNetworkRetryIsStillWaiting() = runBlocking {
+        var offline = true
+        val source = FakeSource { _, _ ->
+            if (offline) SourceResult.Failure(SourceError(SourceErrorKind.NETWORK))
+            else SourceResult.Success(reading(patrick))
+        }
         val settings = MemorySettings()
         val controller = controller(source, MemoryPatient(), settings)
         controller.selectPerson(patrick)
         controller.poll()
+        assertEquals(RetryReason.TRANSIENT, settings.retryWindow?.reason)
         assertTrue(settings.nextAllowedFetch!! >= start.plusSeconds(60))
         assertTrue(settings.nextAllowedFetch!! <= start.plusSeconds(75))
-        assertEquals(SourceErrorKind.RATE_LIMITED, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+        offline = false
+        assertTrue(controller.poll() is SourceResult.Failure)
         assertEquals(1, source.latestCalls)
+        assertTrue(controller.poll(manual = true) is SourceResult.Success)
+        assertEquals(2, source.latestCalls)
+        assertEquals(ConnectionState.READY, controller.display.value.connection)
+        assertNull(settings.retryWindow)
+    }
+
+    @Test fun repeatedManualFailuresCanRetryAfterThreeSecondsEvenAtMaximumBackoff() = runBlocking {
+        val clock = FakeClock(start)
+        val source = FakeSource { _, _ -> SourceResult.Failure(SourceError(SourceErrorKind.NETWORK)) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings, clock)
+        controller.selectPerson(patrick)
+        repeat(6) {
+            assertEquals(SourceErrorKind.NETWORK, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+            clock.advanceMillis(3_000)
+        }
+        assertTrue(settings.nextAllowedFetch!! >= clock.now().plusSeconds(897))
+        assertEquals(SourceErrorKind.NETWORK, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+        assertEquals(7, source.latestCalls)
+        assertNull(controller.display.value.providerRetryAt)
+    }
+
+    @Test fun rapidManualTapsAreDebouncedUsingElapsedTimeNotWallTime() = runBlocking {
+        val clock = FakeClock(start)
+        val source = FakeSource { _, _ -> SourceResult.Failure(SourceError(SourceErrorKind.NETWORK)) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings, clock)
+        controller.selectPerson(patrick)
+        controller.poll(manual = true)
+        val deadline = settings.retryWindow
+        clock.advanceMillis(2_999)
+        clock.instant = start.plusSeconds(3600) // Changing the phone clock cannot bypass debounce.
+        val blocked = controller.poll(manual = true) as SourceResult.Failure
+        assertEquals(SourceErrorKind.REFRESH_DEBOUNCED, blocked.error.kind)
+        assertEquals(clock.now().plusMillis(1), blocked.error.retryAfter)
+        assertEquals(1, source.latestCalls)
+        assertEquals(deadline, settings.retryWindow)
+        clock.advanceMillis(1)
+        assertEquals(SourceErrorKind.NETWORK, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+        assertEquals(2, source.latestCalls)
+    }
+
+    @Test fun networkBackoffRemainsAutomaticOnlyAfterControllerRecreation() = runBlocking {
+        var offline = true
+        val source = FakeSource { _, _ ->
+            if (offline) SourceResult.Failure(SourceError(SourceErrorKind.NETWORK))
+            else SourceResult.Success(reading(patrick))
+        }
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val patient = MemoryPatient()
+        val settings = MemorySettings()
+        val first = AppController(source, auth, patient, settings, FakeClock(start))
+        first.selectPerson(patrick)
+        first.poll()
+        offline = false
+        val afterRestart = AppController(source, auth, patient, settings, FakeClock(start.plusSeconds(5)))
+        assertTrue(afterRestart.poll() is SourceResult.Failure)
+        assertEquals(1, source.latestCalls)
+        assertTrue(afterRestart.poll(manual = true) is SourceResult.Success)
+        assertEquals(2, source.latestCalls)
+    }
+
+    @Test fun serverFailureCanAlsoBeRetriedManuallyBeforeAutomaticDeadline() = runBlocking {
+        var failed = true
+        val source = FakeSource { _, _ ->
+            if (failed) SourceResult.Failure(SourceError(SourceErrorKind.SERVER))
+            else SourceResult.Success(reading(patrick))
+        }
+        val controller = controller(source, MemoryPatient())
+        controller.selectPerson(patrick)
+        controller.poll()
+        assertEquals(ConnectionState.BACKING_OFF, controller.display.value.connection)
+        failed = false
+        assertTrue(controller.poll(manual = true) is SourceResult.Success)
+        assertEquals(2, source.latestCalls)
+    }
+
+    @Test fun networkFailureDuringSessionRecoveryIsCountedOnceAndKeepsItsReason() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }.apply {
+            signInResult = SourceResult.Failure(SourceError(SourceErrorKind.NETWORK))
+        }
+        val settings = MemorySettings()
+        val clock = FakeClock(start.plusSeconds(7200))
+        val controller = controller(source, MemoryPatient(), settings, clock)
+        controller.selectPerson(patrick)
+        val result = controller.poll() as SourceResult.Failure
+        assertEquals(SourceErrorKind.NETWORK, result.error.kind)
+        assertTrue(settings.nextAllowedFetch!! <= clock.now().plusSeconds(75))
+        assertEquals(RetryReason.TRANSIENT, settings.retryWindow?.reason)
+        source.signInResult = SourceResult.Success(session.copy(expiresAt = clock.now().plusSeconds(3600)))
+        assertTrue(controller.poll(manual = true) is SourceResult.Success)
+        assertEquals(1, source.latestCalls)
+    }
+
+    @Test fun providerLimitDuringSessionRecoveryRemainsHardAfterRecreation() = runBlocking {
+        val retryAt = start.plusSeconds(8100)
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }.apply {
+            signInResult = SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val patient = MemoryPatient()
+        val settings = MemorySettings()
+        val clock = FakeClock(start.plusSeconds(7200))
+        val first = AppController(source, auth, patient, settings, clock)
+        first.selectPerson(patrick)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (first.poll() as SourceResult.Failure).error.kind)
+        assertEquals(retryAt, first.display.value.providerRetryAt)
+        val restarted = AppController(source, auth, patient, settings, clock)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (restarted.poll(manual = true) as SourceResult.Failure).error.kind)
+        assertEquals(retryAt, settings.nextAllowedFetch)
+        assertEquals(0, source.latestCalls)
+    }
+
+    @Test fun manualAndAutomaticPollsStillShareOneRequestAfterNetworkFailure() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val pending = CompletableDeferred<SourceResult<Reading>>()
+        var failed = true
+        val source = FakeSource { _, _ ->
+            if (failed) SourceResult.Failure(SourceError(SourceErrorKind.NETWORK))
+            else { entered.complete(Unit); pending.await() }
+        }
+        val controller = controller(source, MemoryPatient())
+        controller.selectPerson(patrick)
+        controller.poll()
+        failed = false
+        val manual = async { controller.poll(manual = true) }
+        entered.await()
+        val automatic = async { controller.poll() }
+        kotlinx.coroutines.yield()
+        pending.complete(SourceResult.Success(reading(patrick)))
+        assertTrue(manual.await() is SourceResult.Success)
+        assertTrue(automatic.await() is SourceResult.Success)
+        assertEquals(2, source.latestCalls)
     }
 
     @Test fun rejectedConnectionSessionReauthenticatesAndReplaysOnce() = runBlocking {
@@ -255,7 +394,9 @@ class AppControllerTest {
 
     private class FakeClock(var instant: Instant) : Clock {
         override fun now() = instant
-        override fun elapsedRealtimeMillis() = 0L
+        private var elapsed = 0L
+        override fun elapsedRealtimeMillis() = elapsed
+        fun advanceMillis(millis: Long) { instant = instant.plusMillis(millis); elapsed += millis }
     }
     private class MemoryAuth(var saved: SavedAuth?) : AuthPersistence {
         var failSave = false
@@ -285,8 +426,8 @@ class AppControllerTest {
         override var intervalMinutes = 1
         override var resumeAfterBoot = true
         override var monitoringEnabled = false
-        override var nextAllowedFetch: Instant? = null
-        override fun clear() { monitoringEnabled = false; nextAllowedFetch = null }
+        override var retryWindow: com.khaleel.glance.data.RetryWindow? = null
+        override fun clear() { monitoringEnabled = false; retryWindow = null }
     }
     private class FakeSource(
         val onConnections: suspend (Session) -> SourceResult<List<Connection>> = { SourceResult.Success(emptyList()) },
@@ -295,9 +436,10 @@ class AppControllerTest {
         var snapshotHistory: List<Reading> = emptyList()
         @Volatile
         var latestCalls = 0
-        override suspend fun signIn(credentials: Credentials) = SourceResult.Success(
+        var signInResult: SourceResult<Session> = SourceResult.Success(
             Session("synthetic-account", "new-token", "api-us.libreview.io", Instant.parse("2030-01-01T00:00:00Z")),
         )
+        override suspend fun signIn(credentials: Credentials) = signInResult
         override suspend fun connections(session: Session) = onConnections(session)
         override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> {
             latestCalls++

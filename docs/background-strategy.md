@@ -106,7 +106,9 @@ gap by refreshing the reading timestamp.
    jitter. After suspension, make at most one immediate eligible request and
    skip missed slots; never burst requests to catch up.
 4. Provider cooldowns and exponential backoff override the nominal cadence.
-   Manual Refresh coalesces and cannot bypass either.
+   Manual Refresh coalesces and cannot bypass provider cooldowns. Following the
+   October 1 DNS-recovery report, manual retries can bypass transient network or
+   server backoff, with a three-second monotonic tap debounce.
 5. A poll has a 30-second overall deadline. Initially run without a wake lock.
    If measurement shows requests beginning but being interrupted during screen
    off, A/B test a non-reference-counted partial wake lock acquired only after

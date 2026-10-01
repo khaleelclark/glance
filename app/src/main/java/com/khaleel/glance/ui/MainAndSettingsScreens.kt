@@ -185,9 +185,10 @@ private fun MainReadingSummary(
                 displayState.connection != ConnectionState.TERMS_REQUIRED &&
                 displayState.connection != ConnectionState.CONNECTION_REMOVED &&
                 displayState.connection != ConnectionState.PROTOCOL_ERROR &&
-                displayState.connection != ConnectionState.LOCAL_ERROR,
+                displayState.connection != ConnectionState.LOCAL_ERROR &&
+                displayState.connection != ConnectionState.FETCHING,
         ) {
-            Text("Refresh now")
+            Text(if (displayState.connection == ConnectionState.FETCHING) "Refreshing…" else "Refresh now")
         }
         TextButton(onClick = callbacks.onRestoreNotification, modifier = Modifier.fillMaxWidth()) {
             Text("Show notification again")

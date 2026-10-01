@@ -51,6 +51,11 @@ internal object SourceFactory {
                 }
                 val count = prefs.getInt("poll_count", 0) + 1
                 prefs.edit().putInt("poll_count", count).putLong("last_poll_ms", clock.now().toEpochMilli()).commit()
+                when (prefs.getString("source_failure", null)) {
+                    "NETWORK" -> return SourceResult.Failure(SourceError(SourceErrorKind.NETWORK))
+                    "SERVER" -> return SourceResult.Failure(SourceError(SourceErrorKind.SERVER))
+                    "RATE_LIMITED" -> return SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, clock.now().plusSeconds(900)))
+                }
                 return SourceResult.Success(
                     Reading(
                         connectionId = DEMO_PERSON_ID,

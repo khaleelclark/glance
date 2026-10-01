@@ -145,7 +145,7 @@ class PollCoordinator(
             val display = controller.display.value
             if (!display.monitoringEnabled) return PollDecision.DISABLED
             if (display.connection.blocksAutomaticPolling()) return PollDecision.BLOCKED
-            if (controller.settings.nextAllowedFetch?.isAfter(dependencies.clock.now()) == true) {
+            if (trigger == PollTrigger.AUTOMATIC && controller.settings.nextAllowedFetch?.isAfter(dependencies.clock.now()) == true) {
                 return PollDecision.COOLDOWN
             }
 

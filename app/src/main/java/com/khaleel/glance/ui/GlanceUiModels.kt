@@ -6,6 +6,7 @@ import com.khaleel.glance.alerts.AlertRule
 import com.khaleel.glance.core.Connection
 import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.SourceResponseInfo
 
 enum class AccountStatus { SIGNED_OUT, SIGNING_IN, SIGNED_IN }
 
@@ -20,6 +21,7 @@ enum class AccountProblem {
 data class AccountUiState(
     val status: AccountStatus,
     val problem: AccountProblem? = null,
+    val responseInfo: SourceResponseInfo? = null,
 )
 
 enum class ConnectionProblem { NONE_FOUND, NETWORK, REMOVED, STORAGE, PROTOCOL }
@@ -29,6 +31,7 @@ data class ConnectionSetupUiState(
     val selectedConnectionId: String? = null,
     val loading: Boolean = false,
     val problem: ConnectionProblem? = null,
+    val responseInfo: SourceResponseInfo? = null,
 )
 
 enum class SetupStep { SIGN_IN, CONNECTION, NOTIFICATION_PRIVACY, COMPLETE }

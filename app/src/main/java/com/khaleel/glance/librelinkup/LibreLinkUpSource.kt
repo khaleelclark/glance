@@ -11,6 +11,8 @@ import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.SourceResponseFormat
+import com.khaleel.glance.core.SourceResponseInfo
 import com.khaleel.glance.core.Trend
 import java.io.IOException
 import java.math.BigDecimal
@@ -61,22 +63,35 @@ class LibreLinkUpSource private constructor(
 
     private val clientVersion = AtomicReference(BASELINE_CLIENT_VERSION)
     private val allowedSessionUrls = (regionalBaseUrls.values + bootstrapBaseUrl).associateBy(::canonicalBase)
-    private val client = if (client.callTimeoutMillis == 0 || client.callTimeoutMillis > REQUEST_TIMEOUT_MILLIS) {
+    private val baseClient = if (client.callTimeoutMillis == 0 || client.callTimeoutMillis > REQUEST_TIMEOUT_MILLIS) {
         client.newBuilder().callTimeout(REQUEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build()
     } else {
         client
     }
+    private val transport = AtomicReference(newTransport())
+
+    private fun newTransport(): OkHttpClient = baseClient.newBuilder()
+        .cookieJar(LibreViewCookieJar(allowedSessionUrls.values.toSet()) { clock.now().toEpochMilli() })
+        .build()
+
+    override fun clearTransportSession() {
+        // Replace the jar: late responses on an old client cannot refill the active jar.
+        transport.set(newTransport())
+    }
 
     override suspend fun signIn(credentials: Credentials): SourceResult<Session> {
+        val sessionClient = newTransport()
+        transport.set(sessionClient)
         if (credentials.email.isBlank() || credentials.password.isEmpty()) {
             return failure(SourceErrorKind.INVALID_CREDENTIALS)
         }
-        val first = loginAt(bootstrapBaseUrl, credentials)
+        val first = loginAt(bootstrapBaseUrl, credentials, sessionClient)
         if (first !is LoginResult.Redirect) return first.toSourceResult()
-        val regionalUrl = regionalBaseUrls[first.region] ?: return failure(SourceErrorKind.PROTOCOL)
-        return when (val second = loginAt(regionalUrl, credentials)) {
+        val regionalUrl = regionalBaseUrls[first.region]
+            ?: return failure(SourceErrorKind.PROTOCOL, first.responseInfo)
+        return when (val second = loginAt(regionalUrl, credentials, sessionClient)) {
             is LoginResult.Success -> SourceResult.Success(second.session)
-            is LoginResult.Redirect -> failure(SourceErrorKind.PROTOCOL)
+            is LoginResult.Redirect -> failure(SourceErrorKind.PROTOCOL, second.responseInfo)
             is LoginResult.Failure -> SourceResult.Failure(second.error)
         }
     }
@@ -88,7 +103,7 @@ class LibreLinkUpSource private constructor(
             authenticatedRequest(url, session, version).get().build()
         })) {
             is HttpResult.Failure -> SourceResult.Failure(result.error)
-            is HttpResult.Success -> parseConnections(result.root)
+            is HttpResult.Success -> parseConnections(result.root).withResponseInfo(result.responseInfo)
         }
     }
 
@@ -112,11 +127,11 @@ class LibreLinkUpSource private constructor(
             request = { version -> authenticatedRequest(url, session, version).get().build() },
         )) {
             is HttpResult.Failure -> SourceResult.Failure(result.error)
-            is HttpResult.Success -> parseSnapshot(result.root, connectionId)
+            is HttpResult.Success -> parseSnapshot(result.root, connectionId).withResponseInfo(result.responseInfo)
         }
     }
 
-    private suspend fun loginAt(baseUrl: HttpUrl, credentials: Credentials): LoginResult {
+    private suspend fun loginAt(baseUrl: HttpUrl, credentials: Credentials, sessionClient: OkHttpClient): LoginResult {
         val url = baseUrl.newBuilder()
             .addPathSegment("llu")
             .addPathSegment("auth")
@@ -124,6 +139,7 @@ class LibreLinkUpSource private constructor(
             .build()
         val json = "{\"email\":${Json.quote(credentials.email)},\"password\":${Json.quote(credentials.password)}}"
         return when (val result = executeWithVersionRetry(
+            sessionClient = sessionClient,
             status2Kind = SourceErrorKind.INVALID_CREDENTIALS,
             request = { version ->
                 commonRequest(url, version)
@@ -132,26 +148,31 @@ class LibreLinkUpSource private constructor(
             },
         )) {
             is HttpResult.Failure -> LoginResult.Failure(result.error)
-            is HttpResult.Success -> parseLogin(result.root, baseUrl)
+            is HttpResult.Success -> when (val parsed = parseLogin(result.root, baseUrl)) {
+                is LoginResult.Failure -> parsed.copy(error = parsed.error.copy(responseInfo = result.responseInfo))
+                is LoginResult.Redirect -> parsed.copy(responseInfo = result.responseInfo)
+                else -> parsed
+            }
         }
     }
 
     private suspend fun executeWithVersionRetry(
         status2Kind: SourceErrorKind = SourceErrorKind.PROTOCOL,
         notFoundKind: SourceErrorKind = SourceErrorKind.PROTOCOL,
+        sessionClient: OkHttpClient = transport.get(),
         request: (String) -> Request,
     ): HttpResult {
         var version = clientVersion.get()
-        val first = execute(request(version), status2Kind, notFoundKind)
+        val first = execute(request(version), status2Kind, notFoundKind, sessionClient)
         if (first !is RawHttpResult.MinimumVersion) return first.toHttpResult()
         val minimum = first.version.takeIf(::isValidVersion)
-            ?: return HttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
+            ?: return HttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL, responseInfo = first.responseInfo))
         version = clientVersion.updateAndGet { current ->
             if (compareVersions(minimum, current) > 0) minimum else current
         }
-        val second = execute(request(version), status2Kind, notFoundKind)
+        val second = execute(request(version), status2Kind, notFoundKind, sessionClient)
         return if (second is RawHttpResult.MinimumVersion) {
-            HttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
+            HttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL, responseInfo = second.responseInfo))
         } else {
             second.toHttpResult()
         }
@@ -161,43 +182,51 @@ class LibreLinkUpSource private constructor(
         request: Request,
         status2Kind: SourceErrorKind,
         notFoundKind: SourceErrorKind,
+        sessionClient: OkHttpClient,
     ): RawHttpResult {
         val response = try {
-            client.newCall(request).await()
+            sessionClient.newCall(request).await()
         } catch (_: IOException) {
             return RawHttpResult.Failure(SourceError(SourceErrorKind.NETWORK))
         }
         try {
             response.use {
-                if (it.code == 401) return RawHttpResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+                val responseInfo = SourceResponseInfo(it.code, when (
+                    it.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
+                ) {
+                    "application/json" -> SourceResponseFormat.JSON
+                    "text/html", "application/xhtml+xml" -> SourceResponseFormat.WEB_PAGE
+                    else -> SourceResponseFormat.OTHER
+                })
+                fun responseFailure(kind: SourceErrorKind, retryAfter: Instant? = null) =
+                    RawHttpResult.Failure(SourceError(kind, retryAfter, responseInfo))
+                if (it.code == 401) return responseFailure(SourceErrorKind.AUTH_EXPIRED)
                 if (it.code == 429) {
-                    return RawHttpResult.Failure(
-                        SourceError(SourceErrorKind.RATE_LIMITED, retryAfter(it.header("Retry-After"))),
-                    )
+                    return responseFailure(SourceErrorKind.RATE_LIMITED, retryAfter(it.header("Retry-After")))
                 }
                 val body = readBoundedBody(it)
-                    ?: return RawHttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
+                    ?: return responseFailure(SourceErrorKind.PROTOCOL)
                 val root = parseRoot(body)
                 if (it.code == 403) {
                     val minimumVersion = root?.minimumVersionForStatus920()
-                    if (minimumVersion != null) return RawHttpResult.MinimumVersion(minimumVersion)
+                    if (minimumVersion != null) return RawHttpResult.MinimumVersion(minimumVersion, responseInfo)
                 }
                 if (it.code in 400..499 && root?.status() == 4) {
-                    return RawHttpResult.Failure(SourceError(SourceErrorKind.TERMS_REQUIRED))
+                    return responseFailure(SourceErrorKind.TERMS_REQUIRED)
                 }
                 if (it.code in 400..499 && root?.status() == 2) {
-                    return RawHttpResult.Failure(SourceError(status2Kind))
+                    return responseFailure(status2Kind)
                 }
-                if (it.code == 404) return RawHttpResult.Failure(SourceError(notFoundKind))
-                if (it.code in 500..599) return RawHttpResult.Failure(SourceError(SourceErrorKind.SERVER))
+                if (it.code == 404) return responseFailure(notFoundKind)
+                if (it.code in 500..599) return responseFailure(SourceErrorKind.SERVER)
                 if (!it.isSuccessful || root == null) {
-                    return RawHttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
+                    return responseFailure(SourceErrorKind.PROTOCOL)
                 }
                 return when (root.status()) {
-                    0 -> RawHttpResult.Success(root)
-                    2 -> RawHttpResult.Failure(SourceError(status2Kind))
-                    4 -> RawHttpResult.Failure(SourceError(SourceErrorKind.TERMS_REQUIRED))
-                    else -> RawHttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
+                    0 -> RawHttpResult.Success(root, responseInfo)
+                    2 -> responseFailure(status2Kind)
+                    4 -> responseFailure(SourceErrorKind.TERMS_REQUIRED)
+                    else -> responseFailure(SourceErrorKind.PROTOCOL)
                 }
             }
         } catch (_: IOException) {
@@ -383,6 +412,11 @@ class LibreLinkUpSource private constructor(
         null
     }
 
+    private fun <T> SourceResult<T>.withResponseInfo(info: SourceResponseInfo): SourceResult<T> = when (this) {
+        is SourceResult.Failure -> copy(error = error.copy(responseInfo = info))
+        is SourceResult.Success -> this
+    }
+
     private fun JsonValue.Object.status(): Int? = values["status"]?.asNumber()?.toIntExactOrNull()
 
     private fun JsonValue.Object.minimumVersionForStatus920(): String? {
@@ -391,20 +425,20 @@ class LibreLinkUpSource private constructor(
     }
 
     private fun RawHttpResult.toHttpResult(): HttpResult = when (this) {
-        is RawHttpResult.Success -> HttpResult.Success(root)
+        is RawHttpResult.Success -> HttpResult.Success(root, responseInfo)
         is RawHttpResult.Failure -> HttpResult.Failure(error)
-        is RawHttpResult.MinimumVersion -> HttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL))
+        is RawHttpResult.MinimumVersion -> HttpResult.Failure(SourceError(SourceErrorKind.PROTOCOL, responseInfo = responseInfo))
     }
 
     private fun LoginResult.toSourceResult(): SourceResult<Session> = when (this) {
         is LoginResult.Success -> SourceResult.Success(session)
         is LoginResult.Failure -> SourceResult.Failure(error)
-        is LoginResult.Redirect -> failure(SourceErrorKind.PROTOCOL)
+        is LoginResult.Redirect -> failure(SourceErrorKind.PROTOCOL, responseInfo)
     }
 
     private sealed interface LoginResult {
         data class Success(val session: Session) : LoginResult
-        data class Redirect(val region: String) : LoginResult
+        data class Redirect(val region: String, val responseInfo: SourceResponseInfo? = null) : LoginResult
         data class Failure(val error: SourceError) : LoginResult
 
         companion object {
@@ -413,13 +447,13 @@ class LibreLinkUpSource private constructor(
     }
 
     private sealed interface RawHttpResult {
-        data class Success(val root: JsonValue.Object) : RawHttpResult
-        data class MinimumVersion(val version: String) : RawHttpResult
+        data class Success(val root: JsonValue.Object, val responseInfo: SourceResponseInfo) : RawHttpResult
+        data class MinimumVersion(val version: String, val responseInfo: SourceResponseInfo) : RawHttpResult
         data class Failure(val error: SourceError) : RawHttpResult
     }
 
     private sealed interface HttpResult {
-        data class Success(val root: JsonValue.Object) : HttpResult
+        data class Success(val root: JsonValue.Object, val responseInfo: SourceResponseInfo) : HttpResult
         data class Failure(val error: SourceError) : HttpResult
     }
 
@@ -474,8 +508,8 @@ class LibreLinkUpSource private constructor(
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(Locale.ROOT, it) }
 
-        private fun failure(kind: SourceErrorKind): SourceResult.Failure =
-            SourceResult.Failure(SourceError(kind))
+        private fun failure(kind: SourceErrorKind, responseInfo: SourceResponseInfo? = null): SourceResult.Failure =
+            SourceResult.Failure(SourceError(kind, responseInfo = responseInfo))
 
         internal fun forTesting(
             client: OkHttpClient,

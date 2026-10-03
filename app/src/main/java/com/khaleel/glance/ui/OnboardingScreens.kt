@@ -91,6 +91,11 @@ internal fun SignInScreen(accountState: AccountUiState, onSignIn: (Credentials) 
                 },
             )
             accountProblemText(accountState.problem)?.let { StatusMessage(it, isError = true) }
+            if (accountState.problem != null) {
+                accountState.responseInfo?.let {
+                    Text(it.summary(), style = MaterialTheme.typography.bodySmall)
+                }
+            }
             Button(onClick = ::submit, modifier = Modifier.fillMaxWidth(), enabled = canSubmit) {
                 if (busy) {
                     CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
@@ -152,6 +157,11 @@ internal fun ConnectionScreen(state: ConnectionSetupUiState, callbacks: GlanceCa
             }
         }
         connectionProblemText(state.problem)?.let { StatusMessage(it, isError = true) }
+        if (state.problem != null) {
+            state.responseInfo?.let {
+                Text(it.summary(), style = MaterialTheme.typography.bodySmall)
+            }
+        }
         if (state.problem != null || (!state.loading && state.connections.isEmpty())) {
             OutlinedButton(onClick = callbacks.onRetryConnections, modifier = Modifier.fillMaxWidth()) {
                 Text("Try again")

@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `26`, and versionName
-`0.21.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `27`, and versionName
+`0.22.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -53,7 +53,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.21.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.22.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -290,3 +290,19 @@ each value change immediately so switching pages cannot cancel a pending save.
 No notification renderer, polling, credential storage, alert policy, widgets or
 watch runtime change. Existing watch installs remain compatible. Synthetic native
 checks and live-device boundaries are recorded in docs/ui-overhaul-validation.md.
+
+## 0.22.0 VPN compatibility candidate
+
+LibreView-issued Secure cookies now remain in memory across bootstrap and
+regional requests. The jar is restricted to reviewed HTTPS origins and clears
+on sign-in/sign-out. No VPN routing, User-Agent, TLS validation or request-cadence
+change was made. This is a candidate for the owner's Proton Free setup failure,
+not a verified live correction. Setup errors and Diagnostics now include the
+HTTP status and a coarse response type, without bodies, headers or cookie values.
+
+Install the phone APK over the current version with Proton enabled, then retry
+the shared-person screen. If it fails, report the displayed HTTP status/type.
+If an existing session still fails, reconnect in Glance to test a fresh login
+sequence; process restarts intentionally drop temporary cookie state. There is
+no watch runtime change and an existing compatible watch install needs no update.
+See [VPN investigation and verification](vpn-compatibility.md).

@@ -28,6 +28,7 @@ internal object SourceFactory {
         val prefs = context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE)
         val real = LibreLinkUpSource(http, clock)
         return object : GlucoseSource {
+            override fun clearTransportSession() = real.clearTransportSession()
             private fun demo() = prefs.getBoolean("enabled", false)
 
             override suspend fun signIn(credentials: Credentials): SourceResult<Session> {

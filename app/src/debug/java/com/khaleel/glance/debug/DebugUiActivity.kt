@@ -36,6 +36,29 @@ class DebugUiActivity : ComponentActivity() {
         )
         val mode = intent.getStringExtra("mode") ?: "fresh"
         val now = Instant.parse("2026-10-01T12:00:00Z")
+        if (mode == "sourceDiagnostics") {
+            // Exercise actual Android preferences in a namespace separate from app diagnostics.
+            val isolated = object : android.content.ContextWrapper(this) {
+                override fun getSharedPreferences(name: String, mode: Int) =
+                    super.getSharedPreferences("synthetic-vpn-test-$name", mode)
+            }
+            val store = com.khaleel.glance.data.DiagnosticsStore(isolated)
+            val info = SourceResponseInfo(403, SourceResponseFormat.WEB_PAGE)
+            store.clear()
+            store.sourceFailure(now, SourceError(SourceErrorKind.PROTOCOL, responseInfo = info))
+            check(com.khaleel.glance.data.DiagnosticsStore(isolated).snapshot().lastResponseInfo == info)
+            store.pollFailure(now, SourceErrorKind.NETWORK)
+            check(store.snapshot().lastResponseInfo == null)
+            store.sourceFailure(now, SourceError(SourceErrorKind.PROTOCOL, responseInfo = info))
+            store.pollSuccess(now)
+            check(store.snapshot().lastResponseInfo == null && store.snapshot().lastError == null)
+            store.sourceFailure(now, SourceError(SourceErrorKind.PROTOCOL, responseInfo = info))
+            store.clear()
+            check(store.snapshot().lastResponseInfo == null && store.snapshot().eventCount == 0)
+            java.io.File(filesDir, "vpn-diagnostics-check.json").writeText(
+                """{"persistedMetadata":true,"clearedOnNetworkError":true,"clearedOnSuccess":true,"clearedOnDelete":true}""",
+            )
+        }
         val events = JSONObject()
         fun event(name: String) {
             events.put(name, events.optInt(name) + 1)
@@ -96,8 +119,19 @@ class DebugUiActivity : ComponentActivity() {
                 onWatchNotificationsChanged = { settings = settings.copy(watchNotificationsEnabled = it); event("watchNotification") },
             )
             Box(Modifier.fillMaxSize()) {
-            GlanceRoot(display, AccountUiState(AccountStatus.SIGNED_OUT), ConnectionSetupUiState(),
-                SetupUiState(if (mode == "signIn") SetupStep.SIGN_IN else SetupStep.COMPLETE,
+            val blockedResponse = SourceResponseInfo(403, SourceResponseFormat.WEB_PAGE)
+            GlanceRoot(display,
+                AccountUiState(AccountStatus.SIGNED_OUT,
+                    if (mode == "blockedSignIn") AccountProblem.PROTOCOL else null,
+                    if (mode == "blockedSignIn") blockedResponse else null),
+                ConnectionSetupUiState(
+                    problem = if (mode == "blockedConnections") ConnectionProblem.PROTOCOL else null,
+                    responseInfo = if (mode == "blockedConnections") blockedResponse else null),
+                SetupUiState(when (mode) {
+                    "signIn", "blockedSignIn" -> SetupStep.SIGN_IN
+                    "blockedConnections" -> SetupStep.CONNECTION
+                    else -> SetupStep.COMPLETE
+                },
                     PermissionStatus.GRANTED, BatteryStatus.UNRESTRICTED),
                 settings, callbacks, modifier = Modifier.padding(bottom = 40.dp),
                 now = now, zoneId = ZoneId.of("UTC"), locale = Locale.US)

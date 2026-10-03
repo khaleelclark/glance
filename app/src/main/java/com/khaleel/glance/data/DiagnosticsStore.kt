@@ -2,6 +2,9 @@ package com.khaleel.glance.data
 
 import android.content.Context
 import com.khaleel.glance.core.SourceErrorKind
+import com.khaleel.glance.core.SourceError
+import com.khaleel.glance.core.SourceResponseFormat
+import com.khaleel.glance.core.SourceResponseInfo
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -13,13 +16,15 @@ data class DiagnosticsSnapshot(
     val largestObservedGapMillis: Long?,
     val eventCount: Int,
     val lastAlertIssue: Instant? = null,
+    val lastResponseInfo: SourceResponseInfo? = null,
 )
 
-/** Only timing and enum categories are stored. No account, person, reading, or HTTP data. */
+/** Only timing, numeric HTTP status and fixed categories are stored; no bodies or identifying data. */
 interface DiagnosticsRecorder {
     fun pollAttempt(at: Instant)
     fun pollSuccess(at: Instant)
     fun pollFailure(at: Instant, kind: SourceErrorKind)
+    fun sourceFailure(at: Instant, error: SourceError) = pollFailure(at, error.kind)
     fun runtime(at: Instant, state: String)
     fun alertIssue(at: Instant) = Unit
     fun snapshot(): DiagnosticsSnapshot
@@ -52,14 +57,27 @@ class DiagnosticsStore(context: Context) : DiagnosticsRecorder {
 
     @Synchronized
     override fun pollSuccess(at: Instant) {
-        prefs.edit().putLong("last_success", at.toEpochMilli()).remove("last_error").apply()
+        prefs.edit().putLong("last_success", at.toEpochMilli()).remove("last_error")
+            .remove("last_http_status").remove("last_response_format").apply()
         append(at, "POLL_SUCCESS")
     }
 
     @Synchronized
     override fun pollFailure(at: Instant, kind: SourceErrorKind) {
-        prefs.edit().putString("last_error", kind.name).apply()
-        append(at, "POLL_" + kind.name)
+        sourceFailure(at, SourceError(kind))
+    }
+
+    @Synchronized
+    override fun sourceFailure(at: Instant, error: SourceError) {
+        val edit = prefs.edit().putString("last_error", error.kind.name)
+        if (error.responseInfo != null) {
+            edit.putInt("last_http_status", error.responseInfo.httpStatus)
+                .putString("last_response_format", error.responseInfo.format.name)
+        } else {
+            edit.remove("last_http_status").remove("last_response_format")
+        }
+        edit.apply()
+        append(at, "POLL_" + error.kind.name)
     }
 
     @Synchronized
@@ -82,6 +100,11 @@ class DiagnosticsStore(context: Context) : DiagnosticsRecorder {
         largestObservedGapMillis = prefs.getLong("max_gap", 0L).takeIf { it > 0L },
         eventCount = events().length(),
         lastAlertIssue = prefs.getLong("last_alert_issue", 0L).takeIf { it > 0L }?.let(Instant::ofEpochMilli),
+        lastResponseInfo = prefs.getInt("last_http_status", 0).takeIf { it > 0 }?.let { status ->
+            prefs.getString("last_response_format", null)?.let { value ->
+                runCatching { SourceResponseInfo(status, SourceResponseFormat.valueOf(value)) }.getOrNull()
+            }
+        },
     )
 
     @Synchronized

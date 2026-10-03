@@ -7,6 +7,8 @@ import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.core.SourceSnapshot
+import com.khaleel.glance.core.SourceResponseFormat
+import com.khaleel.glance.core.SourceResponseInfo
 import com.khaleel.glance.core.Trend
 import java.time.Instant
 import kotlinx.coroutines.runBlocking
@@ -104,6 +106,7 @@ class LibreLinkUpSourceTest {
         val result = source().signIn(credentials())
 
         assertFailure(result, SourceErrorKind.PROTOCOL)
+        assertEquals(SourceResponseInfo(200, SourceResponseFormat.JSON), result.failure().responseInfo)
         assertEquals(1, bootstrap.requestCount)
     }
 
@@ -167,6 +170,48 @@ class LibreLinkUpSourceTest {
         val connections = source().connections(session()).successValue<List<com.khaleel.glance.core.Connection>>()
 
         assertTrue(connections.isEmpty())
+    }
+
+    @Test
+    fun `blocked shared person request retains only safe status and format without retrying`() = runBlocking {
+        bootstrap.enqueue(MockResponse().setResponseCode(403)
+            .addHeader("Content-Type", "text/html; charset=UTF-8")
+            .addHeader("Set-Cookie", "secret-session-cookie")
+            .setBody("<html>Blocked: synthetic-token follower@example.invalid Pat Example</html>"))
+
+        val error = source().connections(session()).failure()
+
+        assertEquals(SourceErrorKind.PROTOCOL, error.kind)
+        assertEquals(SourceResponseInfo(403, SourceResponseFormat.WEB_PAGE), error.responseInfo)
+        assertFalse(error.toString().contains("synthetic-token"))
+        assertFalse(error.toString().contains("follower@example.invalid"))
+        assertFalse(error.toString().contains("Pat Example"))
+        assertFalse(error.toString().contains("secret-session-cookie"))
+        assertEquals(1, bootstrap.requestCount)
+        assertEquals("/llu/connections", bootstrap.takeRequest().path)
+    }
+
+    @Test
+    fun `challenge web page with HTTP 200 cannot become an empty connection list`() = runBlocking {
+        bootstrap.enqueue(MockResponse().setResponseCode(200)
+            .addHeader("Content-Type", "text/html").setBody("<html>Verify your browser</html>"))
+
+        val error = source().connections(session()).failure()
+
+        assertEquals(SourceErrorKind.PROTOCOL, error.kind)
+        assertEquals(SourceResponseInfo(200, SourceResponseFormat.WEB_PAGE), error.responseInfo)
+        assertEquals(1, bootstrap.requestCount)
+    }
+
+    @Test
+    fun `invalid JSON envelope reports a schema problem with response metadata`() = runBlocking {
+        bootstrap.enqueue(jsonResponse("""{"status":0,"data":{"unexpected":"private-value"}}"""))
+
+        val error = source().connections(session()).failure()
+
+        assertEquals(SourceErrorKind.PROTOCOL, error.kind)
+        assertEquals(SourceResponseInfo(200, SourceResponseFormat.JSON), error.responseInfo)
+        assertFalse(error.toString().contains("private-value"))
     }
 
     @Test

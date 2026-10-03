@@ -116,6 +116,7 @@ class AppController(
         synchronized(this) {
             generation++
             capturedGeneration = generation
+            source.clearTransportSession()
             authAttemptsStopped = false
             settings.monitoringEnabled = false
             settings.retryWindow = null
@@ -307,7 +308,7 @@ class AppController(
     @Synchronized
     private fun updateFailure(error: SourceError, capturedGeneration: Long) {
         if (generation != capturedGeneration) return
-        diagnostics.pollFailure(clock.now(), error.kind)
+        diagnostics.sourceFailure(clock.now(), error)
         val state = when (error.kind) {
             SourceErrorKind.NETWORK -> ConnectionState.OFFLINE
             SourceErrorKind.INVALID_CREDENTIALS, SourceErrorKind.AUTH_EXPIRED -> {
@@ -393,6 +394,7 @@ class AppController(
     @Synchronized
     fun signOut() {
         generation++
+        source.clearTransportSession()
         authAttemptsStopped = true
         settings.clear()
         authStore.clear()

@@ -1,0 +1,23 @@
+{
+  "device": "API 36 emulator",
+  "version": "0.22.0",
+  "source": "working tree before release commit; final production cookie-deletion fix included",
+  "synthetic": true,
+  "checks": {
+    "persistedMetadata": true,
+    "clearedOnNetworkError": true,
+    "clearedOnSuccess": true,
+    "clearedOnDelete": true,
+    "connectionErrorDetailsVisible": true,
+    "retryDispatchesExactlyOnce": true,
+    "signInErrorDetailsVisible": true
+  },
+  "allPassed": true,
+  "screenshots": [
+    "docs/evidence/api36-vpn-connections-demo.png",
+    "docs/evidence/api36-vpn-sign-in-demo.png"
+  ],
+  "liveVPN": "not tested",
+  "realAccount": "not tested",
+  "GalaxyS25Ultra": "not tested"
+}

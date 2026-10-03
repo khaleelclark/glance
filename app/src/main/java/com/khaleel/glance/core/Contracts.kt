@@ -37,7 +37,22 @@ enum class SourceErrorKind {
     NETWORK, SERVER, CONNECTION_REMOVED, PROTOCOL, NO_READING, STORAGE, REFRESH_DEBOUNCED,
 }
 
-data class SourceError(val kind: SourceErrorKind, val retryAfter: Instant? = null)
+/** Fixed categories only: never retain response bodies, URLs, headers, or patient data. */
+enum class SourceResponseFormat { JSON, WEB_PAGE, OTHER }
+
+data class SourceResponseInfo(val httpStatus: Int, val format: SourceResponseFormat) {
+    fun summary(): String = "HTTP $httpStatus · " + when (format) {
+        SourceResponseFormat.JSON -> "JSON response"
+        SourceResponseFormat.WEB_PAGE -> "web page response"
+        SourceResponseFormat.OTHER -> "other response format"
+    }
+}
+
+data class SourceError(
+    val kind: SourceErrorKind,
+    val retryAfter: Instant? = null,
+    val responseInfo: SourceResponseInfo? = null,
+)
 
 sealed interface SourceResult<out T> {
     data class Success<T>(val value: T) : SourceResult<T>
@@ -45,6 +60,8 @@ sealed interface SourceResult<out T> {
 }
 
 interface GlucoseSource {
+    /** Drop volatile transport state when signing out or changing accounts. */
+    fun clearTransportSession() = Unit
     suspend fun signIn(credentials: Credentials): SourceResult<Session>
     suspend fun connections(session: Session): SourceResult<List<Connection>>
     suspend fun latest(session: Session, connectionId: String): SourceResult<Reading>

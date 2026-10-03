@@ -15,6 +15,8 @@ import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.core.SourceSnapshot
+import com.khaleel.glance.core.SourceResponseFormat
+import com.khaleel.glance.core.SourceResponseInfo
 import com.khaleel.glance.core.Trend
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -38,6 +40,45 @@ class AppControllerTest {
         connection.id, at, 112.0, 112.0, GlucoseUnit.MG_DL, null,
         Trend.STEADY, null, start,
     )
+
+    @Test fun rejectedResponseRetainsDiagnosticsAndNeverReplacesLastReading() = runBlocking {
+        val previous = reading(patrick)
+        val error = SourceError(SourceErrorKind.PROTOCOL,
+            responseInfo = SourceResponseInfo(403, SourceResponseFormat.WEB_PAGE))
+        val source = FakeSource { _, _ -> SourceResult.Failure(error) }
+        var recorded: SourceError? = null
+        val diagnostics = object : DiagnosticsRecorder {
+            override fun pollAttempt(at: Instant) = Unit
+            override fun pollSuccess(at: Instant) = Unit
+            override fun pollFailure(at: Instant, kind: SourceErrorKind) = Unit
+            override fun sourceFailure(at: Instant, error: SourceError) { recorded = error }
+            override fun runtime(at: Instant, state: String) = Unit
+            override fun snapshot() = DiagnosticsSnapshot(null, null, recorded?.kind, null, 0)
+            override fun clear() = Unit
+        }
+        val patient = MemoryPatient().apply { state = StoredPatientState(patrick, previous) }
+        val controller = AppController(source, MemoryAuth(SavedAuth(credentials, session)), patient,
+            MemorySettings(), FakeClock(start), diagnostics)
+
+        controller.poll()
+
+        assertEquals(error, recorded)
+        assertEquals(previous, controller.display.value.reading)
+        assertEquals(ConnectionState.PROTOCOL_ERROR, controller.display.value.connection)
+        assertEquals(previous, patient.state.lastReading)
+        assertEquals(0, source.signInCalls)
+    }
+
+    @Test fun accountStartAndSignOutClearTransientTransportState() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = AppController(source, MemoryAuth(null), MemoryPatient(), MemorySettings(), FakeClock(start))
+
+        assertTrue(controller.signIn(credentials) is SourceResult.Success)
+        assertEquals(1, source.transportClears)
+        controller.signOut()
+        assertEquals(2, source.transportClears)
+        assertTrue(!controller.hasAccount)
+    }
 
     @Test fun lateResponseCannotCrossPersonBoundary() = runBlocking {
         val pending = CompletableDeferred<SourceResult<Reading>>()
@@ -436,10 +477,16 @@ class AppControllerTest {
         var snapshotHistory: List<Reading> = emptyList()
         @Volatile
         var latestCalls = 0
+        var signInCalls = 0
+        var transportClears = 0
+        override fun clearTransportSession() { transportClears++ }
         var signInResult: SourceResult<Session> = SourceResult.Success(
             Session("synthetic-account", "new-token", "api-us.libreview.io", Instant.parse("2030-01-01T00:00:00Z")),
         )
-        override suspend fun signIn(credentials: Credentials) = signInResult
+        override suspend fun signIn(credentials: Credentials): SourceResult<Session> {
+            signInCalls++
+            return signInResult
+        }
         override suspend fun connections(session: Session) = onConnections(session)
         override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> {
             latestCalls++

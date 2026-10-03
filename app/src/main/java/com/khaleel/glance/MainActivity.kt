@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
                     "Last attempt: " + (diagnostic.lastAttempt ?: "none") + "\n" +
                     "Last success: " + (diagnostic.lastSuccess ?: "none") + "\n" +
                     "Last error: " + (diagnostic.lastError ?: "none") + "\n" +
+                    "Last error response: " + (diagnostic.lastResponseInfo?.summary() ?: "none") + "\n" +
                     "Last alert delivery issue: " + (diagnostic.lastAlertIssue ?: "none") + "\n" +
                     "Largest poll gap: " +
                     (diagnostic.largestObservedGapMillis?.let { it / 1000L } ?: "none") + " seconds\n" +
@@ -232,7 +233,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadConnections() {
-        connectionState = connectionState.copy(loading = true, problem = null)
+        connectionState = connectionState.copy(loading = true, problem = null, responseInfo = null)
         scope.launch {
             val result = runCatching { controller.connections() }.getOrNull()
             connectionState = when (result) {
@@ -240,7 +241,9 @@ class MainActivity : ComponentActivity() {
                     connections = result.value,
                     problem = if (result.value.isEmpty()) ConnectionProblem.NONE_FOUND else null,
                 )
-                is SourceResult.Failure -> ConnectionSetupUiState(problem = result.error.kind.connectionProblem())
+                is SourceResult.Failure -> ConnectionSetupUiState(
+                    problem = result.error.kind.connectionProblem(), responseInfo = result.error.responseInfo,
+                )
                 null -> ConnectionSetupUiState(problem = ConnectionProblem.PROTOCOL)
             }
         }
@@ -288,7 +291,9 @@ class MainActivity : ComponentActivity() {
                         setupState = setupState.copy(step = SetupStep.CONNECTION)
                     }
                     is SourceResult.Failure ->
-                        accountState = AccountUiState(AccountStatus.SIGNED_OUT, result.error.kind.accountProblem())
+                        accountState = AccountUiState(
+                            AccountStatus.SIGNED_OUT, result.error.kind.accountProblem(), result.error.responseInfo,
+                        )
                     null -> accountState = AccountUiState(AccountStatus.SIGNED_OUT, AccountProblem.PROTOCOL)
                 }
             }

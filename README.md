@@ -7,6 +7,11 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
+Version 0.22.0 adds temporary, LibreView-only HTTPS cookie handling as a VPN
+compatibility candidate and safe HTTP response details for connection errors.
+Its effect on the owner's Proton VPN connection remains unverified. See
+[VPN investigation](docs/vpn-compatibility.md).
+
 The main screen includes a 24-hour graph of validated source samples. Touch
 to inspect readings and pinch to zoom from one hour to the full day. Two-finger
 dragging does not scroll the timeline. **6 hr**, **12 hr** and **24 hr** under the

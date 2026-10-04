@@ -6,11 +6,12 @@ import java.time.Duration
 import java.time.Instant
 
 object ReadingPolicy {
+    val FRESH_WINDOW: Duration = Duration.ofMinutes(5)
     fun freshness(reading: Reading?, now: Instant): ReadingFreshness {
         if (reading == null) return ReadingFreshness.ABSENT
         val age = Duration.between(reading.measuredAt, now)
         if (age < Duration.ofMinutes(-2)) return ReadingFreshness.INVALID_TIME
-        if (age < Duration.ofMinutes(5)) return ReadingFreshness.FRESH
+        if (age < FRESH_WINDOW) return ReadingFreshness.FRESH
         if (age < Duration.ofMinutes(15)) return ReadingFreshness.DELAYED
         return ReadingFreshness.STALE
     }

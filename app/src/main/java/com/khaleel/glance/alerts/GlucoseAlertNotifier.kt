@@ -18,6 +18,7 @@ import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.notification.GlucoseStatusIcon
 import java.util.UUID
 import java.time.ZoneId
+import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -28,8 +29,19 @@ class GlucoseAlertNotifier(
     private val numericStatusIcon: () -> Boolean = { true },
 ) : AlertDelivery {
     private val manager = context.getSystemService(NotificationManager::class.java)
-    private data class ActiveAlert(val kind: AlertKind, val personId: String, val token: String, var iconText: String?)
+    private data class ActiveAlert(
+        val kind: AlertKind, val personId: String, val token: String,
+        var iconText: String?, var iconDeadline: Instant?,
+    )
     private var activeAlert: ActiveAlert? = null
+
+    private data class StatusIcon(val text: String?, val expiry: AlertIconExpiry?)
+    private fun statusIcon(display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean): StatusIcon {
+        val expiry = AlertIconExpiry.forReading(display.reading, Instant.now())
+        val text = GlucoseStatusIcon.text(display, unit, numericStatusIcon(), showOnLockScreen)
+            .takeIf { expiry != null }
+        return StatusIcon(text, expiry.takeIf { text != null })
+    }
 
     override fun ensureChannels() {
         AlertKind.entries.forEach { kind ->
@@ -77,7 +89,7 @@ class GlucoseAlertNotifier(
         val title = "${kind.label} · ${person.displayName}"
         val detail = "${GlucoseFormat.withUnit(reading, unit, Locale.getDefault())} at $time"
         val token = UUID.randomUUID().toString()
-        val iconText = GlucoseStatusIcon.text(display, unit, numericStatusIcon(), showOnLockScreen)
+        val icon = statusIcon(display, unit, showOnLockScreen)
         val open = PendingIntent.getActivity(
             context, 5100, Intent().setClassName(context, "com.khaleel.glance.MainActivity")
                 .setAction("com.khaleel.glance.action.OPEN_ALERT"),
@@ -102,8 +114,9 @@ class GlucoseAlertNotifier(
             .setOnlyAlertOnce(false)
             .setWhen(reading.measuredAt.toEpochMilli())
             .setShowWhen(true)
+            .setTimeoutAfter(icon.expiry?.remainingMillis ?: 0)
             .setVisibility(if (showOnLockScreen) Notification.VISIBILITY_PUBLIC else Notification.VISIBILITY_PRIVATE)
-        iconText?.let { builder.setSmallIcon(GlucoseStatusIcon.create(it)) }
+        icon.text?.let { builder.setSmallIcon(GlucoseStatusIcon.create(it)) }
         if (!showOnLockScreen) {
             builder.setPublicVersion(
                 Notification.Builder(context, channelId(kind))
@@ -116,7 +129,7 @@ class GlucoseAlertNotifier(
         }
         clear()
         manager.notify(notificationId(kind), builder.build())
-        activeAlert = ActiveAlert(kind, person.id, token, iconText)
+        activeAlert = ActiveAlert(kind, person.id, token, icon.text, icon.expiry?.deadline)
     }
 
     @Synchronized
@@ -139,15 +152,17 @@ class GlucoseAlertNotifier(
             clear()
             return
         }
-        val text = GlucoseStatusIcon.text(display, unit, numericStatusIcon(), showOnLockScreen)
-        if (text == active.iconText) return
+        val icon = statusIcon(display, unit, showOnLockScreen)
+        if (icon.text == active.iconText && icon.expiry?.deadline == active.iconDeadline) return
         val builder = Notification.Builder.recoverBuilder(context, posted.notification)
             .setSmallIcon(R.drawable.ic_glance_status)
             .setOnlyAlertOnce(true)
-        text?.let { builder.setSmallIcon(GlucoseStatusIcon.create(it)) }
+            .setTimeoutAfter(icon.expiry?.remainingMillis ?: 0)
+        icon.text?.let { builder.setSmallIcon(GlucoseStatusIcon.create(it)) }
         // Preserve the alarm's original title, triggering reading/time, channel and delete token.
         manager.notify(posted.id, builder.build())
-        active.iconText = text
+        active.iconText = icon.text
+        active.iconDeadline = icon.expiry?.deadline
     }
 
     @Synchronized

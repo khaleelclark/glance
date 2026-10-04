@@ -73,6 +73,9 @@ class AlertIconInstrumentation : Instrumentation() {
             notifier.post(AlertKind.HIGH, initial, GlucoseUnit.MG_DL, true)
             waitFor { iconMatches(alert(), "240") }
             val original = alert()
+            checkResult("numericAlarmUsesRemainingSourceFreshnessTimeout") {
+                original.timeoutAfter in 265_000L..270_000L
+            }
             val oldToken = original.extras.getString("com.khaleel.glance.alerts.ICON_TOKEN")!!
             val latest = state(248.0)
             notifier.refreshIcon(latest, GlucoseUnit.MG_DL, true)
@@ -82,6 +85,15 @@ class AlertIconInstrumentation : Instrumentation() {
                 alert().`when` == original.`when` && alert().channelId == original.channelId
             }
             checkResult("iconRefreshSetsOnlyAlertOnce") { alert().flags and Notification.FLAG_ONLY_ALERT_ONCE != 0 }
+            val priorTimeout = alert().timeoutAfter
+            val sameValueNewSample = latest.copy(reading = latest.reading!!.copy(
+                measuredAt = latest.reading.measuredAt.plusSeconds(10)))
+            notifier.refreshIcon(sameValueNewSample, GlucoseUnit.MG_DL, true)
+            waitFor { alert().timeoutAfter > priorTimeout + 9_000 }
+            checks.put("sameValueNewSampleRenewsSystemExpiry", true)
+            val renewedTimeout = alert().timeoutAfter
+            notifier.refreshIcon(sameValueNewSample, GlucoseUnit.MG_DL, true)
+            checkResult("duplicateSampleDoesNotExtendSystemExpiry") { alert().timeoutAfter == renewedTimeout }
             notifier.refreshIcon(latest, GlucoseUnit.MMOL_L, true)
             waitFor { iconMatches(alert(), "13.8") }
             checks.put("iconRefreshUsesChosenUnit", true)

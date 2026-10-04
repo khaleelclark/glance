@@ -210,6 +210,23 @@ class DebugNotificationActivity : Activity() {
             context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit().clear().commit()
             return
         }
+        if (mode == "alert-expiry-demo") {
+            val app = context.applicationContext as com.khaleel.glance.GlanceApplication
+            app.controller.settings.numericStatusIcon = true
+            app.alertNotifier.ensureChannels()
+            val now = Instant.now()
+            val sourceTime = now.minusSeconds(288)
+            val reading = Reading("synthetic-expiry-person", sourceTime, 240.0, 240.0,
+                GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-expiry", now)
+            val display = DisplayState(true, RuntimeState.RUNNING, ConnectionState.READY,
+                Connection("synthetic-expiry-person", "DEMO · Expiry"), reading,
+                ReadingFreshness.FRESH, now, null)
+            app.alertNotifier.post(AlertKind.HIGH, display, GlucoseUnit.MG_DL, true)
+            java.io.File(context.filesDir, "alert-expiry-fixture.json").writeText(
+                org.json.JSONObject().put("synthetic", true).put("sourceTime", sourceTime.toString())
+                    .put("freshnessDeadline", sourceTime.plusSeconds(300).toString()).toString())
+            return
+        }
         if (mode == "alert-demo") {
             val kind = runCatching {
                 AlertKind.valueOf(intent.getStringExtra("kind") ?: "URGENT_HIGH")

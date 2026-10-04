@@ -46,7 +46,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,18 +63,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.khaleel.glance.alerts.AlertHistoryEntry
-import com.khaleel.glance.core.Connection
 import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseFormat
 import com.khaleel.glance.core.GlucoseFormat.label
 import com.khaleel.glance.core.GlucoseUnit
-import com.khaleel.glance.core.PersonDisplayState
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Trend
-import com.khaleel.glance.core.forPerson
 import com.khaleel.glance.ui.GlanceButton as Button
 import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
 import java.time.Duration
@@ -88,9 +84,9 @@ import java.util.Locale
 
 internal enum class AppDestination(val label: String, val glyph: GlanceGlyph) {
     NOW("Now", GlanceGlyph.NOW), LOGBOOK("Logbook", GlanceGlyph.LOGBOOK),
-    PEOPLE("People", GlanceGlyph.PEOPLE), SETTINGS("Settings", GlanceGlyph.SETTINGS),
+    SETTINGS("Settings", GlanceGlyph.SETTINGS),
 }
-private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, ALERT_PERSON, ACCENT }
+private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, ACCENT }
 private enum class ConfirmAction { SIGN_OUT, DELETE_DATA }
 
 @Composable
@@ -105,34 +101,20 @@ internal fun CompletedGlanceApp(
     zoneId: ZoneId,
     locale: Locale,
 ) {
-    val roster = remember(displayState) { rosterStates(displayState) }
     var destinationName by rememberSaveable { mutableStateOf(AppDestination.NOW.name) }
-    var viewedPersonId by rememberSaveable { mutableStateOf(displayState.person?.id) }
-    val destinations = AppDestination.entries.filter { it != AppDestination.PEOPLE || roster.size > 1 }
+    val destinations = AppDestination.entries
     val destination = AppDestination.entries.firstOrNull { it.name == destinationName }
-        ?.takeIf { it in destinations } ?: AppDestination.NOW
-    LaunchedEffect(roster.map { it.person.id }, displayState.person?.id) {
-        if (viewedPersonId !in roster.map { it.person.id }) viewedPersonId = displayState.person?.id ?: roster.firstOrNull()?.person?.id
-        if (destination == AppDestination.PEOPLE && roster.size <= 1) destinationName = AppDestination.NOW.name
-    }
+        ?: AppDestination.NOW
     BackHandler(enabled = destination != AppDestination.NOW) { destinationName = AppDestination.NOW.name }
-    val viewedState = viewedPersonId?.let(displayState::forPerson) ?: displayState
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = { GlanceBottomBar(destinations, destination) { destinationName = it.name } },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                AppDestination.NOW -> MainReadingScreen(viewedState, displayState.person?.id, settings, callbacks, text, now, zoneId, locale)
+                AppDestination.NOW -> MainReadingScreen(displayState, settings, callbacks, text, now, zoneId, locale)
                 AppDestination.LOGBOOK -> LogbookScreen(alertHistory, settings, now, zoneId, locale, callbacks.onClearAlertLog)
-                AppDestination.PEOPLE -> PeopleScreen(displayState, roster, settings, text, now, callbacks.onRefreshPeople,
-                    onView = {
-                        viewedPersonId = it.id
-                        callbacks.onViewedPersonChanged(it.id)
-                        destinationName = AppDestination.NOW.name
-                    },
-                    onPin = callbacks.onPinPerson)
-                AppDestination.SETTINGS -> SettingsScreen(displayState, setupState, settings, callbacks, roster.map { it.person })
+                AppDestination.SETTINGS -> SettingsScreen(displayState, setupState, settings, callbacks)
             }
         }
     }
@@ -157,7 +139,6 @@ private fun GlanceBottomBar(items: List<AppDestination>, selected: AppDestinatio
 @Composable
 internal fun MainReadingScreen(
     state: DisplayState,
-    primaryPersonId: String?,
     settings: UserSettingsUi,
     callbacks: GlanceCallbacks,
     text: GlanceUiText,
@@ -168,7 +149,7 @@ internal fun MainReadingScreen(
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var selectedTime by rememberSaveable(state.person?.id) { mutableStateOf<Long?>(null) }
     val summary: @Composable ColumnScope.() -> Unit = {
-        ReadingHeader(state, primaryPersonId, callbacks)
+        ReadingHeader(state, callbacks)
         ReadingHero(state, settings, text, now, locale)
         ReadingStatus(state, text, callbacks)
     }
@@ -188,17 +169,14 @@ internal fun MainReadingScreen(
 }
 
 @Composable
-private fun ReadingHeader(state: DisplayState, primaryPersonId: String?, callbacks: GlanceCallbacks) {
+private fun ReadingHeader(state: DisplayState, callbacks: GlanceCallbacks) {
     val refreshEnabled = state.monitoringEnabled && state.runtime == RuntimeState.RUNNING && state.connection !in nonRefreshableConnections
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         GlanceMark()
         Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text("GLANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text(state.person?.displayName ?: "Shared reading", Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (state.person?.id != null && state.person.id == primaryPersonId) Badge("PINNED")
-            }
+            Text(state.person?.displayName ?: "Shared reading", Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         IconButton(callbacks.onRefresh, enabled = refreshEnabled,
             modifier = Modifier.semantics { contentDescription = "Refresh reading" }) {
@@ -260,69 +238,18 @@ private fun ReadingStatus(state: DisplayState, text: GlanceUiText, callbacks: Gl
 }
 
 @Composable
-private fun PeopleScreen(
-    display: DisplayState, roster: List<PersonDisplayState>, settings: UserSettingsUi, text: GlanceUiText, now: Instant,
-    onRefresh: () -> Unit, onView: (Connection) -> Unit, onPin: (Connection) -> Unit,
-) {
-    ScreenList {
-        ScreenHeader("People", "Everyone Glance is monitoring") {
-            IconButton(onRefresh, modifier = Modifier.semantics { contentDescription = "Refresh all people" }) {
-                GlanceGlyphIcon(GlanceGlyph.REFRESH, color = MaterialTheme.colorScheme.primary)
-            }
-        }
-        roster.forEach { item ->
-            val projected = display.forPerson(item.person.id) ?: display.copy(person = item.person, reading = item.reading,
-                freshness = item.freshness, connection = item.connection, history = item.history)
-            val reading = text.reading(projected, settings.unit, now)
-            val primary = display.person?.id == item.person.id
-            Surface(Modifier.fillMaxWidth().clickable { onView(item.person) }, GlanceShapes.large,
-                MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
-                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(item.person.displayName, style = MaterialTheme.typography.titleLarge)
-                            Text(personStatus(item), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (primary) Badge("PRIMARY")
-                    }
-                    if (reading == null) Text("Waiting for first reading", color = MaterialTheme.colorScheme.onSurfaceVariant) else {
-                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Text(reading.value, style = MaterialTheme.typography.headlineLarge)
-                            Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 3.dp))
-                            if (reading.trendSymbol.isNotBlank()) Text(reading.trendSymbol, style = MaterialTheme.typography.headlineMedium.copy(color = MaterialTheme.colorScheme.primary))
-                        }
-                        Text(reading.measured, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        if (!primary) TextButton({ onPin(item.person) }) { Text("Pin to notification") }
-                        TextButton({ onView(item.person) }) { Text("View") }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun LogbookScreen(
     history: List<AlertHistoryEntry>, settings: UserSettingsUi, now: Instant, zoneId: ZoneId, locale: Locale, onClear: () -> Unit,
 ) {
-    var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmClear by rememberSaveable { mutableStateOf(false) }
-    val people = remember(history) { history.map { it.person }.distinctBy { it.id } }
-    val filtered = history.filter { filter == null || it.person.id == filter }.sortedByDescending { it.firedAt }
-    val groups = groupAlertHistory(filtered, zoneId)
+    val groups = groupAlertHistory(history, zoneId)
     val time = remember(zoneId, locale) { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).withZone(zoneId) }
     ScreenList {
         ScreenHeader("Logbook", "Glucose alerts that fired on this phone") {
             if (history.isNotEmpty()) TextButton({ confirmClear = true }) { Text("Clear") }
         }
-        if (people.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(filter == null, { filter = null }, label = { Text("All people") })
-            people.forEach { person -> FilterChip(filter == person.id, { filter = person.id }, label = { Text(person.displayName) }) }
-        }
-        if (filtered.isEmpty()) GlanceCard(Modifier.fillMaxWidth()) {
-            Text(if (history.isEmpty()) "No alerts yet" else "No alerts for this person", style = MaterialTheme.typography.titleLarge)
+        if (history.isEmpty()) GlanceCard(Modifier.fillMaxWidth()) {
+            Text("No alerts yet", style = MaterialTheme.typography.titleLarge)
             Text("When a glucose alert fires, its type and source reading will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         groups.forEach { (day, entries) ->
@@ -357,7 +284,7 @@ private fun LogbookScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsScreen(
-    display: DisplayState, setup: SetupUiState, settings: UserSettingsUi, callbacks: GlanceCallbacks, roster: List<Connection>,
+    display: DisplayState, setup: SetupUiState, settings: UserSettingsUi, callbacks: GlanceCallbacks,
 ) {
     var sheet by rememberSaveable { mutableStateOf<SettingsSheet?>(null) }
     var confirm by remember { mutableStateOf<ConfirmAction?>(null) }
@@ -392,9 +319,8 @@ internal fun SettingsScreen(
             if (display.monitoringEnabled) { GroupDivider(); TextButton(callbacks.onStopMonitoring, Modifier.fillMaxWidth()) { Text("Stop monitoring") } }
         }
         SettingsGroup("Alerts") {
-            if (roster.size > 1) { ValueSettingRow("Alert rules for", settings.alertPersonName ?: "Choose a person") { sheet = SettingsSheet.ALERT_PERSON }; GroupDivider() }
             AlertSettings(settings.alerts, settings.unit, callbacks.onAlertRuleChanged, callbacks.onAlertSoundChanged,
-                callbacks.onOpenNotificationSettings, settings.alertPersonName)
+                callbacks.onOpenNotificationSettings)
         }
         SettingsGroup("Appearance & devices") {
             ValueSettingRow("App color", accentName(settings.accentHex)) { sheet = SettingsSheet.ACCENT }; GroupDivider()
@@ -421,8 +347,6 @@ internal fun SettingsScreen(
                         "One minute checks sooner; five minutes uses less battery and network.") { callbacks.onIntervalChanged(if (it == "Every minute") 1 else 5); sheet = null }
                     SettingsSheet.PRESENTATION -> SheetChoices("Notification presentation", listOf("Graph" to !settings.enhancedNotification, "Live Update" to settings.enhancedNotification),
                         "Live Update is requested on supported devices; Android may show the graph notification instead.") { callbacks.onEnhancedNotificationChanged(it == "Live Update"); sheet = null }
-                    SettingsSheet.ALERT_PERSON -> SheetChoices("Alert rules for", roster.map { it.displayName to (it.id == settings.alertPersonId) },
-                        "Each person keeps independent alert rules.") { label -> roster.firstOrNull { it.displayName == label }?.let { callbacks.onViewedPersonChanged(it.id) }; sheet = null }
                     SettingsSheet.ACCENT -> {
                         Text("App color", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
                         Text("Ocean blue is the Glance default. Custom saved colors remain supported.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -454,10 +378,6 @@ private fun ScreenHeader(title: String, subtitle: String, action: @Composable ((
         Column(Modifier.weight(1f)) { Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineMedium); Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         action?.invoke()
     }
-}
-
-@Composable private fun Badge(text: String) = Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
-    Text(text, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 }
 
 @Composable private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) = Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -520,11 +440,6 @@ private fun ScreenHeader(title: String, subtitle: String, action: @Composable ((
     } }
 }
 
-internal fun rosterStates(display: DisplayState): List<PersonDisplayState> {
-    val primary = display.person?.let { PersonDisplayState(it, display.reading, display.freshness, display.connection, display.lastSuccessfulFetch, display.history) }
-    return (listOfNotNull(primary) + display.people).distinctBy { it.person.id }
-}
-
 internal fun groupAlertHistory(history: List<AlertHistoryEntry>, zoneId: ZoneId): List<Pair<LocalDate, List<AlertHistoryEntry>>> =
     history.sortedByDescending { it.firedAt }.groupBy { it.firedAt.atZone(zoneId).toLocalDate() }.map { it.key to it.value }
 
@@ -546,12 +461,6 @@ private val reconnectConnections = setOf(ConnectionState.SIGN_IN_REQUIRED, Conne
 private fun trendSymbol(trend: Trend) = when (trend) {
     Trend.RISING_QUICKLY -> "↑"; Trend.RISING, Trend.RISING_SLOWLY -> "↗"; Trend.STEADY -> "→"
     Trend.FALLING, Trend.FALLING_SLOWLY -> "↘"; Trend.FALLING_QUICKLY -> "↓"; Trend.UNKNOWN -> ""
-}
-private fun personStatus(state: PersonDisplayState) = when (state.connection) {
-    ConnectionState.READY -> when (state.freshness) { ReadingFreshness.FRESH -> "Current"; ReadingFreshness.DELAYED -> "Reading delayed"; ReadingFreshness.STALE -> "No recent reading"; ReadingFreshness.INVALID_TIME -> "Reading time unavailable"; ReadingFreshness.ABSENT -> "Waiting for first reading" }
-    ConnectionState.FETCHING -> "Checking now"; ConnectionState.OFFLINE -> "Offline · showing last reading"; ConnectionState.BACKING_OFF -> "Waiting to retry"
-    ConnectionState.SIGN_IN_REQUIRED -> "Sign-in required"; ConnectionState.TERMS_REQUIRED -> "LibreLinkUp terms required"; ConnectionState.CONNECTION_REMOVED -> "Connection unavailable"
-    ConnectionState.PROTOCOL_ERROR -> "Source response unavailable"; ConnectionState.LOCAL_ERROR -> "Local data unavailable"
 }
 private fun dayLabel(day: LocalDate, now: Instant, zoneId: ZoneId, locale: Locale): String {
     val today = now.atZone(zoneId).toLocalDate()

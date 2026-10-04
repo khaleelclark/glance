@@ -183,7 +183,7 @@ internal fun GlanceMark(modifier: Modifier = Modifier, inverse: Boolean = false)
     }
 }
 
-internal enum class GlanceGlyph { NOW, LOGBOOK, PEOPLE, SETTINGS, REFRESH, BACK }
+internal enum class GlanceGlyph { NOW, LOGBOOK, SETTINGS, REFRESH, BACK }
 
 /** Dependency-free line icons keep the UI crisp without importing a second icon system. */
 @Composable
@@ -207,14 +207,6 @@ internal fun GlanceGlyphIcon(
                     val y = size.height * (.34f + index * .17f)
                     drawLine(color, Offset(size.width * .34f, y), Offset(size.width * .68f, y), line, StrokeCap.Round)
                 }
-            }
-            GlanceGlyph.PEOPLE -> {
-                drawCircle(color, size.width * .12f, Offset(size.width * .39f, size.height * .35f), style = stroke)
-                drawCircle(color, size.width * .10f, Offset(size.width * .68f, size.height * .40f), style = stroke)
-                drawArc(color, 195f, 150f, false,
-                    Offset(size.width * .14f, size.height * .42f), Size(size.width * .5f, size.height * .42f), style = stroke)
-                drawArc(color, 195f, 145f, false,
-                    Offset(size.width * .49f, size.height * .48f), Size(size.width * .36f, size.height * .32f), style = stroke)
             }
             GlanceGlyph.SETTINGS -> {
                 listOf(.28f to .65f, .50f to .38f, .72f to .58f).forEach { (y, knob) ->

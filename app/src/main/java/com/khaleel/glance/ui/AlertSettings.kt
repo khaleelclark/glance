@@ -63,12 +63,11 @@ internal fun AlertSettings(
     onRuleChange: (AlertKind, AlertRule) -> Unit,
     onSoundChange: (AlertKind) -> Unit,
     onOpenNotificationSettings: () -> Unit,
-    personName: String? = null,
 ) {
     var editingName by rememberSaveable { mutableStateOf<String?>(null) }
     val editing = AlertKind.entries.firstOrNull { it.name == editingName }
     Text(
-        personName?.let { "Limits and repeat timing for $it." } ?: "Choose a limit, then turn it on.",
+        "Choose a limit, then turn it on.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -111,7 +110,6 @@ internal fun AlertSettings(
                 savedRule = config[kind],
                 config = config,
                 unit = unit,
-                personName = personName,
                 onRuleChange = onRuleChange,
                 onSoundChange = onSoundChange,
                 onDone = { editingName = null },
@@ -126,7 +124,6 @@ private fun AlertRuleSheet(
     savedRule: AlertRule,
     config: AlertConfig,
     unit: GlucoseUnit,
-    personName: String?,
     onRuleChange: (AlertKind, AlertRule) -> Unit,
     onSoundChange: (AlertKind) -> Unit,
     onDone: () -> Unit,
@@ -152,7 +149,6 @@ private fun AlertRuleSheet(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text(kind.label, style = MaterialTheme.typography.headlineSmall)
-        personName?.let { Text("Alert for $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics {
                 contentDescription = "Enable ${kind.label} alert"

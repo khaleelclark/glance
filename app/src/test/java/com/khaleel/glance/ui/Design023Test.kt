@@ -3,13 +3,8 @@ package com.khaleel.glance.ui
 import com.khaleel.glance.alerts.AlertHistoryEntry
 import com.khaleel.glance.alerts.AlertKind
 import com.khaleel.glance.core.Connection
-import com.khaleel.glance.core.ConnectionState
-import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
-import com.khaleel.glance.core.PersonDisplayState
 import com.khaleel.glance.core.Reading
-import com.khaleel.glance.core.ReadingFreshness
-import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Trend
 import java.time.Instant
 import java.time.ZoneId
@@ -20,17 +15,6 @@ import org.junit.Test
 
 class Design023Test {
     private val now = Instant.parse("2026-10-04T18:00:00Z")
-
-    @Test fun rosterKeepsPrimaryFirstAndRemovesDuplicateProviderEntries() {
-        val primary = Connection("a", "Alex")
-        val other = Connection("b", "Bailey")
-        val state = state(primary).copy(people = listOf(
-            PersonDisplayState(primary, reading("a", 110.0, now), ReadingFreshness.FRESH),
-            PersonDisplayState(other, reading("b", 130.0, now), ReadingFreshness.FRESH),
-        ))
-
-        assertEquals(listOf("a", "b"), rosterStates(state).map { it.person.id })
-    }
 
     @Test fun deltaUsesOnlyLatestEarlierSourceObservationAndActualInterval() {
         val current = reading("a", 118.0, now)
@@ -59,17 +43,6 @@ class Design023Test {
         assertEquals(2, groups.size)
         assertEquals("1", groups.first().second.single().id)
     }
-
-    private fun state(person: Connection) = DisplayState(
-        monitoringEnabled = true,
-        runtime = RuntimeState.RUNNING,
-        connection = ConnectionState.READY,
-        person = person,
-        reading = reading(person.id, 118.0, now),
-        freshness = ReadingFreshness.FRESH,
-        lastSuccessfulFetch = now,
-        nextAllowedFetch = null,
-    )
 
     private fun reading(connectionId: String, value: Double, at: Instant) = Reading(
         connectionId = connectionId,

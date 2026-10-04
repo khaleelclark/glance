@@ -200,8 +200,13 @@ passed on the API 36 emulator. Evidence is in `api36-chart-0.25.0.json` and
 nickname checks exercise actual Android Keystore storage; UI callbacks remain
 synthetic. The original screen images retain the normal-font 40/50 overlap
 caught during visual inspection. Presentation fix 30d3f02 passed 217 phone
-unit tests with zero failures/errors/skips and zero debug lint errors. Focused
-corrected font/axis inspection and native rerun are pending.
+unit tests with zero failures/errors/skips and zero debug lint errors. The corrected
+17-check native rerun passed at clean cfb0764; the focused three-check normal
+font/200% portrait/landscape profile passed at 1466ebf with generated evidence
+only. Root inspected all corrected axis/tooltip/preset images: the 40/50 labels
+are separate and the full selected value/unit/time fit in both orientations.
+Evidence: `api36-chart-0.25.0-axis-fix.json` and
+`api36-ui-0.25.0-font-fix.json`. Production source is unchanged since 30d3f02.
 
 Button-navigation screenshots show the app surface behind the system buttons
 in light/dark modes. They do not establish Samsung One UI rendering. Live

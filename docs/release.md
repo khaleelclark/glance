@@ -80,7 +80,7 @@ application ID and signer for every upgrade; increment versionCode.
    enabled ordinary alert settings, falling back independently to 70/240 when
    off. Below Low is red; above High is yellow. Edge arrows mark readings outside
    the scale; the value readout on the graph retains the actual value, with
-   its measurement time aligned beneath the crosshair. The current reading places the
+   its measurement time directly below the value in the same top tooltip. The current reading places the
    value, unit, and trend arrow together, with a plain-language trend below;
    landscape places the graph beside it. Settings has color presets, a
    touchable color wheel, brightness slider, and a custom six-digit hex field; light and dark themes

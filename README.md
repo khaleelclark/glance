@@ -13,6 +13,7 @@ top graph tooltip. The status dot sits beside Refresh, and the system navigation
 bar follows the app surface. Set **Settings → Reading → Follower nickname** to
 show an alias in the app and notifications; leave it blank to restore the source
 name. Source identity and glucose values stay unchanged.
+See [0.25 verification](docs/refinement-025-validation.md).
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.

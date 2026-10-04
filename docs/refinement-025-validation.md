@@ -46,9 +46,18 @@ Y-axis bounds with text size. Source, Canvas plot geometry, thresholds and all
 selection/gesture logic are unchanged. Corrected candidate: 217 phone JVM tests,
 zero failures/errors/skips, debug assembly successful, debug lint zero errors.
 
-Pending: corrected native/visual checks at normal and 200% font in both
-orientations, read-only review closure, clean release
-signing, same-signer checks, APK/manifest publication, and source push.
+Corrected native receipt api36-chart-0.25.0-axis-fix.json passes all 17 checks
+at clean cfb0764 (docs-only after production 30d3f02). Corrected fixture SHA-256:
+640e98fe43538b3537765e88305128fb0f51cc6dffa43d0ed97b9a13715f77ff. The focused
+profile api36-ui-0.25.0-font-fix.json passes three checks at 1466ebf, with generated
+evidence only dirty. Root inspected normal-font axis separation and both
+portrait/landscape 200% tooltip and preset screenshots: full 113 mg/dL and full
+localized measurement date/time are visible together, with reachable presets.
+Canvas plot geometry and source rules remained unchanged since review candidate
+30d3f02; only documentation/evidence has followed.
+
+Pending: read-only review closure, clean release signing, same-signer checks,
+APK/manifest publication, and source push.
 
 Live LibreLinkUp, Samsung One UI, TalkBack, overnight/background, battery,
 physical watch and audible-alert qualification are not claimed by emulator

@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -123,7 +122,7 @@ internal fun CompletedGlanceApp(
 @Composable
 private fun GlanceBottomBar(items: List<AppDestination>, selected: AppDestination, onSelect: (AppDestination) -> Unit) {
     NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp,
-        modifier = Modifier.navigationBarsPadding()) {
+    ) {
         items.forEach { item ->
             NavigationBarItem(
                 selected = item == selected,
@@ -158,12 +157,12 @@ internal fun MainReadingScreen(
             selectedTime, { selectedTime = it }, settings.alerts)
     }
     if (landscape) {
-        Row(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(Modifier.fillMaxSize().padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(Modifier.weight(.43f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp), content = summary)
             Column(Modifier.weight(.57f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp), content = chart)
         }
     } else {
-        Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(18.dp),
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) { summary(); chart() }
     }
 }
@@ -245,12 +244,12 @@ private fun LogbookScreen(
     val groups = groupAlertHistory(history, zoneId)
     val time = remember(zoneId, locale) { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).withZone(zoneId) }
     ScreenList {
-        ScreenHeader("Logbook", "Glucose alerts that fired on this phone") {
+        ScreenHeader("Logbook", "Glucose alerts posted by Glance") {
             if (history.isNotEmpty()) TextButton({ confirmClear = true }) { Text("Clear") }
         }
         if (history.isEmpty()) GlanceCard(Modifier.fillMaxWidth()) {
             Text("No alerts yet", style = MaterialTheme.typography.titleLarge)
-            Text("When a glucose alert fires, its type and source reading will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("When Glance posts a glucose alert, its type and source reading will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         groups.forEach { (day, entries) ->
             Text(dayLabel(day, now, zoneId, locale), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium,
@@ -265,7 +264,11 @@ private fun LogbookScreen(
                             Text(entry.person.displayName, style = MaterialTheme.typography.bodyMedium)
                             Text(GlucoseFormat.withUnit(entry.reading, settings.unit, locale) + trendSymbol(entry.reading.trend).let { if (it.isBlank()) "" else "  $it" },
                                 style = MaterialTheme.typography.headlineSmall)
-                            Text("Source reading ${time.format(entry.reading.measuredAt)} · Alert fired ${time.format(entry.firedAt)}",
+                            val sourceTime = if (entry.reading.measuredAt.atZone(zoneId).toLocalDate() == day) {
+                                time.format(entry.reading.measuredAt)
+                            } else DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(locale)
+                                .withZone(zoneId).format(entry.reading.measuredAt)
+                            Text("Source reading $sourceTime · Posted ${time.format(entry.firedAt)}",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -339,7 +342,7 @@ internal fun SettingsScreen(
     }
     sheet?.let { active ->
         ModalBottomSheet({ sheet = null }, sheetState = rememberModalBottomSheetState(true), containerColor = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (active) {
                     SettingsSheet.UNIT -> SheetChoices("Display units", listOf("mg/dL" to (settings.unit == GlucoseUnit.MG_DL), "mmol/L" to (settings.unit == GlucoseUnit.MMOL_L))) {
                         callbacks.onUnitChanged(if (it == "mg/dL") GlucoseUnit.MG_DL else GlucoseUnit.MMOL_L); sheet = null }
@@ -362,14 +365,14 @@ internal fun SettingsScreen(
         confirmButton = { TextButton({ help = false }) { Text("Done") } })
     confirm?.let { action ->
         AlertDialog({ confirm = null }, title = { Text(if (action == ConfirmAction.SIGN_OUT) "Sign out?" else "Delete local data?") },
-            text = { Text(if (action == ConfirmAction.SIGN_OUT) "Monitoring will stop and saved account and reading data will be removed." else "Saved readings and local diagnostics will be removed. This cannot be undone.") },
+            text = { Text(if (action == ConfirmAction.SIGN_OUT) "Monitoring will stop and saved account, reading and alert-log data will be removed." else "Saved readings, alert history and local diagnostics will be removed. This cannot be undone.") },
             confirmButton = { TextButton({ confirm = null; if (action == ConfirmAction.SIGN_OUT) callbacks.onSignOut() else callbacks.onDeleteLocalData() }) { Text(if (action == ConfirmAction.SIGN_OUT) "Sign out" else "Delete") } },
             dismissButton = { TextButton({ confirm = null }) { Text("Cancel") } })
     }
 }
 
 @Composable private fun ScreenList(content: @Composable ColumnScope.() -> Unit) = Column(
-    Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(18.dp),
+    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
     verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
 
 @Composable

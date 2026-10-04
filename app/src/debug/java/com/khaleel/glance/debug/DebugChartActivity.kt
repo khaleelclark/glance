@@ -224,7 +224,7 @@ class ChartGestureInstrumentation : Instrumentation() {
 
     private fun checkColorBands(red: Int, orange: Int, low: Double = 70.0, high: Double = 240.0) {
         val bounds = Rect().also { chart().getBoundsInScreen(it) }
-        val inset = bounds.height() * 16f / 220
+        val inset = 16f * targetContext.resources.displayMetrics.density
         val bitmap = checkNotNull(uiAutomation.takeScreenshot())
         try {
             fun lineHasColor(value: Double, expected: Int): Boolean {

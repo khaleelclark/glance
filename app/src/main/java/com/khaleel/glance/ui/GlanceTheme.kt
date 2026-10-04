@@ -109,6 +109,8 @@ internal object ThemeAccent {
             onSecondaryContainer = onBackground,
             tertiary = lerp(primary, if (dark) Color.White else Color.Black, 0.24f),
             onTertiary = onPrimary,
+            tertiaryContainer = container,
+            onTertiaryContainer = onBackground,
             background = background,
             onBackground = onBackground,
             surface = surface,

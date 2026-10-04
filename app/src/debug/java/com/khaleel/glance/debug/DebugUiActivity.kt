@@ -84,7 +84,7 @@ class DebugUiActivity : ComponentActivity() {
             if (mode == "stale") ReadingFreshness.STALE else ReadingFreshness.FRESH,
             now, null, history)
         setContent {
-            var alarmHistory by remember { mutableStateOf(
+            var alarmHistory by remember { mutableStateOf<List<AlertHistoryEntry>>(
                 if (mode == "emptyLog") emptyList() else AlertKind.entries.mapIndexed { index, kind ->
                     val value = when (kind) {
                         AlertKind.LOW -> 65.0

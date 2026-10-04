@@ -166,7 +166,9 @@ class AlertEngineTest {
         val history = MemoryHistory()
         val reading = reading(305.0, start)
         val live = display(reading)
-        val engine = AlertEngine(store, MemoryDelivery(), MutableClock(start), { live }, { false }, history)
+        val delivery = MemoryDelivery()
+        val clock = MutableClock(start)
+        val engine = AlertEngine(store, delivery, clock, { live }, { false }, history)
         engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
         val snapshot = store.state
 
@@ -174,6 +176,10 @@ class AlertEngineTest {
 
         assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
         assertEquals(snapshot, store.state)
+        clock.now = start.plusSeconds(600)
+        engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
+        assertEquals(1, delivery.posted.size)
+        assertTrue(history.events.value.isEmpty())
     }
 
     @Test fun clearHistoryWaitsForPendingAppendAndClearsItLast() {

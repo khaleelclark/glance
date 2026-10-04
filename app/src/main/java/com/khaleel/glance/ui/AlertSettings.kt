@@ -4,6 +4,8 @@ import android.graphics.Color
 import android.view.ViewGroup
 import android.widget.NumberPicker
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -145,7 +147,7 @@ private fun AlertRuleSheet(
     val (minimum, maximum) = alertRange(kind, config)
     val values = remember(minimum, maximum, unit) { thresholdWheelValues(minimum, maximum, unit) }
     Column(
-        Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text(kind.label, style = MaterialTheme.typography.headlineSmall)

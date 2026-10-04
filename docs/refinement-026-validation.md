@@ -32,7 +32,21 @@ mode does not restore a custom theme. The smaller plot's geometry is unchanged.
 The native runner checks idle solid-green marker pixels, held selection and
 release/cancel dismissal, independently of the synthetic UI callbacks.
 
-Independent source review, clean release tests/signing, signer continuity,
+Independent review of exact 8cadd4da40e7279f6ecfbb064e76b64f5b38f068 found
+no HIGH/MEDIUM regression and one LOW: the platform light starting window
+preceded the black Compose UI. Production correction ca538e7 defines black
+platform windows/system bars and an explicit black API 31+ splash. Debug assembly
+passes. A second complete native chart run passes all 20 checks on clean ca538e7,
+fixture c645275ecf0e8691f4bbee9f30f285f3dd5cf7bf3f146d531ad5479e2ce4d5d1.
+Receipt: api36-chart-0.26.0-launch-theme.json. Root captured an actual COLD launch
+under system light mode and inspected the black splash, lilac droplet, light
+system-bar icons and final black synthetic production screen. Three focused
+compiled-resource/visual checks pass; see api36-launch-theme-0.26.0.json.
+Host KVM access uses the already configured kvm group via sg; no permission
+configuration was changed. API 30 launch resources compile but were not run.
+Android's launch-window attributes follow the official [splash-screen guidance](https://developer.android.com/develop/ui/views/launch/splash-screen).
+
+Independent launch-window closure, clean release tests/signing, signer continuity,
 artifact publication and source push remain pending. The final signed APK is
 not claimed to run in the emulator. Synthetic debug evidence cannot qualify
 live LibreLinkUp, Samsung One UI, TalkBack, overnight/background, battery,

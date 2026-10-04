@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "productionCandidate": "ca538e7930817e1168c35bde0d302d646b58f76c",
+  "sourceCommitAtRun": "ca538e7930817e1168c35bde0d302d646b58f76c",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "c645275ecf0e8691f4bbee9f30f285f3dd5cf7bf3f146d531ad5479e2ce4d5d1",
+  "checks": {
+    "compiledManifestAndBothThemeConfigurationsUseBlackLaunchWindow": true,
+    "coldStartInSystemLightModeShowsBlackSplashAndLightSystemIcons": true,
+    "coldStartReachesBlackSyntheticProductionScreen": true
+  },
+  "allPassed": true,
+  "inspection": "aapt resource/manifest dump plus manual visual inspection of cold-start frames 1 and 7. am start reports LaunchState COLD, TotalTime 1642ms. This is debug synthetic launch evidence, not signed-release runtime qualification.",
+  "notRun": [
+    "Samsung One UI",
+    "API 30 starting window runtime",
+    "final signed APK launch",
+    "live account"
+  ]
+}

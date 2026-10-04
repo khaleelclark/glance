@@ -232,3 +232,10 @@ Screen checks cover top source time and actual age once, stale labels, absence
 of theme controls, both system modes and 200% portrait/landscape reachability.
 Root inspected the screenshots; these tests do not qualify Samsung One UI,
 TalkBack, physical watch, live LibreLinkUp, overnight operation or battery.
+
+The 0.26 launch-window correction ca538e7 also passes all 20 native chart checks
+on its exact clean debug fixture. Three focused compiled-resource/visual checks
+confirm the black cold-start splash and light system icons under system light
+mode, followed by the black synthetic production screen. See
+[evidence/api36-launch-theme-0.26.0.json](evidence/api36-launch-theme-0.26.0.json).
+API 30 launch runtime and final signed APK launch are not run.

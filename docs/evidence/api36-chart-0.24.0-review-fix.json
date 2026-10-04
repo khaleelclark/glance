@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "oneFingerScrubsWithoutPanningOrParentScrolling": true,
+    "pinchDoesNotChangePresetWindow": true,
+    "twoFingerGesturesDoNotChangeSelectedReading": true,
+    "twoFingerDragDoesNotScrollTimeline": true,
+    "threeSixTwelveTwentyFourHourPresetsWork": true,
+    "liftingOneFingerDoesNotSwitchFromMultiTouchToScrub": true,
+    "accessibilityUsesReadingSelectionAndPresetsWithoutZoom": true,
+    "accessibleReadingNavigationStopsAtPresetEdgesWithoutPanning": true,
+    "pinchCannotChangeTwentyFourHourPreset": true,
+    "fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty": true,
+    "defaultHorizontalLinesAndLowHighTraceColorsRender": true,
+    "outOfScaleSelectionPreservesActualValues": true,
+    "enabledOrdinaryLimitsSyncIndependently": true,
+    "mmolScaleAndLimitsConvertWithIdenticalColorGeometry": true,
+    "darkThemeHorizontalLinesAndLowHighColorsRender": true,
+    "emptyPresetDoesNotAnnounceHiddenSelection": true,
+    "widerPresetRestoresRealSelectedSource": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "7734fbcb5b13b8c869dd6be374a8bb406c5f9a339df4171e318796774e77485b",
+  "sourceCommitAtRun": "fc28c35bede016fca999728be026594b4633a75e",
+  "sourceDirtyAtRun": false,
+  "fixtureType": "Debug-only synthetic APK; not a release deliverable",
+  "GalaxyS25Ultra": "not tested",
+  "liveAccount": "not tested"
+}

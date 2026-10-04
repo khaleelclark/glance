@@ -5,8 +5,8 @@ Status: work in progress; no live follower account or Galaxy S25 Ultra has been 
 ## 0.24.0 graph and reading refinement
 
 Integrated debug verification passes 208 phone JVM tests, zero failures/errors/
-skips and zero debug lint errors. Synthetic API 36 fixtures pass 15 native chart
-checks, 11 integrated UI checks and two focused 200% font checks after visual
+skips and zero debug lint errors. Synthetic API 36 fixtures pass 17 corrected native chart
+checks (including empty-window semantics), 11 integrated UI checks and two focused 200% font checks after visual
 inspection caught and corrected graph value/unit/time clipping. These receipts
 use distinct baseline/correction APK hashes and source/dirty states; see
 [refinement-024-validation.md](refinement-024-validation.md) for exact boundaries.

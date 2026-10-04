@@ -1,6 +1,6 @@
 # Glance 0.24 refinement validation
 
-Status: integrated implementation and focused font correction at d6db76e;
+Status: integrated implementation and chart review corrections at fc28c35;
 final source review and clean release verification remain in progress. Base is clean 0.23 source d5a91c9.
 
 ## Scope
@@ -59,8 +59,19 @@ independently to reach its presets; the top and bottom screenshots show this
 rather than claiming the entire 200% chart fits simultaneously.
 
 This follow-up is not a full baseline rerun or execution of the final signed
-release APK. Final read-only source review and clean release verification are
-pending.
+release APK. The integrated source review at 52ff7a3 and large-text correction review at
+d6db76e found no HIGH/MEDIUM blocker. Two localized LOW findings were corrected
+at fc28c35: selected tooltip text now uses the existing range container/
+on-container colors (all six light/dark pairs exceed 10:1 by calculation), and
+empty presets announce no source readings without a hidden selected value.
+
+The corrected fixture passed **17 native chart checks**, including all 15 prior
+checks and two empty-window/wider-preset checks. Its receipt records clean
+fc28c35, APK SHA-256
+`7734fbcb5b13b8c869dd6be374a8bb406c5f9a339df4171e318796774e77485b`.
+Three focused light-mode source-range screenshots verify the final tooltip
+containers. The final LOW correction review and clean release verification
+remain pending.
 
 ## Device limits
 

@@ -24,8 +24,11 @@ an empty selected preset announced the latest retained off-window point even
 though its visual overlay was hidden. The correction uses the existing range
 container/on-container palette and only announces a visible selection, explicitly
 announcing an empty window through chart semantics. Dedicated native checks
-cover the empty six-hour preset and recovery through a wider preset. Final
-correction evidence/review remains pending at this document's creation.
+cover the empty six-hour preset and recovery through a wider preset. Correction fc28c35 passed 17 native chart checks at its exact clean source,
+including the empty-window and wider-preset cases. The six selected tooltip
+container/on-container pairs exceed 10:1 contrast; focused light-mode range
+screenshots are inspected separately. Final source correction review remains
+pending.
 
 ## Large text correction
 

@@ -7,14 +7,20 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.26.0 uses a smaller droplet logo, a fixed black background, graphite
+Version 0.27.0 retains a smaller droplet logo, a fixed black background, graphite
 cards and lilac controls. The custom color picker is removed. The reading card
 starts with **Reading at <source time> · <actual age>**; delayed/stale/time warnings
 remain explicit. Hold and drag the graph to inspect a real reading; release or
 cancel to dismiss the tooltip and selection. The permanent endpoint dot is gone.
 Screen-reader reading actions also offer **Latest reading** and **Dismiss reading**.
 Follower nicknames remain under Settings → Reading and carry into notifications.
-See [0.26 verification](docs/refinement-026-validation.md).
+Glucose alerts now use the glucose number as their status icon. While an alert
+remains visible, its icon follows the latest eligible reading quietly; its text
+keeps the category and source reading/time that triggered it. Ongoing and enhanced
+notifications also retain eligible number icons. Keep notification visible
+protects the reading card from Clear all and restores it after individual swipes.
+
+See [0.27 verification](docs/notification-027-validation.md).
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.

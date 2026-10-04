@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `31`, and versionName
-`0.26.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `32`, and versionName
+`0.27.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -59,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.26.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.27.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -415,3 +415,26 @@ See [0.26 validation](refinement-026-validation.md). Update an existing Studio
 installation from the same computer/debug signer. The personal APK can only
 update an installation with its existing personal signer. Live-account/Samsung,
 TalkBack, overnight/battery and physical-watch qualification remain outstanding.
+
+## 0.27.0 numeric alert icons and reading-card retention
+
+Glucose alerts use the same eligible source-number status icon as the ongoing
+card. The visible alert icon follows the latest reading/unit quietly, without
+re-evaluating thresholds, resetting cooldowns or logging another event. Alert
+text retains its category and the triggering reading/time. Enhanced notification
+requests also retain eligible number icons. Number preference, hidden lock-screen
+values, source identity and freshness remain enforced; stale/absent/special or
+unrenderable values are not advertised as a current status-bar number.
+
+An opaque per-post delete token prevents dismissed alerts returning during an
+icon update and prevents an older callback clearing a newer alarm. On process
+recreation, prior visible numeric alarms with no in-memory identity scope are
+removed on the first render; encrypted alarm history remains available.
+
+The ongoing reading card already uses ONGOING/NO_CLEAR for Clear all protection.
+Keep notification visible defaults on and restores its regular card after a
+valid current-session swipe callback. Android 14+ allows individual swipes on
+ordinary ongoing cards; Glance cannot promise zero motion/removal before the
+callback restores it. Stop/sign-out still remove the card. The toggle's wording
+now explains both behaviors. See the official [Android behavior](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)
+and [0.27 validation](notification-027-validation.md).

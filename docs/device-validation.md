@@ -239,3 +239,12 @@ confirm the black cold-start splash and light system icons under system light
 mode, followed by the black synthetic production screen. See
 [evidence/api36-launch-theme-0.26.0.json](evidence/api36-launch-theme-0.26.0.json).
 API 30 launch runtime and final signed APK launch are not run.
+
+## 0.27 numeric alarm icons and reading-card retention
+
+219 JVM tests pass; debug assembly and lint (zero errors) pass. Native framework checks pass all 16 icon/privacy/
+delete-token assertions on clean 227b943, and the same debug APK passes ten
+foreground-service retention scenarios including actual Clear all and individual
+swipe. Both alarm and ongoing card display a numeric small icon in the High DEMO
+preview. See [0.27 validation](notification-027-validation.md) for fixture hashes,
+exact source/dirty boundaries, pending review/release work and device limitations.

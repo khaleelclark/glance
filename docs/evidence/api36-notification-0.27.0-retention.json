@@ -1,0 +1,24 @@
+{
+  "sdk": "36",
+  "checks": {
+    "legacy_grant_not_reimported_after_process_recreation_other_settings_preserved": true,
+    "original_and_public_clear_protection": true,
+    "old_generation_ignored": true,
+    "clear_all_removes_disposable_but_retains_glance": true,
+    "real_swipe_restores_regular_card": true,
+    "privacy_off_posts_redacted_card_without_numeric_icon_graph_or_chip": true,
+    "retention_off_respects_real_swipe": true,
+    "stop_removes_card_and_no_restoration": true,
+    "person-change_rejects_old_delete_intent": true,
+    "sign-out_rejects_old_delete_intent": true
+  },
+  "promotion_on_emulator": false,
+  "samsung_now_bar": "not tested",
+  "synthetic": true,
+  "allPassed": true,
+  "fixtureApkSha256": "94bfce960085a43225a78ab8486839feaab5408ec1b3bc208a12f63436a3b014",
+  "sourceCommitAtRun": "227b9436cb61cb86d425059a5bc0817c2cdda410",
+  "sourceDirtyAtRun": true,
+  "scope": "Actual API 36 synthetic foreground service, Clear all and real swipe; dirty generated evidence/scripts/docs only, production source pinned to 227b943",
+  "SamsungOneUI": "not tested"
+}

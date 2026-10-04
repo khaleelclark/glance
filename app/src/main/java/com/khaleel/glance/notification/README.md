@@ -21,6 +21,14 @@ Fresh numeric readings use a generated 96×96 alpha-mask small icon in the
 selected unit by default. Nonfresh, special, absent, stopped, and unrenderably
 long values use the Glance icon. The user can disable numeric icons. Public
 versions always retain the ordinary icon. Android controls tint and icon size.
+Glucose alerts share this same number policy, including numeric-icon preference,
+privacy, source-person identity and freshness. A visible alert's icon follows the
+latest reading/unit silently (ONLY_ALERT_ONCE) while preserving its original
+category and triggering reading/time. Promoted requests retain eligible numbers
+too. Alert delete intents use an opaque per-post token and explicit non-exported
+receiver; delayed callbacks cannot clear a later alarm. Missing/dismissed alerts
+are not republished by icon refresh. A new process discards an unscoped prior
+alarm card on first render, keeping its encrypted history record.
 
 Ongoing and NO_CLEAR request protection from Clear all on both card variants.
 The owner reports Samsung clearing the card anyway. The explicit personal-build

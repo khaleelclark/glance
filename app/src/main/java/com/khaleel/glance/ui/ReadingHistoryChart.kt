@@ -164,6 +164,7 @@ internal fun ReadingHistoryChart(
     val fontScale = LocalDensity.current.fontScale
     val geometry = chartGeometryDp(compact, fontScale)
     val chartHeight = geometry.height.dp
+    val axisHeight = 22.dp * fontScale.coerceAtLeast(1f)
     val points = chartPoints(history, connectionId, now)
     val limits = chartLimits(alerts)
     var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.75) }
@@ -239,7 +240,7 @@ internal fun ReadingHistoryChart(
                     val topRail = geometry.topRail.dp
                     val bottomRail = geometry.bottomRail.dp
                     val plotHeight = chartHeight - topRail - bottomRail
-                    Box(Modifier.width(48.dp * fontScale.coerceAtLeast(1f)).height(chartHeight)) {
+                    Box(Modifier.width(48.dp * fontScale.coerceAtLeast(1f)).height(chartHeight + axisHeight)) {
                         Text(
                             unit.label,
                             Modifier.offset(y = 2.dp),
@@ -248,7 +249,7 @@ internal fun ReadingHistoryChart(
                         )
                         for (value in chartGridLabelValues(compact || fontScale >= 1.5f)) {
                             val y = if (value == chartBottomMgDl) {
-                                topRail + plotHeight - if (fontScale >= 1.5f) 30.dp else 12.dp
+                                topRail + plotHeight + 8.dp * fontScale.coerceAtLeast(1f)
                             }
                             else topRail + plotHeight * chartYFraction(value).toFloat() - 8.dp
                             Text(axisValue(value, points[0], unit, locale), Modifier.offset(y = y),
@@ -460,7 +461,7 @@ internal fun ReadingHistoryChart(
                             }
                             val axisTimeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
                                 .withLocale(locale).withZone(zoneId)
-                            Box(Modifier.width(chartWidth).height(22.dp)) {
+                            Box(Modifier.width(chartWidth).height(axisHeight)) {
                                 var previousLabelEnd = (-1).dp
                                 for (tick in timeTicks) {
                                     val fraction = timeFraction(tick, now)

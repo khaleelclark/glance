@@ -208,6 +208,14 @@ def font_fix():
     old_night = ui.adb('shell', 'cmd', 'uimode', 'night').strip()
     focused = {}
     try:
+        ui.adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0')
+        ui.adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0')
+        ui.adb('shell', 'settings', 'put', 'system', 'user_rotation', '0')
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'yes')
+        ui.start()
+        assert ui.find('40', True).get('text') == '40' and ui.find('50', True).get('text') == '50'
+        snapshot('axis-fix-normal')
+        focused['normalFontKeepsBothFortyAndFiftyAxisLabels'] = True
         ui.adb('shell', 'settings', 'put', 'system', 'font_scale', '2.0')
         ui.adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0')
         ui.adb('shell', 'cmd', 'uimode', 'night', 'yes')
@@ -221,6 +229,19 @@ def font_fix():
             description = ui.find('source readings over 24 hours').get('content-desc')
             assert 'Selected source reading 113 mg/dL' in description and 'measured' in description
             snapshot('font-fix-' + name)
+            for _ in range(8):
+                if ui.visible('Glucose trend'):
+                    break
+                root = ui.tree()
+                scrolling = [n for n in root.iter('node') if n.get('scrollable') == 'true']
+                column = next((n for n in scrolling if any('source readings over 24 hours' in ui.label(child)
+                    for child in n.iter('node'))), scrolling[-1])
+                left, top, right, bottom = map(int, re.findall(r'\d+', column.get('bounds')))
+                ui.adb('shell', 'input', 'swipe', str(left + 8), str(top + (bottom-top)//4),
+                    str(left + 8), str(top + (bottom-top)*3//4), '250')
+                ui.settle()
+            assert ui.visible('Glucose trend')
+            snapshot('font-fix-' + name + '-tooltip')
             focused[name + 'AtTwoHundredPercentKeepsReadingAndPresetAndSourceSemantics'] = True
         apk = ui.adb('shell', 'pm', 'path', 'com.khaleel.glance').strip().removeprefix('package:')
         assert re.fullmatch(r'/data/app/[A-Za-z0-9/_.=+~\-]+/base\.apk', apk)

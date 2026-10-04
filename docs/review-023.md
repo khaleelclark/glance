@@ -49,8 +49,26 @@ after the second pointer is present, translation does not pan or change selectio
 Existing native gesture checks cover the latter behavior. Neither observation
 was identified as a HIGH/MEDIUM release blocker.
 
-Final corrected-source review is a separate required gate. Its exact source
-commit and canonical outcome will be saved alongside the final release
-manifest/APKs; this record does not claim approval of an unreviewed correction.
+## Final correction review
+
+The independent reviewer completed the bounded read-only correction review at
+clean `main@310d908229e434684de649d27de3f5adca330f66`, inspecting
+`8e3cd74..310d908` and the affected wiring/evidence. The original MEDIUM and
+targeted LOW findings are closed; no HIGH/MEDIUM source blocker remains. The
+reviewer found the candidate ready for clean release signing/source push,
+subject to the separate release artifact verification steps. No build, test,
+device, signing, credential or push action was performed by the reviewer.
+
+The five-check correction receipt and three DEMO screenshots were verified;
+the baseline 24 UI / 16 chart / 8 storage checks retain their own fixture hashes.
+This evidence does not claim an exact-clean-final-commit emulator run, a full
+24-check correction rerun, real Android disk-failure injection or TalkBack use.
+
+The final documentation clarification records that failed local-data deletion
+can leave the log visible while signed in; signed-out hiding applies after
+sign-out. No production source changed after the reviewed correction commit.
+The release manifests identify the complete delivered source revision, and the
+canonical review outcome is retained alongside the APKs.
+
 Live account, Samsung, TalkBack, overnight, battery, car, physical watch and
 audible-alert qualification remain outstanding.

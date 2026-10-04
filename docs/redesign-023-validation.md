@@ -21,9 +21,10 @@ posting a notification does not prove that Android sounded it.
 The log is encrypted in no-backup storage and bounded to 1,000 records and 30
 days. Clearing the log must preserve the existing alert fingerprint/cooldown
 state. Explicit new sign-in requires successful log cleanup. Sign-out and local
-health-data deletion attempt cleanup and report partial failures; an unerased
-ledger remains encrypted/hidden and blocks another explicit sign-in until
-cleanup succeeds. Default diagnostic exports continue to exclude patient names, values
+health-data deletion attempt cleanup and report partial failures. After sign-out,
+an unerased ledger remains encrypted and hidden. Failed local-data deletion can
+leave the log visible in the signed-in Logbook. Another explicit sign-in requires
+successful cleanup. Default diagnostic exports continue to exclude patient names, values
 and alarm records. Custom accent choices are preserved; the default accent is
 now ocean blue.
 
@@ -139,9 +140,13 @@ injected disk failure has not been exercised; the MainActivity effect wiring is
 part of the source review. The focused accessibility checks verify semantics,
 rather than running TalkBack.
 
-Final independent review must approve the corrected source before release
-signing/push. Its exact reviewed source and outcome will accompany the final
-release artifacts; the earlier reviews do not themselves approve the correction.
+The final independent read-only correction review approved production source at
+`310d908229e434684de649d27de3f5adca330f66`: no HIGH/MEDIUM blocker remains, and
+the original cleanup blocker and targeted LOW findings are closed. See
+[review-023.md](review-023.md). The subsequent documentation-only clarification
+above distinguishes failed local deletion from signed-out hiding; it changes no
+production source. Final signed APK identity, clean release checks and delivery
+source revision are recorded separately in the release manifests.
 
 ## Device limits and owner update
 

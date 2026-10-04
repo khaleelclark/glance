@@ -71,7 +71,7 @@ class AlertEngine(
                     person = person,
                     kind = kind,
                     reading = current,
-                    firedAt = firedAt,
+                    firedAt = clock.now(),
                 ),
             )
         } else if (evaluation.clearExisting) {

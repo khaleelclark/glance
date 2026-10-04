@@ -45,16 +45,6 @@ class AlertHistoryRetentionTest {
         }))
     }
 
-    @Test fun accountBindingAcceptsOnlyLowercaseSha256ScopeKeys() {
-        val valid = "0123456789abcdef".repeat(4)
-        assertEquals(valid, AlertAccountScope.requireValid(valid))
-        listOf("", "raw-account-id", valid.uppercase(), valid.dropLast(1)).forEach { invalid ->
-            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
-                AlertAccountScope.requireValid(invalid)
-            }
-        }
-    }
-
     private fun entry(id: String, firedAt: Instant, owner: Connection) = AlertHistoryEntry(
         id = id,
         person = owner,

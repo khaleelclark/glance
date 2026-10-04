@@ -53,6 +53,21 @@ internal fun runAlarmHistoryProbe(context: Context): JSONObject {
     restored.clear()
     check(restored.events.value.isEmpty())
     check(EncryptedAlertHistoryStore(SecureFileStore(isolated), clock).events.value.isEmpty())
+    // Reject damaged authenticated ciphertext without exposing partially decoded records.
+    val encryptedFile = directory.listFiles().orEmpty().single { it.extension == "bin" }
+    val damaged = encryptedFile.readBytes()
+    damaged[damaged.lastIndex] = (damaged.last().toInt() xor 1).toByte()
+    encryptedFile.writeBytes(damaged)
+    val unreadable = EncryptedAlertHistoryStore(SecureFileStore(isolated), clock)
+    check(unreadable.events.value.isEmpty())
+    val sample = AlertHistoryEntry("synthetic-recovery", person, AlertKind.HIGH,
+        Reading(person.id, now.minusSeconds(60), 250.0, 250.0, GlucoseUnit.MG_DL,
+            null, Trend.STEADY, "synthetic-recovery-record", now), now)
+    check(runCatching { unreadable.append(sample) }.isFailure)
+    unreadable.clear()
+    unreadable.append(sample)
+    check(EncryptedAlertHistoryStore(SecureFileStore(isolated), clock).events.value == listOf(sample))
+    unreadable.clear()
     return JSONObject().apply {
         put("allFourExactTypesPersisted", true)
         put("recreatedStorePreservesRecords", true)
@@ -60,5 +75,7 @@ internal fun runAlarmHistoryProbe(context: Context): JSONObject {
         put("onDiskPatientNameNotPlaintext", true)
         put("clearPersistsAcrossRecreation", true)
         put("isolatedSyntheticDirectory", true)
+        put("damagedCiphertextFailsClosed", true)
+        put("explicitClearRepairsUnreadableHistory", true)
     }
 }

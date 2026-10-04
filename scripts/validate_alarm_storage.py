@@ -16,6 +16,8 @@ EXPECTED = {
     "onDiskPatientNameNotPlaintext",
     "clearPersistsAcrossRecreation",
     "isolatedSyntheticDirectory",
+    "damagedCiphertextFailsClosed",
+    "explicitClearRepairsUnreadableHistory",
 }
 
 

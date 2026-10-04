@@ -5,33 +5,13 @@ accepted for posting. It remains a single-person feature: alert settings,
 deduplication, notification IDs, and runtime behavior retain their existing
 interfaces and semantics.
 
-## Account binding
+## Account cleanup
 
-The backend supplies a stable lowercase SHA-256 `accountScopeKey`; raw provider
-account IDs must not be passed or stored. Before alert settings are read or a
-poll can be evaluated, integration calls both:
-
-```kotlin
-alertPreferences.bindAccount(accountScopeKey)
-alertHistory.bindAccount(accountScopeKey)
-```
-
-Call these during startup when saved authentication exists and immediately
-after successful sign-in, before accepting new poll results. A repeated binding
-to the same key preserves alert rules, deduplication/cooldowns, and log entries.
-Changing the key atomically clears each store before recording the new binding.
-
-For upgrade compatibility, the first `AlertPreferences` binding adopts the
-existing unbound rules and snapshot. The history store does not adopt an
-unbound version-1 log because its account cannot be proven: first binding writes
-an empty bound ledger. No history is published through `events` until binding
-succeeds. Invalid keys, unreadable encrypted state, or failed persistence throw;
-callers must stop alert evaluation rather than continue with another account's
-data. Explicit `clear()` can delete an unreadable ledger so setup can recover.
-
-Signed-out UI should hide the ledger. Signing out alone need not discard
-same-account preferences/history; binding a different account performs the
-privacy clear. Full local-data deletion can still call the explicit clear APIs.
+Explicit new sign-in clears the log before accepting another account session;
+if that clear fails, sign-in stops with a storage error. Sign-out and full local
+health-data deletion also clear the log. A routine restart with the existing
+encrypted session retains its history. No new account-binding or multiple-person
+API is introduced in this release.
 
 ## Encrypted local history
 
@@ -44,21 +24,26 @@ The observable list is newest first, deduplicated by event ID, limited to 1,000
 events, and pruned after 30 days. Loading bounds the parsed input and rejects
 invalid enums, timestamps, numeric fields, special-value alerts, and
 cross-person reading identities. Names, internal connection IDs, readings, and
-the account-scope digest remain only in encrypted no-backup storage; the alarm
+source details remain only in encrypted no-backup storage; the alarm
 log is not part of diagnostics or exports.
 
 `AlertEngine` takes `history: AlertHistoryPersistence = NoAlertHistory` as its
 trailing constructor argument. It appends only after `AlertDelivery.post()`
-returns successfully. Blocked channels, duplicate samples, cooldown-suppressed
+returns successfully. The posting timestamp is captured immediately after that
+call returns, separately from the source measurement time. Blocked channels,
+duplicate samples, cooldown-suppressed
 samples, stale readings, and ordinary in-range samples never create rows. A
 history write failure propagates after delivery; the already-posted alert and
-committed dedup/cooldown state remain truthful.
+committed dedup/cooldown state remain truthful. Unreadable history stays hidden
+and cannot be appended until an explicit clear succeeds. Clear atomically writes
+an empty encrypted ledger; a failed write preserves the visible list and reports
+failure instead of claiming cleanup succeeded.
 
 `AlertEngine.clearHistory()` is synchronized with evaluation and append. It
 clears only the ledger, preserving the alert snapshot and rules, so a user log
 clear cannot make the same source sample alert again. The same method is safe
-for explicit local-data deletion. Account binding is performed before polling,
-outside an active evaluation.
+for explicit local-data deletion. Sign-out retains the existing behavior of
+clearing alert preferences; log-only clear leaves preferences and cooldowns intact.
 
 The log proves that Android accepted a notification post, not that sound was
 audible. Notification permission, channel importance/sound, Do Not Disturb,

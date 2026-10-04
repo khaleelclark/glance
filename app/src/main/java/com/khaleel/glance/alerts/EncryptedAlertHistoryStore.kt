@@ -20,98 +20,50 @@ class EncryptedAlertHistoryStore(
     private val encrypted: SecureFileStore,
     private val clock: Clock,
 ) : AlertHistoryPersistence {
-    private data class Loaded(
-        val accountScopeKey: String?,
-        val events: List<AlertHistoryEntry>,
-        val failure: Exception? = null,
-    )
-
-    private val loaded = try {
+    private var loadFailure: Exception? = null
+    private val mutableEvents = MutableStateFlow(try {
         load()
     } catch (error: Exception) {
-        Loaded(null, emptyList(), error)
-    }
-    private var storedAccountScopeKey: String? = loaded.accountScopeKey
-    private var pendingEvents: List<AlertHistoryEntry> = loaded.events
-    private var boundAccountScopeKey: String? = null
-    private var loadFailure: Exception? = loaded.failure
-    private val mutableEvents = MutableStateFlow<List<AlertHistoryEntry>>(emptyList())
+        loadFailure = error
+        emptyList()
+    })
     override val events: StateFlow<List<AlertHistoryEntry>> = mutableEvents.asStateFlow()
-
-    /**
-     * Makes persisted health data visible only after its account identity is confirmed.
-     * Legacy unbound history is discarded on first binding; the same bound account is retained.
-    */
-    @Synchronized
-    fun bindAccount(accountScopeKey: String) {
-        AlertAccountScope.requireValid(accountScopeKey)
-        loadFailure?.let { throw IllegalStateException("Could not read alarm history binding", it) }
-        if (boundAccountScopeKey == accountScopeKey) return
-
-        val retained = if (storedAccountScopeKey == accountScopeKey) {
-            AlertHistoryRetention.retain(pendingEvents, clock.now())
-        } else {
-            emptyList()
-        }
-        write(accountScopeKey, retained)
-        storedAccountScopeKey = accountScopeKey
-        boundAccountScopeKey = accountScopeKey
-        pendingEvents = retained
-        mutableEvents.value = retained
-    }
 
     @Synchronized
     override fun append(entry: AlertHistoryEntry) {
-        val accountScopeKey = checkNotNull(boundAccountScopeKey) {
-            "Alarm history must be bound to an account before append"
-        }
+        loadFailure?.let { throw IllegalStateException("Could not read alarm history", it) }
         require(AlertHistoryRetention.valid(entry)) { "Alert history identity does not match" }
         val retained = AlertHistoryRetention.retain(listOf(entry) + mutableEvents.value, clock.now())
-        write(accountScopeKey, retained)
-        pendingEvents = retained
+        write(retained)
         mutableEvents.value = retained
     }
 
     @Synchronized
     override fun clear() {
-        if (loadFailure != null) {
-            encrypted.delete(FILE_NAME)
-            loadFailure = null
-            storedAccountScopeKey = null
-            pendingEvents = emptyList()
-            mutableEvents.value = emptyList()
-            return
-        }
-        val accountScopeKey = boundAccountScopeKey ?: storedAccountScopeKey
-        if (accountScopeKey == null) encrypted.delete(FILE_NAME) else write(accountScopeKey, emptyList())
-        pendingEvents = emptyList()
+        // A checked atomic replacement avoids treating a failed file deletion as success.
+        // It also repairs unreadable history only when the user explicitly clears it.
+        write(emptyList())
+        loadFailure = null
         mutableEvents.value = emptyList()
     }
 
-    private fun write(accountScopeKey: String, entries: List<AlertHistoryEntry>) {
+    private fun write(entries: List<AlertHistoryEntry>) {
         encrypted.write(FILE_NAME, JSONObject().apply {
             put("version", CURRENT_VERSION)
-            put("accountScopeKey", accountScopeKey)
             put("events", JSONArray().apply { entries.forEach { put(toJson(it)) } })
         })
     }
 
-    private fun load(): Loaded {
-        val root = encrypted.read(FILE_NAME) ?: return Loaded(null, emptyList())
-        val version = root.optInt("version", -1)
-        require(version == LEGACY_VERSION || version == CURRENT_VERSION) {
+    private fun load(): List<AlertHistoryEntry> {
+        val root = encrypted.read(FILE_NAME) ?: return emptyList()
+        require(root.optInt("version", -1) == CURRENT_VERSION) {
             "Unsupported alarm history"
         }
-        val accountScopeKey = if (version == CURRENT_VERSION) {
-            AlertAccountScope.requireValid(root.getString("accountScopeKey"))
-        } else {
-            null
-        }
-        val items = root.optJSONArray("events") ?: return Loaded(accountScopeKey, emptyList())
+        val items = root.getJSONArray("events")
         val parsed = (0 until minOf(items.length(), MAX_PARSE_COUNT)).mapNotNull { index ->
             items.optJSONObject(index)?.let { runCatching { fromJson(it) }.getOrNull() }
         }
-        return Loaded(accountScopeKey, AlertHistoryRetention.retain(parsed, clock.now()))
+        return AlertHistoryRetention.retain(parsed, clock.now())
     }
 
     private fun toJson(entry: AlertHistoryEntry) = JSONObject().apply {
@@ -167,8 +119,7 @@ class EncryptedAlertHistoryStore(
 
     private companion object {
         const val FILE_NAME = "alert_history"
-        const val LEGACY_VERSION = 1
-        const val CURRENT_VERSION = 2
+        const val CURRENT_VERSION = 1
         const val MAX_PARSE_COUNT = 2_000
     }
 }

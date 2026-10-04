@@ -107,6 +107,45 @@ class AlertEngineTest {
         assertTrue(store.state.lastFiredAt.containsKey(AlertKind.URGENT_HIGH))
     }
 
+    @Test fun recordsPostingTimeAfterDeliveryReturns() {
+        val clock = MutableClock(start)
+        val postedAt = start.plusSeconds(2)
+        val reading = reading(305.0, start.minusSeconds(30))
+        val live = display(reading)
+        val history = MemoryHistory()
+        val delivery = object : AlertDelivery {
+            override fun ensureChannels() = Unit
+            override fun canPost(kind: AlertKind) = true
+            override fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
+                clock.now = postedAt
+            }
+            override fun clear() = Unit
+        }
+
+        AlertEngine(MemoryStore(), delivery, clock, { live }, { false }, history)
+            .onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
+
+        assertEquals(postedAt, history.events.value.single().firedAt)
+        assertEquals(start.minusSeconds(30), history.events.value.single().reading.measuredAt)
+    }
+
+    @Test fun logsAllFourExactTypesWithUrgentPriority() {
+        val values = mapOf(AlertKind.LOW to 65.0, AlertKind.URGENT_LOW to 50.0,
+            AlertKind.HIGH to 250.0, AlertKind.URGENT_HIGH to 310.0)
+        values.forEach { (kind, value) ->
+            val sample = reading(value, start.minusSeconds(30))
+            val live = display(sample)
+            val history = MemoryHistory()
+            val delivery = MemoryDelivery()
+            AlertEngine(MemoryStore(AlertKind.entries.toSet()), delivery, MutableClock(start),
+                { live }, { false }, history)
+                .onPollResult(SourceResult.Success(sample), live, GlucoseUnit.MG_DL, false)
+            assertEquals(listOf(kind), delivery.posted)
+            assertEquals(kind, history.events.value.single().kind)
+            assertEquals(sample, history.events.value.single().reading)
+        }
+    }
+
     @Test fun historyWriteFailurePropagatesAfterDeliveredAlert() {
         val store = MemoryStore()
         val delivery = MemoryDelivery()
@@ -248,11 +287,11 @@ class AlertEngineTest {
         ReadingFreshness.FRESH, reading.receivedAt, null,
     )
 
-    private class MemoryStore : AlertStore {
+    private class MemoryStore(private val enabledKinds: Set<AlertKind> = setOf(AlertKind.URGENT_HIGH)) : AlertStore {
         private val defaults = AlertConfig.defaults()
         var state = AlertSnapshot()
         override fun config() = AlertConfig(defaults.rules.mapValues { (kind, rule) ->
-            rule.copy(enabled = kind == AlertKind.URGENT_HIGH)
+            rule.copy(enabled = kind in enabledKinds)
         })
         override fun snapshot() = state
         override fun saveSnapshot(snapshot: AlertSnapshot) { state = snapshot }

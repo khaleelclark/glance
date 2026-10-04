@@ -7,21 +7,6 @@ import java.time.Instant
 class AlertPreferences(context: Context) : AlertStore {
     private val prefs = context.getSharedPreferences("glucose_alerts", Context.MODE_PRIVATE)
 
-    /**
-     * Binds all settings and deduplication state to the authenticated account.
-     * The first binding adopts legacy single-account preferences; an account change clears them.
-    */
-    @Synchronized
-    fun bindAccount(accountScopeKey: String) {
-        AlertAccountScope.requireValid(accountScopeKey)
-        val prior = prefs.getString(ACCOUNT_SCOPE_KEY, null)
-        if (prior == accountScopeKey) return
-        val editor = if (prior == null) prefs.edit() else prefs.edit().clear()
-        check(editor.putString(ACCOUNT_SCOPE_KEY, accountScopeKey).commit()) {
-            "Could not bind alert settings to account"
-        }
-    }
-
     override fun config(): AlertConfig {
         val defaults = AlertConfig.defaults()
         val loaded = AlertConfig(AlertKind.entries.associateWith { kind ->
@@ -73,9 +58,5 @@ class AlertPreferences(context: Context) : AlertStore {
 
     fun clear() {
         check(prefs.edit().clear().commit()) { "Could not clear alert settings" }
-    }
-
-    private companion object {
-        const val ACCOUNT_SCOPE_KEY = "account_scope_key"
     }
 }

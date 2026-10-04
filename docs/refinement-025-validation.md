@@ -1,6 +1,11 @@
 # Glance 0.25 polish validation
 
-Implementation in progress on clean 0.24 base a9ef2d1.
+Implementation in progress on clean 0.24 base a9ef2d1. Nickname backend
+integrated as bb5ff96, with teal upgrade migration at 265b228. Initial phone
+checks: 214 JVM tests, zero failures/errors/skips; debug assembly successful;
+debug lint zero errors. That first invocation overlapped addition of a debug
+probe, so it is preliminary evidence rather than final release qualification.
+The complete integrated checks will follow the chart handoff.
 
 Requested changes: sugar/insulin-related logo (native sugar cube selected), new
 muted teal default, source timestamp immediately below selected graph value,

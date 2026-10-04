@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val display by controller.display.collectAsState()
             val alarmHistory by app.alertHistory.events.collectAsState()
+            LaunchedEffect(display.person?.id) { refreshSettings() }
             var now by androidx.compose.runtime.remember { mutableStateOf(Instant.now()) }
             LaunchedEffect(Unit) {
                 while (true) {

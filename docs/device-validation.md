@@ -2,6 +2,18 @@
 
 Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
 
+## 0.24.0 graph and reading refinement
+
+Integrated debug verification passes 208 phone JVM tests, zero failures/errors/
+skips and zero debug lint errors. Synthetic API 36 fixtures pass 15 native chart
+checks, 11 integrated UI checks and two focused 200% font checks after visual
+inspection caught and corrected graph value/unit/time clipping. These receipts
+use distinct baseline/correction APK hashes and source/dirty states; see
+[refinement-024-validation.md](refinement-024-validation.md) for exact boundaries.
+Final clean signing/source push and independent correction review are pending.
+No live-account/Samsung, TalkBack, overnight, battery, car, physical-watch or
+audible-delivery qualification is claimed.
+
 ## 0.23.0 focused redesign and alarm log
 
 The integrated phone/watch debug build passes 205/15 JVM tests with zero

@@ -1,0 +1,16 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "portraitAtTwoHundredPercentKeepsReadingAndPresetAndSourceSemantics": true,
+    "landscapeAtTwoHundredPercentKeepsReadingAndPresetAndSourceSemantics": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "82d92e37c4a1c0f9f941004f2b7745550f11f994b192eb5aaedd43ae4d6ef896",
+  "sourceCommitAtRun": "d6db76eecee290b0b777f7b3833c518a9348e6f7",
+  "sourceDirtyAtRun": true,
+  "scope": "Focused 200% font follow-up; inspect screenshots for actual visual clipping",
+  "TalkBack": "not tested",
+  "liveAccount": "not tested",
+  "GalaxyS25Ultra": "not tested"
+}

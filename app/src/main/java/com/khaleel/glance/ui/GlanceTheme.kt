@@ -15,9 +15,10 @@ internal data class PickerColor(val hue: Float, val saturation: Float, val brigh
 internal data class AccentPreset(val name: String, val hex: String)
 
 internal object ThemeAccent {
-    const val DEFAULT = "#087E82"
+    const val DEFAULT = "#1677D2"
     val presets = listOf(
         AccentPreset("Ocean", DEFAULT),
+        AccentPreset("Lagoon", "#087E82"),
         AccentPreset("Berry", "#7046A3"),
         AccentPreset("Forest", "#397B50"),
         AccentPreset("Coral", "#AF405B"),
@@ -83,8 +84,9 @@ internal object ThemeAccent {
 
     fun scheme(hex: String, dark: Boolean): ColorScheme {
         val requested = color(hex)
-        val background = if (dark) Color(0xFF10181E) else Color(0xFFEFF3F4)
-        val card = if (dark) Color(0xFF202E37) else Color(0xFFF7FAFA)
+        val background = if (dark) Color(0xFF0E171F) else Color(0xFFF5F7FA)
+        val surface = if (dark) Color(0xFF15212B) else Color(0xFFFFFFFF)
+        val card = if (dark) Color(0xFF1B2A35) else Color(0xFFF0F4F8)
         val primary = readableAgainst(requested, card, dark)
         val onPrimary = if (contrast(primary, Color.White) >= contrast(primary, Color.Black)) {
             Color.White
@@ -92,8 +94,9 @@ internal object ThemeAccent {
             Color.Black
         }
         val container = if (dark) lerp(background, primary, 0.3f) else lerp(background, primary, 0.16f)
-        val onBackground = if (dark) Color(0xFFF0F5F4) else Color(0xFF172122)
-        val onVariant = if (dark) Color(0xFFC3CFCD) else Color(0xFF4A5B5C)
+        val onBackground = if (dark) Color(0xFFF2F6FA) else Color(0xFF17212B)
+        val onVariant = if (dark) Color(0xFFB8C6D1) else Color(0xFF536270)
+        val outline = if (dark) Color(0xFF617280) else Color(0xFF788895)
         val base = if (dark) darkColorScheme() else lightColorScheme()
         return base.copy(
             primary = primary,
@@ -108,15 +111,24 @@ internal object ThemeAccent {
             onTertiary = onPrimary,
             background = background,
             onBackground = onBackground,
-            surface = if (dark) Color(0xFF18242C) else Color.White,
+            surface = surface,
             onSurface = onBackground,
             surfaceVariant = card,
             onSurfaceVariant = onVariant,
-            surfaceContainerLow = if (dark) Color(0xFF18242C) else Color.White,
+            surfaceContainerLowest = if (dark) Color(0xFF0A1218) else Color.White,
+            surfaceContainerLow = surface,
             surfaceContainer = card,
             surfaceContainerHigh = lerp(card, primary, 0.05f),
             surfaceContainerHighest = lerp(card, primary, 0.08f),
+            surfaceBright = if (dark) Color(0xFF263641) else Color.White,
+            surfaceDim = if (dark) Color(0xFF0E171F) else Color(0xFFE2E8EE),
+            surfaceTint = primary,
+            inverseSurface = onBackground,
+            inverseOnSurface = background,
+            inversePrimary = readableAgainst(requested, onBackground, !dark),
+            outline = outline,
             outlineVariant = lerp(onVariant, card, 0.7f),
+            scrim = Color.Black,
         )
     }
 

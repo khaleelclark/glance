@@ -299,8 +299,11 @@ private fun PermissionStatusCard(status: PermissionStatus, callbacks: GlanceCall
 
 @Composable
 private fun OnboardingHeader(eyebrow: String, title: String, summary: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text(eyebrow, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+            GlanceMark()
+            Text(eyebrow, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
         Text(title, modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineLarge)
         Text(summary, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

@@ -116,7 +116,7 @@ internal fun ReadingHistoryChart(
     alerts: AlertConfig = AlertConfig.defaults(),
 ) {
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val chartHeight = if (compact) 130.dp else 220.dp
+    val chartHeight = if (compact) 170.dp else 300.dp
     val points = chartPoints(history, connectionId, now)
     val limits = chartLimits(alerts)
     var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.75) }
@@ -138,10 +138,20 @@ internal fun ReadingHistoryChart(
         .withLocale(locale).withZone(zoneId)
 
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shadowElevation = 2.dp) {
         Column(Modifier.padding(if (compact) 16.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
-            Text("History", modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Glucose trend", modifier = Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge)
+                    if (!compact) Text("Source readings only", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text("${(viewport.span * 24).toInt()} HR", Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
             if (points.isEmpty()) {
                 Text("The graph will appear after Glance receives readings for this person.")
             } else {
@@ -170,7 +180,7 @@ internal fun ReadingHistoryChart(
                     "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. Red below Low; orange above High. Touch to inspect readings. Pinch to zoom. Use the 6, 12 or 24 hour choices to reset the time window."
 
                 if (!compact) Text(
-                    "Touch to inspect · Pinch to zoom",
+                    "Touch a point to inspect · Pinch to zoom",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

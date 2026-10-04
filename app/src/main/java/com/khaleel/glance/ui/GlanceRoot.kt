@@ -1,19 +1,14 @@
 package com.khaleel.glance.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.khaleel.glance.alerts.AlertHistoryEntry
 import com.khaleel.glance.core.DisplayState
 import java.time.Instant
 import java.time.ZoneId
@@ -35,14 +30,9 @@ fun GlanceRoot(
     now: Instant = Instant.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
     locale: Locale = Locale.getDefault(),
+    alertHistory: List<AlertHistoryEntry> = emptyList(),
 ) {
     val text = remember(zoneId, locale) { GlanceUiText(zoneId, locale) }
-    var settingsVisible by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(setupState.step) {
-        if (setupState.step != SetupStep.COMPLETE) settingsVisible = false
-    }
-
-    BackHandler(enabled = settingsVisible && setupState.step == SetupStep.COMPLETE) { settingsVisible = false }
 
     val darkTheme = isSystemInDarkTheme()
     val colorScheme = remember(settings.accentHex, darkTheme) {
@@ -62,26 +52,17 @@ fun GlanceRoot(
                         text = text,
                         now = now,
                     )
-                    SetupStep.COMPLETE -> if (settingsVisible) {
-                        SettingsScreen(
-                            displayState = displayState,
-                            setupState = setupState,
-                            settings = settings,
-                            callbacks = callbacks,
-                            onBack = { settingsVisible = false },
-                        )
-                    } else {
-                        MainReadingScreen(
-                            displayState = displayState,
-                            settings = settings,
-                            callbacks = callbacks,
-                            text = text,
-                            now = now,
-                            zoneId = zoneId,
-                            locale = locale,
-                            onOpenSettings = { settingsVisible = true },
-                        )
-                    }
+                    SetupStep.COMPLETE -> CompletedGlanceApp(
+                        displayState = displayState,
+                        setupState = setupState,
+                        settings = settings,
+                        callbacks = callbacks,
+                        alertHistory = alertHistory,
+                        text = text,
+                        now = now,
+                        zoneId = zoneId,
+                        locale = locale,
+                    )
                 }
             }
         }

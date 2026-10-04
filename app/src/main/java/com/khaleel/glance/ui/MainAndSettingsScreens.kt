@@ -1,11 +1,17 @@
 package com.khaleel.glance.ui
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -14,23 +20,33 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,707 +54,509 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.khaleel.glance.alerts.AlertHistoryEntry
+import com.khaleel.glance.core.Connection
 import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.DisplayState
+import com.khaleel.glance.core.GlucoseFormat
+import com.khaleel.glance.core.GlucoseFormat.label
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.PersonDisplayState
+import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
+import com.khaleel.glance.core.Trend
+import com.khaleel.glance.core.forPerson
 import com.khaleel.glance.ui.GlanceButton as Button
 import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
+import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
+
+internal enum class AppDestination(val label: String, val glyph: GlanceGlyph) {
+    NOW("Now", GlanceGlyph.NOW), LOGBOOK("Logbook", GlanceGlyph.LOGBOOK),
+    PEOPLE("People", GlanceGlyph.PEOPLE), SETTINGS("Settings", GlanceGlyph.SETTINGS),
+}
+private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, ALERT_PERSON, ACCENT }
+private enum class ConfirmAction { SIGN_OUT, DELETE_DATA }
+
+@Composable
+internal fun CompletedGlanceApp(
+    displayState: DisplayState,
+    setupState: SetupUiState,
+    settings: UserSettingsUi,
+    callbacks: GlanceCallbacks,
+    alertHistory: List<AlertHistoryEntry>,
+    text: GlanceUiText,
+    now: Instant,
+    zoneId: ZoneId,
+    locale: Locale,
+) {
+    val roster = remember(displayState) { rosterStates(displayState) }
+    var destinationName by rememberSaveable { mutableStateOf(AppDestination.NOW.name) }
+    var viewedPersonId by rememberSaveable { mutableStateOf(displayState.person?.id) }
+    val destinations = AppDestination.entries.filter { it != AppDestination.PEOPLE || roster.size > 1 }
+    val destination = AppDestination.entries.firstOrNull { it.name == destinationName }
+        ?.takeIf { it in destinations } ?: AppDestination.NOW
+    LaunchedEffect(roster.map { it.person.id }, displayState.person?.id) {
+        if (viewedPersonId !in roster.map { it.person.id }) viewedPersonId = displayState.person?.id ?: roster.firstOrNull()?.person?.id
+        if (destination == AppDestination.PEOPLE && roster.size <= 1) destinationName = AppDestination.NOW.name
+    }
+    BackHandler(enabled = destination != AppDestination.NOW) { destinationName = AppDestination.NOW.name }
+    val viewedState = viewedPersonId?.let(displayState::forPerson) ?: displayState
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = { GlanceBottomBar(destinations, destination) { destinationName = it.name } },
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when (destination) {
+                AppDestination.NOW -> MainReadingScreen(viewedState, displayState.person?.id, settings, callbacks, text, now, zoneId, locale)
+                AppDestination.LOGBOOK -> LogbookScreen(alertHistory, settings, now, zoneId, locale, callbacks.onClearAlertLog)
+                AppDestination.PEOPLE -> PeopleScreen(displayState, roster, settings, text, now, callbacks.onRefreshPeople,
+                    onView = {
+                        viewedPersonId = it.id
+                        callbacks.onViewedPersonChanged(it.id)
+                        destinationName = AppDestination.NOW.name
+                    },
+                    onPin = callbacks.onPinPerson)
+                AppDestination.SETTINGS -> SettingsScreen(displayState, setupState, settings, callbacks, roster.map { it.person })
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlanceBottomBar(items: List<AppDestination>, selected: AppDestination, onSelect: (AppDestination) -> Unit) {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp,
+        modifier = Modifier.navigationBarsPadding()) {
+        items.forEach { item ->
+            NavigationBarItem(
+                selected = item == selected,
+                onClick = { onSelect(item) },
+                icon = { GlanceGlyphIcon(item.glyph, color = if (item == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) },
+                label = { Text(item.label) },
+                alwaysShowLabel = true,
+            )
+        }
+    }
+}
 
 @Composable
 internal fun MainReadingScreen(
-    displayState: DisplayState,
+    state: DisplayState,
+    primaryPersonId: String?,
     settings: UserSettingsUi,
     callbacks: GlanceCallbacks,
     text: GlanceUiText,
     now: Instant,
     zoneId: ZoneId,
     locale: Locale,
-    onOpenSettings: () -> Unit,
 ) {
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var selectedChartTime by rememberSaveable(displayState.person?.id) { mutableStateOf<Long?>(null) }
+    var selectedTime by rememberSaveable(state.person?.id) { mutableStateOf<Long?>(null) }
+    val summary: @Composable ColumnScope.() -> Unit = {
+        ReadingHeader(state, primaryPersonId, callbacks)
+        ReadingHero(state, settings, text, now, locale)
+        ReadingStatus(state, text, callbacks)
+    }
+    val chart: @Composable ColumnScope.() -> Unit = {
+        ReadingHistoryChart(state.history, state.person?.id, settings.unit, now, zoneId, locale,
+            selectedTime, { selectedTime = it }, settings.alerts)
+    }
     if (landscape) {
-        Row(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
-        ) {
-            Column(
-                Modifier.weight(0.44f).fillMaxHeight().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                MainReadingSummary(displayState, settings, callbacks, text, now, onOpenSettings)
-            }
-            Column(
-                Modifier.weight(0.56f).fillMaxHeight().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                ReadingHistoryChart(
-                    displayState.history,
-                    displayState.person?.id,
-                    settings.unit,
-                    now,
-                    zoneId,
-                    locale,
-                    selectedChartTime,
-                    { selectedChartTime = it },
-                    alerts = settings.alerts,
-                )
-            }
+        Row(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.weight(.43f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp), content = summary)
+            Column(Modifier.weight(.57f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp), content = chart)
         }
     } else {
-        ScreenColumn {
-            MainReadingSummary(displayState, settings, callbacks, text, now, onOpenSettings)
-            ReadingHistoryChart(
-                displayState.history,
-                displayState.person?.id,
-                settings.unit,
-                now,
-                zoneId,
-                locale,
-                selectedChartTime,
-                { selectedChartTime = it },
-                alerts = settings.alerts,
-            )
+        Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) { summary(); chart() }
+    }
+}
+
+@Composable
+private fun ReadingHeader(state: DisplayState, primaryPersonId: String?, callbacks: GlanceCallbacks) {
+    val refreshEnabled = state.monitoringEnabled && state.runtime == RuntimeState.RUNNING && state.connection !in nonRefreshableConnections
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        GlanceMark()
+        Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text("GLANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(state.person?.displayName ?: "Shared reading", Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (state.person?.id != null && state.person.id == primaryPersonId) Badge("PINNED")
+            }
+        }
+        IconButton(callbacks.onRefresh, enabled = refreshEnabled,
+            modifier = Modifier.semantics { contentDescription = "Refresh reading" }) {
+            GlanceGlyphIcon(GlanceGlyph.REFRESH, color = if (refreshEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        TextButton(onClick = if (state.runtime == RuntimeState.RUNNING) callbacks.onStopMonitoring else callbacks.onResumeMonitoring,
+            modifier = Modifier.heightIn(min = 48.dp)) { Text(if (state.runtime == RuntimeState.RUNNING) "Pause" else "Resume") }
+    }
+}
+
+@Composable
+private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: GlanceUiText, now: Instant, locale: Locale) {
+    val reading = text.reading(state, settings.unit, now)
+    val delta = readingDeltaText(state.reading, state.history, settings.unit, locale)
+    Surface(Modifier.fillMaxWidth().animateContentSize(), GlanceShapes.extraLarge,
+        MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shadowElevation = 2.dp) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(reading?.freshness ?: "Waiting for first reading", style = MaterialTheme.typography.labelLarge,
+                color = if (state.freshness == ReadingFreshness.FRESH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            if (reading == null) {
+                Text("No reading yet", style = MaterialTheme.typography.headlineLarge)
+                Text("Glance is waiting for LibreLinkUp.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(reading.value, style = MaterialTheme.typography.displayLarge, modifier = Modifier.alignByBaseline())
+                    Text(reading.unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
+                    if (reading.trendSymbol.isNotBlank()) Text(reading.trendSymbol,
+                        style = MaterialTheme.typography.displayMedium.copy(color = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.alignByBaseline().semantics { contentDescription = "Trend ${reading.trendDescription}" })
+                }
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(reading.trendDescription, style = MaterialTheme.typography.titleMedium)
+                    delta?.let { Text("· $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                Text(reading.measured, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
 
 @Composable
-private fun MainReadingSummary(
-    displayState: DisplayState,
-    settings: UserSettingsUi,
-    callbacks: GlanceCallbacks,
-    text: GlanceUiText,
-    now: Instant,
-    onOpenSettings: () -> Unit,
-) {
-    val reading = text.reading(displayState, settings.unit, now)
-    val refreshEnabled = displayState.monitoringEnabled && displayState.runtime == RuntimeState.RUNNING &&
-        displayState.connection !in setOf(
-            ConnectionState.SIGN_IN_REQUIRED,
-            ConnectionState.TERMS_REQUIRED,
-            ConnectionState.CONNECTION_REMOVED,
-            ConnectionState.PROTOCOL_ERROR,
-            ConnectionState.LOCAL_ERROR,
-            ConnectionState.FETCHING,
-        )
+private fun ReadingStatus(state: DisplayState, text: GlanceUiText, callbacks: GlanceCallbacks) {
+    val connection = text.connection(state)
+    Row(Modifier.fillMaxWidth().clip(GlanceShapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)
+        .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        Surface(Modifier.size(9.dp), CircleShape, color = when {
+            state.runtime != RuntimeState.RUNNING -> MaterialTheme.colorScheme.outline
+            connection != null -> MaterialTheme.colorScheme.error
+            else -> MaterialTheme.colorScheme.primary
+        }) {}
+        Column(Modifier.weight(1f)) {
+            Text(text.monitoring(state), style = MaterialTheme.typography.labelLarge)
+            AnimatedVisibility(connection != null) { connection?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        }
+        if (state.connection in reconnectConnections) TextButton(callbacks.onReconnect) { Text("Reconnect") }
+        if (state.connection == ConnectionState.LOCAL_ERROR) TextButton(callbacks.onOpenDiagnostics) { Text("Details") }
+    }
+}
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    "GLANCE",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = displayState.person?.displayName ?: "Shared reading",
-                    modifier = Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-            }
-            TextButton(onClick = onOpenSettings, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Settings")
+@Composable
+private fun PeopleScreen(
+    display: DisplayState, roster: List<PersonDisplayState>, settings: UserSettingsUi, text: GlanceUiText, now: Instant,
+    onRefresh: () -> Unit, onView: (Connection) -> Unit, onPin: (Connection) -> Unit,
+) {
+    ScreenList {
+        ScreenHeader("People", "Everyone Glance is monitoring") {
+            IconButton(onRefresh, modifier = Modifier.semantics { contentDescription = "Refresh all people" }) {
+                GlanceGlyphIcon(GlanceGlyph.REFRESH, color = MaterialTheme.colorScheme.primary)
             }
         }
-
-        GlanceCard(
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ) {
-            if (reading == null) {
-                Text("Waiting for first reading", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    "Glance is waiting for LibreLinkUp.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Text(
-                    reading.freshness,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(9.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        reading.value,
-                        style = MaterialTheme.typography.displayLarge,
-                        modifier = Modifier.alignByBaseline(),
-                    )
-                    Text(
-                        reading.unit,
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.alignByBaseline(),
-                    )
-                    if (reading.trendSymbol.isNotBlank()) {
-                        Text(
-                            text = reading.trendSymbol,
-                            modifier = Modifier.alignByBaseline().semantics {
-                                contentDescription = "Trend ${reading.trendDescription}"
-                            },
-                            style = MaterialTheme.typography.displayMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            ),
-                        )
+        roster.forEach { item ->
+            val projected = display.forPerson(item.person.id) ?: display.copy(person = item.person, reading = item.reading,
+                freshness = item.freshness, connection = item.connection, history = item.history)
+            val reading = text.reading(projected, settings.unit, now)
+            val primary = display.person?.id == item.person.id
+            Surface(Modifier.fillMaxWidth().clickable { onView(item.person) }, GlanceShapes.large,
+                MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, if (primary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
+                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(item.person.displayName, style = MaterialTheme.typography.titleLarge)
+                            Text(personStatus(item), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (primary) Badge("PRIMARY")
+                    }
+                    if (reading == null) Text("Waiting for first reading", color = MaterialTheme.colorScheme.onSurfaceVariant) else {
+                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Text(reading.value, style = MaterialTheme.typography.headlineLarge)
+                            Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 3.dp))
+                            if (reading.trendSymbol.isNotBlank()) Text(reading.trendSymbol, style = MaterialTheme.typography.headlineMedium.copy(color = MaterialTheme.colorScheme.primary))
+                        }
+                        Text(reading.measured, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        if (!primary) TextButton({ onPin(item.person) }) { Text("Pin to notification") }
+                        TextButton({ onView(item.person) }) { Text("View") }
                     }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Text(
-                    "Trend · ${reading.trendDescription}",
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    reading.measured,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        StatusMessage(text.monitoring(displayState))
-        text.connection(displayState)?.let { StatusMessage(it, isError = true) }
-
-        when (displayState.connection) {
-            ConnectionState.SIGN_IN_REQUIRED,
-            ConnectionState.TERMS_REQUIRED,
-            ConnectionState.CONNECTION_REMOVED,
-            ConnectionState.PROTOCOL_ERROR -> OutlinedButton(
-                onClick = callbacks.onReconnect,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Reconnect LibreLinkUp")
-            }
-            ConnectionState.LOCAL_ERROR -> OutlinedButton(
-                onClick = callbacks.onOpenDiagnostics,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Review diagnostics")
-            }
-            else -> Unit
-        }
-
-        if (displayState.runtime == RuntimeState.RUNNING) {
-            Button(
-                onClick = callbacks.onRefresh,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = refreshEnabled,
-            ) {
-                Text(if (displayState.connection == ConnectionState.FETCHING) "Refreshing…" else "Refresh")
-            }
-        } else {
-            Button(onClick = callbacks.onResumeMonitoring, modifier = Modifier.fillMaxWidth()) {
-                Text(if (displayState.monitoringEnabled) "Try again" else "Start monitoring")
             }
         }
     }
 }
 
+@Composable
+private fun LogbookScreen(
+    history: List<AlertHistoryEntry>, settings: UserSettingsUi, now: Instant, zoneId: ZoneId, locale: Locale, onClear: () -> Unit,
+) {
+    var filter by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmClear by rememberSaveable { mutableStateOf(false) }
+    val people = remember(history) { history.map { it.person }.distinctBy { it.id } }
+    val filtered = history.filter { filter == null || it.person.id == filter }.sortedByDescending { it.firedAt }
+    val groups = groupAlertHistory(filtered, zoneId)
+    val time = remember(zoneId, locale) { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).withZone(zoneId) }
+    ScreenList {
+        ScreenHeader("Logbook", "Glucose alerts that fired on this phone") {
+            if (history.isNotEmpty()) TextButton({ confirmClear = true }) { Text("Clear") }
+        }
+        if (people.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(filter == null, { filter = null }, label = { Text("All people") })
+            people.forEach { person -> FilterChip(filter == person.id, { filter = person.id }, label = { Text(person.displayName) }) }
+        }
+        if (filtered.isEmpty()) GlanceCard(Modifier.fillMaxWidth()) {
+            Text(if (history.isEmpty()) "No alerts yet" else "No alerts for this person", style = MaterialTheme.typography.titleLarge)
+            Text("When a glucose alert fires, its type and source reading will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        groups.forEach { (day, entries) ->
+            Text(dayLabel(day, now, zoneId, locale), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(Modifier.fillMaxWidth(), GlanceShapes.large, MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+                Column {
+                    entries.forEachIndexed { index, entry ->
+                        if (index > 0) GroupDivider()
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row { Text(entry.kind.label, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium); Text(time.format(entry.firedAt), color = MaterialTheme.colorScheme.primary) }
+                            Text(entry.person.displayName, style = MaterialTheme.typography.bodyMedium)
+                            Text(GlucoseFormat.withUnit(entry.reading, settings.unit, locale) + trendSymbol(entry.reading.trend).let { if (it.isBlank()) "" else "  $it" },
+                                style = MaterialTheme.typography.headlineSmall)
+                            Text("Source reading ${time.format(entry.reading.measuredAt)} · Alert fired ${time.format(entry.firedAt)}",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (confirmClear) AlertDialog(
+        onDismissRequest = { confirmClear = false }, title = { Text("Clear alert log?") },
+        text = { Text("This removes alert history from this phone. It does not change alert rules or account data.") },
+        confirmButton = { TextButton({ confirmClear = false; onClear() }) { Text("Clear log") } },
+        dismissButton = { TextButton({ confirmClear = false }) { Text("Cancel") } },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsScreen(
-    displayState: DisplayState,
-    setupState: SetupUiState,
-    settings: UserSettingsUi,
-    callbacks: GlanceCallbacks,
-    onBack: () -> Unit,
+    display: DisplayState, setup: SetupUiState, settings: UserSettingsUi, callbacks: GlanceCallbacks, roster: List<Connection>,
 ) {
-    var page by rememberSaveable { mutableStateOf(SettingsPage.EVERYDAY) }
-    var confirmAction by remember { mutableStateOf<ConfirmAction?>(null) }
-    var notificationHelpVisible by rememberSaveable { mutableStateOf(false) }
-    val everydayScroll = rememberScrollState()
-    val alertsScroll = rememberScrollState()
-    val moreScroll = rememberScrollState()
-    val pageScroll = when (page) {
-        SettingsPage.EVERYDAY -> everydayScroll
-        SettingsPage.ALERTS -> alertsScroll
-        SettingsPage.MORE -> moreScroll
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding(),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-                .padding(start = 20.dp, top = 18.dp, end = 20.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            SettingsToolbar(onBack)
-            SettingsTabs(selected = page, onSelect = { page = it })
+    var sheet by rememberSaveable { mutableStateOf<SettingsSheet?>(null) }
+    var confirm by remember { mutableStateOf<ConfirmAction?>(null) }
+    var help by rememberSaveable { mutableStateOf(false) }
+    ScreenList {
+        ScreenHeader("Settings", "Glance, arranged around daily use")
+        SettingsGroup("Reading") {
+            ValueSettingRow("Units", settings.unit.label) { sheet = SettingsSheet.UNIT }; GroupDivider()
+            ValueSettingRow("Refresh cadence", if (settings.intervalMinutes == 1) "Every minute" else "Every 5 minutes") { sheet = SettingsSheet.CADENCE }
         }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(pageScroll)
-                .padding(start = 20.dp, end = 20.dp, bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            when (page) {
-                SettingsPage.EVERYDAY -> EverydaySettings(
-                    displayState = displayState,
-                    setupState = setupState,
-                    settings = settings,
-                    callbacks = callbacks,
-                    onShowNotificationHelp = { notificationHelpVisible = true },
-                )
-                SettingsPage.ALERTS -> AlertsSettingsPage(settings, callbacks)
-                SettingsPage.MORE -> MoreSettings(
-                    settings = settings,
-                    callbacks = callbacks,
-                    onConfirm = { confirmAction = it },
-                )
-            }
-        }
-    }
-
-    if (notificationHelpVisible) {
-        AlertDialog(
-            onDismissRequest = { notificationHelpVisible = false },
-            title = { Text("How notifications work") },
-            text = {
-                Text(
-                    "Routine updates are silent. Lock-screen privacy also hides the number icon and Live Update value. " +
-                        "Live Update is requested only on supported devices and always falls back to the standard notification. " +
-                        "Keeping the notification visible can restore the standard notification after it is cleared while monitoring continues.",
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { notificationHelpVisible = false }) { Text("Done") }
-            },
-        )
-    }
-
-    confirmAction?.let { action ->
-        AlertDialog(
-            onDismissRequest = { confirmAction = null },
-            title = { Text(if (action == ConfirmAction.SIGN_OUT) "Sign out?" else "Delete local data?") },
-            text = {
-                Text(
-                    if (action == ConfirmAction.SIGN_OUT) {
-                        "Monitoring will stop and saved account and reading data will be removed."
-                    } else {
-                        "Saved readings and local diagnostics will be removed. This cannot be undone."
-                    },
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmAction = null
-                        if (action == ConfirmAction.SIGN_OUT) callbacks.onSignOut()
-                        else callbacks.onDeleteLocalData()
-                    },
-                ) {
-                    Text(if (action == ConfirmAction.SIGN_OUT) "Sign out" else "Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmAction = null }) { Text("Cancel") }
-            },
-        )
-    }
-}
-
-@Composable
-private fun SettingsToolbar(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp)) { Text("Back") }
-        Text(
-            "Settings",
-            modifier = Modifier.weight(1f).semantics { heading() },
-            style = MaterialTheme.typography.headlineMedium,
-        )
-    }
-}
-
-@Composable
-private fun SettingsTabs(selected: SettingsPage, onSelect: (SettingsPage) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SettingsPage.entries.forEach { page ->
-            val active = page == selected
-            val shape = RoundedCornerShape(16.dp)
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp)
-                    .background(
-                        if (active) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainerLow,
-                        shape,
-                    )
-                    .border(
-                        1.dp,
-                        if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                        shape,
-                    )
-                    .selectable(selected = active, role = Role.RadioButton, onClick = { onSelect(page) })
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(page.label, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    }
-}
-
-@Composable
-private fun EverydaySettings(
-    displayState: DisplayState,
-    setupState: SetupUiState,
-    settings: UserSettingsUi,
-    callbacks: GlanceCallbacks,
-    onShowNotificationHelp: () -> Unit,
-) {
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Reading & refresh", "Set display units and check frequency.")
-        Text("Units", style = MaterialTheme.typography.titleMedium)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChoiceOption("mg/dL", settings.unit == GlucoseUnit.MG_DL, Modifier.weight(1f)) {
-                callbacks.onUnitChanged(GlucoseUnit.MG_DL)
-            }
-            ChoiceOption("mmol/L", settings.unit == GlucoseUnit.MMOL_L, Modifier.weight(1f)) {
-                callbacks.onUnitChanged(GlucoseUnit.MMOL_L)
-            }
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Text("Refresh cadence", style = MaterialTheme.typography.titleMedium)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChoiceOption("1 minute", settings.intervalMinutes == 1, Modifier.weight(1f)) {
-                callbacks.onIntervalChanged(1)
-            }
-            ChoiceOption("5 minutes", settings.intervalMinutes == 5, Modifier.weight(1f)) {
-                callbacks.onIntervalChanged(5)
-            }
-        }
-        Text(
-            if (settings.intervalMinutes == 1) "Faster checks with more battery and network use."
-            else "Lower traffic; readings may briefly appear delayed.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Notification", "Choose its privacy and presentation.")
-        SettingSwitch(
-            title = "Lock-screen values",
-            summary = "Show the name, reading and time while locked.",
-            checked = settings.showOnLockScreen,
-            onCheckedChange = callbacks.onLockScreenVisibilityChanged,
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Text("Notification style", style = MaterialTheme.typography.titleMedium)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChoiceOption("Graph", !settings.enhancedNotification, Modifier.weight(1f)) {
-                callbacks.onEnhancedNotificationChanged(false)
-            }
-            ChoiceOption("Live Update", settings.enhancedNotification, Modifier.weight(1f)) {
-                callbacks.onEnhancedNotificationChanged(true)
-            }
-        }
-        Text(
+        SettingsGroup("Notification") {
+            SwitchSettingRow("Lock-screen values", "Show name, reading and time while locked.", settings.showOnLockScreen, callbacks.onLockScreenVisibilityChanged); GroupDivider()
+            ValueSettingRow("Presentation", if (settings.enhancedNotification) "Live Update" else "Graph") { sheet = SettingsSheet.PRESENTATION }; GroupDivider()
             if (settings.enhancedNotification) {
-                "Requests Android's compact Live Update; Graph is the fallback."
-            } else {
-                "Shows the regular notification with its small history graph."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (settings.enhancedNotification) {
-            Text(
-                settings.liveUpdateStatus,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TextButton(onClick = callbacks.onOpenLiveUpdateSettings, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Live Update settings")
+                Text(settings.liveUpdateStatus, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ActionSettingRow("Live Update system settings", onClick = callbacks.onOpenLiveUpdateSettings)
+                GroupDivider()
             }
+            SwitchSettingRow("Glucose number icon", "Fresh values only, when privacy allows.", settings.numericStatusIcon, callbacks.onNumericStatusIconChanged); GroupDivider()
+            SwitchSettingRow("Keep notification visible", "Restore it after clearing while monitoring.", settings.keepNotificationVisible, callbacks.onKeepNotificationVisibleChanged)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(callbacks.onRestoreNotification, Modifier.weight(1f),
+                    display.monitoringEnabled && setup.notificationPermission == PermissionStatus.GRANTED) { Text("Show notification") }
+                TextButton({ help = true }, Modifier.weight(1f).heightIn(min = 48.dp)) { Text("How it works") }
+            }
+            ActionSettingRow("Notification settings · ${permissionStatusShort(setup.notificationPermission)}", onClick = callbacks.onOpenNotificationSettings)
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        SettingSwitch(
-            title = "Glucose number icon",
-            summary = "Requires lock-screen values. Older readings use the app icon.",
-            checked = settings.numericStatusIcon,
-            onCheckedChange = callbacks.onNumericStatusIconChanged,
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        SettingSwitch(
-            title = "Keep notification visible",
-            summary = "Restores it after clearing while monitoring.",
-            checked = settings.keepNotificationVisible,
-            onCheckedChange = callbacks.onKeepNotificationVisibleChanged,
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = callbacks.onRestoreNotification, modifier = Modifier.weight(1f),
-                enabled = displayState.monitoringEnabled && setupState.notificationPermission == PermissionStatus.GRANTED) {
-                Text("Show notification")
-            }
-            TextButton(onClick = onShowNotificationHelp, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                Text("How it works")
-            }
+        SettingsGroup("Monitoring") {
+            SwitchSettingRow("Resume after restart", "Restarts after first unlock when Android allows.", settings.resumeAfterBoot, callbacks.onResumeAfterBootChanged); GroupDivider()
+            ActionSettingRow("Battery settings · ${batteryStatusShort(setup.batteryStatus)}", onClick = callbacks.onOpenBatterySettings)
+            if (display.monitoringEnabled) { GroupDivider(); TextButton(callbacks.onStopMonitoring, Modifier.fillMaxWidth()) { Text("Stop monitoring") } }
         }
-        PermissionSettingsRow(setupState.notificationPermission, callbacks.onOpenNotificationSettings)
+        SettingsGroup("Alerts") {
+            if (roster.size > 1) { ValueSettingRow("Alert rules for", settings.alertPersonName ?: "Choose a person") { sheet = SettingsSheet.ALERT_PERSON }; GroupDivider() }
+            AlertSettings(settings.alerts, settings.unit, callbacks.onAlertRuleChanged, callbacks.onAlertSoundChanged,
+                callbacks.onOpenNotificationSettings, settings.alertPersonName)
+        }
+        SettingsGroup("Appearance & devices") {
+            ValueSettingRow("App color", accentName(settings.accentHex)) { sheet = SettingsSheet.ACCENT }; GroupDivider()
+            SwitchSettingRow("Show widget values", "May be visible while the phone is locked.", settings.widgetValuesVisible, callbacks.onWidgetValuesChanged); GroupDivider()
+            SwitchSettingRow("Share watch readings", "Shows values in the watch app and complication.", settings.watchValuesVisible, callbacks.onWatchValuesChanged); GroupDivider()
+            SwitchSettingRow("Watch notification", "Allows one silent native watch notification.", settings.watchNotificationsEnabled, callbacks.onWatchNotificationsChanged)
+            Text(settings.watchSyncStatus, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        SettingsGroup("Account & support") {
+            ActionSettingRow("Change person", onClick = callbacks.onChangePerson); GroupDivider()
+            ActionSettingRow("Reconnect LibreLinkUp", onClick = callbacks.onReconnect); GroupDivider()
+            ActionSettingRow("Diagnostics", onClick = callbacks.onOpenDiagnostics); GroupDivider()
+            ActionSettingRow("Delete local data") { confirm = ConfirmAction.DELETE_DATA }; GroupDivider()
+            ActionSettingRow("Sign out", true) { confirm = ConfirmAction.SIGN_OUT }
+        }
     }
-
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Background monitoring", "Control restart and battery behavior.")
-        SettingSwitch(
-            title = "Resume after restart",
-            summary = "Restarts after first unlock when allowed; force-stop requires reopening.",
-            checked = settings.resumeAfterBoot,
-            onCheckedChange = callbacks.onResumeAfterBootChanged,
-        )
-        OutlinedButton(onClick = callbacks.onOpenBatterySettings, modifier = Modifier.fillMaxWidth()) {
-            Text("Battery settings · ${batteryStatusShort(setupState.batteryStatus)}")
-        }
-        if (displayState.monitoringEnabled) {
-            TextButton(onClick = callbacks.onStopMonitoring, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text("Stop monitoring")
+    sheet?.let { active ->
+        ModalBottomSheet({ sheet = null }, sheetState = rememberModalBottomSheetState(true), containerColor = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (active) {
+                    SettingsSheet.UNIT -> SheetChoices("Display units", listOf("mg/dL" to (settings.unit == GlucoseUnit.MG_DL), "mmol/L" to (settings.unit == GlucoseUnit.MMOL_L))) {
+                        callbacks.onUnitChanged(if (it == "mg/dL") GlucoseUnit.MG_DL else GlucoseUnit.MMOL_L); sheet = null }
+                    SettingsSheet.CADENCE -> SheetChoices("Refresh cadence", listOf("Every minute" to (settings.intervalMinutes == 1), "Every 5 minutes" to (settings.intervalMinutes == 5)),
+                        "One minute checks sooner; five minutes uses less battery and network.") { callbacks.onIntervalChanged(if (it == "Every minute") 1 else 5); sheet = null }
+                    SettingsSheet.PRESENTATION -> SheetChoices("Notification presentation", listOf("Graph" to !settings.enhancedNotification, "Live Update" to settings.enhancedNotification),
+                        "Live Update is requested on supported devices; Android may show the graph notification instead.") { callbacks.onEnhancedNotificationChanged(it == "Live Update"); sheet = null }
+                    SettingsSheet.ALERT_PERSON -> SheetChoices("Alert rules for", roster.map { it.displayName to (it.id == settings.alertPersonId) },
+                        "Each person keeps independent alert rules.") { label -> roster.firstOrNull { it.displayName == label }?.let { callbacks.onViewedPersonChanged(it.id) }; sheet = null }
+                    SettingsSheet.ACCENT -> {
+                        Text("App color", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
+                        Text("Ocean blue is the Glance default. Custom saved colors remain supported.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
+                        Button({ sheet = null }, Modifier.fillMaxWidth()) { Text("Done") }
+                    }
+                }
             }
         }
+    }
+    if (help) AlertDialog({ help = false }, title = { Text("How notifications work") },
+        text = { Text("Routine readings are silent. Lock-screen privacy also hides the number icon and Live Update value. Android can fall back to the standard graph notification at any time.") },
+        confirmButton = { TextButton({ help = false }) { Text("Done") } })
+    confirm?.let { action ->
+        AlertDialog({ confirm = null }, title = { Text(if (action == ConfirmAction.SIGN_OUT) "Sign out?" else "Delete local data?") },
+            text = { Text(if (action == ConfirmAction.SIGN_OUT) "Monitoring will stop and saved account and reading data will be removed." else "Saved readings and local diagnostics will be removed. This cannot be undone.") },
+            confirmButton = { TextButton({ confirm = null; if (action == ConfirmAction.SIGN_OUT) callbacks.onSignOut() else callbacks.onDeleteLocalData() }) { Text(if (action == ConfirmAction.SIGN_OUT) "Sign out" else "Delete") } },
+            dismissButton = { TextButton({ confirm = null }) { Text("Cancel") } })
     }
 }
 
+@Composable private fun ScreenList(content: @Composable ColumnScope.() -> Unit) = Column(
+    Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(18.dp),
+    verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+
 @Composable
-private fun AlertsSettingsPage(settings: UserSettingsUi, callbacks: GlanceCallbacks) {
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Glucose alerts", "Alerts are separate from silent reading updates.")
-        AlertSettings(
-            settings.alerts,
-            settings.unit,
-            callbacks.onAlertRuleChanged,
-            callbacks.onAlertSoundChanged,
-            callbacks.onOpenNotificationSettings,
-        )
+private fun ScreenHeader(title: String, subtitle: String, action: @Composable (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) { Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineMedium); Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        action?.invoke()
     }
 }
 
-@Composable
-private fun MoreSettings(
-    settings: UserSettingsUi,
-    callbacks: GlanceCallbacks,
-    onConfirm: (ConfirmAction) -> Unit,
-) {
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Appearance", "Use one calm accent throughout Glance.")
-        AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
-    }
-
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Widgets", "Phone and car surfaces have their own privacy choice.")
-        SettingSwitch(
-            title = "Show widget values",
-            summary = "Shows readings on widgets, including while the phone is locked.",
-            checked = settings.widgetValuesVisible,
-            onCheckedChange = callbacks.onWidgetValuesChanged,
-        )
-        Text(
-            "Add Glance glucose from the phone's widget picker. Android Auto availability depends on its version and rollout.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Galaxy Watch", "The phone remains the only device that signs in and fetches readings.")
-        SettingSwitch(
-            title = "Share watch readings",
-            summary = "Shows readings in the app and complication; anyone nearby may see them.",
-            checked = settings.watchValuesVisible,
-            onCheckedChange = callbacks.onWatchValuesChanged,
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        SettingSwitch(
-            title = "Watch notification",
-            summary = "Allows one silent notification when enabled on the watch too.",
-            checked = settings.watchNotificationsEnabled,
-            onCheckedChange = callbacks.onWatchNotificationsChanged,
-        )
-        Text(
-            "Readings hide after 5 minutes without phone sync. Add Glance glucose to a text complication slot and tap it to open the watch app.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(settings.watchSyncStatus, style = MaterialTheme.typography.bodyMedium)
-    }
-
-    GlanceCard(Modifier.fillMaxWidth()) {
-        SectionTitle("Account & support")
-        OutlinedButton(onClick = callbacks.onChangePerson, modifier = Modifier.fillMaxWidth()) {
-            Text("Change person")
-        }
-        OutlinedButton(onClick = callbacks.onReconnect, modifier = Modifier.fillMaxWidth()) {
-            Text("Reconnect LibreLinkUp")
-        }
-        OutlinedButton(onClick = callbacks.onOpenDiagnostics, modifier = Modifier.fillMaxWidth()) {
-            Text("Diagnostics")
-        }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        OutlinedButton(onClick = { onConfirm(ConfirmAction.DELETE_DATA) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Delete local data")
-        }
-        TextButton(
-            onClick = { onConfirm(ConfirmAction.SIGN_OUT) },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) {
-            Text("Sign out", color = MaterialTheme.colorScheme.error)
-        }
-    }
+@Composable private fun Badge(text: String) = Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+    Text(text, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
 }
 
-@Composable
-private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
+@Composable private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) = Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+    Text(title.uppercase(), Modifier.padding(start = 5.dp).semantics { heading() }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(Modifier.fillMaxWidth(), GlanceShapes.large, MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) { Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), content = content) }
+}
+@Composable private fun GroupDivider() = HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+@Composable private fun ValueSettingRow(title: String, value: String, onClick: () -> Unit) = Row(
+    Modifier.fillMaxWidth().heightIn(min = 58.dp).clickable(onClick = onClick).padding(vertical = 8.dp),
+    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+    Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable private fun ActionSettingRow(title: String, danger: Boolean = false, onClick: () -> Unit) = Row(
+    Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(onClick = onClick).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+    Text("›", style = MaterialTheme.typography.titleLarge, color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable private fun SwitchSettingRow(title: String, summary: String, checked: Boolean, onChange: (Boolean) -> Unit) = Row(
+    Modifier.fillMaxWidth().heightIn(min = 68.dp).toggleable(value = checked, role = Role.Switch, onValueChange = onChange).padding(vertical = 8.dp),
+    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleMedium); Text(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    Switch(checked, null)
+}
+
+@Composable private fun SheetChoices(title: String, choices: List<Pair<String, Boolean>>, summary: String? = null, onSelect: (String) -> Unit) {
+    Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
+    summary?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    Column(Modifier.selectableGroup()) { choices.forEachIndexed { index, item ->
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).selectable(selected = item.second, role = Role.RadioButton) { onSelect(item.first) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(item.first, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Surface(Modifier.size(22.dp), CircleShape, if (item.second) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                border = BorderStroke(2.dp, if (item.second) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)) {
+                if (item.second) Box(Modifier.padding(6.dp).background(MaterialTheme.colorScheme.onPrimary, CircleShape))
+            }
+        }
+        if (index < choices.lastIndex) GroupDivider()
+    } }
+}
+
+@Composable private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
     var draft by rememberSaveable(selectedHex) { mutableStateOf(selectedHex) }
-    var customVisible by rememberSaveable { mutableStateOf(false) }
+    var custom by rememberSaveable { mutableStateOf(false) }
     val normalized = ThemeAccent.normalize(draft)
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ThemeAccent.presets.forEach { preset ->
-            FilterChip(
-                selected = selectedHex.equals(preset.hex, ignoreCase = true),
-                onClick = { onSelect(preset.hex) },
-                label = { Text(preset.name) },
-                leadingIcon = { Text("●", color = ThemeAccent.color(preset.hex)) },
-            )
-        }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ThemeAccent.presets.forEach { preset -> FilterChip(selectedHex.equals(preset.hex, true), { onSelect(preset.hex) }, label = { Text(preset.name) }, leadingIcon = { Text("●", color = ThemeAccent.color(preset.hex)) }) }
     }
-    OutlinedButton(onClick = { customVisible = !customVisible }, modifier = Modifier.fillMaxWidth()) {
-        Text(if (customVisible) "Close custom color" else "Custom color")
-    }
-    if (customVisible) {
+    OutlinedButton({ custom = !custom }, Modifier.fillMaxWidth()) { Text(if (custom) "Close custom color" else "Custom color") }
+    AnimatedVisibility(custom) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         ColorWheelPicker(normalized ?: selectedHex) { draft = it }
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { if (it.length <= 7) draft = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Hex color") },
-            placeholder = { Text("#087E82") },
-            singleLine = true,
-            isError = draft.isNotBlank() && normalized == null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-            supportingText = {
-                Text(
-                    if (draft.isNotBlank() && normalized == null) "Enter six hex digits, such as #087E82."
-                    else "Very light or dark colors are adjusted to keep text readable.",
-                )
-            },
-        )
-        Button(
-            onClick = { normalized?.let(onSelect) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = normalized != null && !normalized.equals(selectedHex, ignoreCase = true),
-        ) {
-            Text("Apply color")
-        }
-    }
+        OutlinedTextField(draft, { if (it.length <= 7) draft = it }, Modifier.fillMaxWidth(), label = { Text("Hex color") },
+            placeholder = { Text(ThemeAccent.DEFAULT) }, singleLine = true, isError = draft.isNotBlank() && normalized == null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii), supportingText = { Text(if (normalized == null) "Enter six hex digits." else "Adjusted when needed for readable contrast.") })
+        Button({ normalized?.let(onSelect) }, Modifier.fillMaxWidth(), normalized != null && !normalized.equals(selectedHex, true)) { Text("Apply color") }
+    } }
 }
 
-@Composable
-private fun ChoiceOption(label: String, selected: Boolean, modifier: Modifier, onSelect: () -> Unit) {
-    val shape = RoundedCornerShape(14.dp)
-    Row(
-        modifier
-            .heightIn(min = 48.dp)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceContainerHigh,
-                shape,
-            )
-            .border(
-                1.dp,
-                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                shape,
-            )
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
-    }
+internal fun rosterStates(display: DisplayState): List<PersonDisplayState> {
+    val primary = display.person?.let { PersonDisplayState(it, display.reading, display.freshness, display.connection, display.lastSuccessfulFetch, display.history) }
+    return (listOfNotNull(primary) + display.people).distinctBy { it.person.id }
 }
 
-@Composable
-private fun SettingSwitch(
-    title: String,
-    summary: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 64.dp)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = checked, onCheckedChange = null)
-    }
+internal fun groupAlertHistory(history: List<AlertHistoryEntry>, zoneId: ZoneId): List<Pair<LocalDate, List<AlertHistoryEntry>>> =
+    history.sortedByDescending { it.firedAt }.groupBy { it.firedAt.atZone(zoneId).toLocalDate() }.map { it.key to it.value }
+
+internal fun readingDeltaText(current: Reading?, history: List<Reading>, unit: GlucoseUnit, locale: Locale): String? {
+    val currentValue = current?.valueMgDl?.takeIf { it.isFinite() } ?: return null
+    if (current.specialValue != null) return null
+    val prior = history.filter { it.connectionId == current.connectionId && it.measuredAt < current.measuredAt && it.valueMgDl?.isFinite() == true && it.specialValue == null }.maxByOrNull { it.measuredAt } ?: return null
+    val minutes = Duration.between(prior.measuredAt, current.measuredAt).toMinutes()
+    if (minutes !in 1..30) return null
+    val delta = currentValue - prior.valueMgDl!!
+    val shown = if (unit == GlucoseUnit.MG_DL) String.format(locale, "%+.0f", delta) else String.format(locale, "%+.1f", delta / 18.0182)
+    return "$shown ${unit.label} in $minutes min"
 }
 
-@Composable
-private fun PermissionSettingsRow(status: PermissionStatus, onOpen: () -> Unit) {
-    val label = when (status) {
-        PermissionStatus.UNKNOWN -> "not checked"
-        PermissionStatus.GRANTED -> "allowed"
-        PermissionStatus.DENIED -> "not allowed"
-    }
-    OutlinedButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-        Text("Notification settings · $label")
-    }
+private val nonRefreshableConnections = setOf(ConnectionState.SIGN_IN_REQUIRED, ConnectionState.TERMS_REQUIRED,
+    ConnectionState.CONNECTION_REMOVED, ConnectionState.PROTOCOL_ERROR, ConnectionState.LOCAL_ERROR, ConnectionState.FETCHING)
+private val reconnectConnections = setOf(ConnectionState.SIGN_IN_REQUIRED, ConnectionState.TERMS_REQUIRED,
+    ConnectionState.CONNECTION_REMOVED, ConnectionState.PROTOCOL_ERROR)
+private fun trendSymbol(trend: Trend) = when (trend) {
+    Trend.RISING_QUICKLY -> "↑"; Trend.RISING, Trend.RISING_SLOWLY -> "↗"; Trend.STEADY -> "→"
+    Trend.FALLING, Trend.FALLING_SLOWLY -> "↘"; Trend.FALLING_QUICKLY -> "↓"; Trend.UNKNOWN -> ""
 }
-
-private fun batteryStatusShort(status: BatteryStatus) = when (status) {
-    BatteryStatus.UNKNOWN -> "not checked"
-    BatteryStatus.STANDARD -> "standard"
-    BatteryStatus.UNRESTRICTED -> "unrestricted"
+private fun personStatus(state: PersonDisplayState) = when (state.connection) {
+    ConnectionState.READY -> when (state.freshness) { ReadingFreshness.FRESH -> "Current"; ReadingFreshness.DELAYED -> "Reading delayed"; ReadingFreshness.STALE -> "No recent reading"; ReadingFreshness.INVALID_TIME -> "Reading time unavailable"; ReadingFreshness.ABSENT -> "Waiting for first reading" }
+    ConnectionState.FETCHING -> "Checking now"; ConnectionState.OFFLINE -> "Offline · showing last reading"; ConnectionState.BACKING_OFF -> "Waiting to retry"
+    ConnectionState.SIGN_IN_REQUIRED -> "Sign-in required"; ConnectionState.TERMS_REQUIRED -> "LibreLinkUp terms required"; ConnectionState.CONNECTION_REMOVED -> "Connection unavailable"
+    ConnectionState.PROTOCOL_ERROR -> "Source response unavailable"; ConnectionState.LOCAL_ERROR -> "Local data unavailable"
 }
-
-private enum class SettingsPage(val label: String) {
-    EVERYDAY("Everyday"),
-    ALERTS("Alerts"),
-    MORE("More"),
+private fun dayLabel(day: LocalDate, now: Instant, zoneId: ZoneId, locale: Locale): String {
+    val today = now.atZone(zoneId).toLocalDate()
+    return when (day) { today -> "Today"; today.minusDays(1) -> "Yesterday"; else -> DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(day) }
 }
-
-private enum class ConfirmAction { SIGN_OUT, DELETE_DATA }
+private fun accentName(hex: String) = ThemeAccent.presets.firstOrNull { it.hex.equals(hex, true) }?.name ?: "Custom"
+private fun permissionStatusShort(status: PermissionStatus) = when (status) { PermissionStatus.UNKNOWN -> "not checked"; PermissionStatus.GRANTED -> "allowed"; PermissionStatus.DENIED -> "not allowed" }
+private fun batteryStatusShort(status: BatteryStatus) = when (status) { BatteryStatus.UNKNOWN -> "not checked"; BatteryStatus.STANDARD -> "standard"; BatteryStatus.UNRESTRICTED -> "unrestricted" }

@@ -3,20 +3,27 @@ package com.khaleel.glance.ui
 import android.graphics.Color
 import android.view.ViewGroup
 import android.widget.NumberPicker
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import com.khaleel.glance.ui.GlanceOutlinedButton as OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,21 +37,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
 import com.khaleel.glance.alerts.AlertConfig
 import com.khaleel.glance.alerts.AlertKind
 import com.khaleel.glance.alerts.AlertRule
 import com.khaleel.glance.core.GlucoseUnit
-import java.util.Locale
 import kotlinx.coroutines.delay
+import java.util.Locale
+import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AlertSettings(
     config: AlertConfig,
@@ -52,203 +63,180 @@ internal fun AlertSettings(
     onRuleChange: (AlertKind, AlertRule) -> Unit,
     onSoundChange: (AlertKind) -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    personName: String? = null,
 ) {
-    var expandedName by rememberSaveable { mutableStateOf<String?>(null) }
-    Text("Choose a limit, then turn it on.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    OutlinedButton(onClick = onOpenNotificationSettings, modifier = Modifier.fillMaxWidth()) {
-        Text("Android alert settings")
-    }
-    HelpDetails("Alert setup", "Each alert has its own Android category for sound and priority. On Samsung, if categories are hidden, enable Settings → Notifications → Advanced settings → Manage notification categories for each app.")
-    AlertKind.entries.forEach { kind ->
-        AlertRuleControls(kind, config, unit, expandedName == kind.name,
-            onExpand = { expandedName = if (expandedName == kind.name) null else kind.name },
-            onRuleChange = onRuleChange, onSoundChange = onSoundChange)
-        if (kind != AlertKind.URGENT_HIGH) HorizontalDivider()
-    }
-}
-
-@Composable
-private fun AlertRuleControls(
-    kind: AlertKind,
-    config: AlertConfig,
-    unit: GlucoseUnit,
-    expanded: Boolean,
-    onExpand: () -> Unit,
-    onRuleChange: (AlertKind, AlertRule) -> Unit,
-    onSoundChange: (AlertKind) -> Unit,
-) {
-        val savedRule = config[kind]
-        var rule by remember { mutableStateOf(savedRule) }
-        var pendingRule by remember { mutableStateOf<AlertRule?>(null) }
-        var saveAttempt by remember { mutableIntStateOf(0) }
-        val currentOnRuleChange by rememberUpdatedState(onRuleChange)
-        fun flush() {
-            val pending = pendingRule ?: return
-            pendingRule = null
-            try {
-                currentOnRuleChange(kind, pending)
-            } finally {
-                // The synchronous host refreshes authoritative config even on
-                // failure. An unchanged rule must still reset optimistic UI.
-                saveAttempt++
-            }
-        }
-        fun stage(next: AlertRule) {
-            rule = next
-            // Do not compare to a composition's potentially outdated savedRule
-            // when input follows a completed save before recomposition.
-            pendingRule = next
-        }
-        // Keep every notch in local state; the checked host save runs only after
-        // quiet input or an explicit exit, never once per fling callback.
-        LaunchedEffect(savedRule, saveAttempt) {
-            if (pendingRule == null) rule = savedRule
-        }
-        LaunchedEffect(pendingRule) {
-            if (pendingRule != null) {
-                delay(300)
-                flush()
-            }
-        }
-        DisposableEffect(Unit) { onDispose { flush() } }
+    var editingName by rememberSaveable { mutableStateOf<String?>(null) }
+    val editing = AlertKind.entries.firstOrNull { it.name == editingName }
+    Text(
+        personName?.let { "Limits and repeat timing for $it." } ?: "Choose a limit, then turn it on.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    AlertKind.entries.forEachIndexed { index, kind ->
+        val rule = config[kind]
         Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier.fillMaxWidth().heightIn(min = 70.dp).clickable { editingName = kind.name }.padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(kind.label, style = MaterialTheme.typography.titleMedium)
                 Text(
                     "${if (kind.isLow) "At or below" else "At or above"} ${thresholdText(rule.thresholdMgDl, unit)} · ${rule.cooldownMinutes} min",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Switch(
                 checked = rule.enabled,
-                onCheckedChange = { stage(rule.copy(enabled = it)); flush() },
+                onCheckedChange = { onRuleChange(kind, rule.copy(enabled = it)) },
                 modifier = Modifier.semantics { contentDescription = "Enable ${kind.label} alert" },
             )
+            Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(
-                onClick = onExpand,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(if (expanded) "Done" else "Edit alert", textAlign = TextAlign.Center)
-            }
-            TextButton(
-                onClick = { onSoundChange(kind) },
-                modifier = Modifier.weight(1f).semantics {
-                    contentDescription = "Open ${kind.label} notification category in Android settings"
-                },
-            ) { Text("Sound & priority", textAlign = TextAlign.Center) }
+        if (index < AlertKind.entries.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+    TextButton(onClick = onOpenNotificationSettings, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+        Text("Android alert settings")
+    }
+
+    editing?.let { kind ->
+        ModalBottomSheet(
+            onDismissRequest = { editingName = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            AlertRuleSheet(
+                kind = kind,
+                savedRule = config[kind],
+                config = config,
+                unit = unit,
+                personName = personName,
+                onRuleChange = onRuleChange,
+                onSoundChange = onSoundChange,
+                onDone = { editingName = null },
+            )
         }
-        if (expanded) {
-            val currentFlush by rememberUpdatedState(::flush)
-            DisposableEffect(Unit) { onDispose { currentFlush() } }
-            AlertRuleEditor(kind, rule, config, unit,
-                onThresholdChange = { stage(rule.copy(thresholdMgDl = it)) },
-                onCooldownChange = { stage(rule.copy(cooldownMinutes = it)) })
-        }
+    }
 }
 
 @Composable
-private fun AlertRuleEditor(
+private fun AlertRuleSheet(
     kind: AlertKind,
-    rule: AlertRule,
+    savedRule: AlertRule,
     config: AlertConfig,
     unit: GlucoseUnit,
-    onThresholdChange: (Int) -> Unit,
-    onCooldownChange: (Int) -> Unit,
+    personName: String?,
+    onRuleChange: (AlertKind, AlertRule) -> Unit,
+    onSoundChange: (AlertKind) -> Unit,
+    onDone: () -> Unit,
 ) {
-    val (minimum, maximum) = when (kind) {
-        AlertKind.URGENT_LOW -> 40 to config[AlertKind.LOW].thresholdMgDl
-        AlertKind.LOW -> config[AlertKind.URGENT_LOW].thresholdMgDl to (config[AlertKind.HIGH].thresholdMgDl - 1)
-        AlertKind.HIGH -> (config[AlertKind.LOW].thresholdMgDl + 1) to config[AlertKind.URGENT_HIGH].thresholdMgDl
-        AlertKind.URGENT_HIGH -> config[AlertKind.HIGH].thresholdMgDl to 400
+    var draft by remember(kind) { mutableStateOf(savedRule) }
+    var pending by remember(kind) { mutableStateOf<AlertRule?>(null) }
+    var saveAttempt by remember(kind) { mutableIntStateOf(0) }
+    val currentSave by rememberUpdatedState(onRuleChange)
+    fun flush() {
+        val next = pending ?: return
+        pending = null
+        try { currentSave(kind, next) } finally { saveAttempt++ }
     }
-    val thresholdValues = remember(minimum, maximum, unit) { thresholdWheelValues(minimum, maximum, unit) }
-    val currentOnThresholdChange by rememberUpdatedState(onThresholdChange)
-    val currentOnCooldownChange by rememberUpdatedState(onCooldownChange)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    fun stage(next: AlertRule) { draft = next; pending = next }
+    LaunchedEffect(savedRule, saveAttempt) { if (pending == null) draft = savedRule }
+    LaunchedEffect(pending) { if (pending != null) { delay(300); flush() } }
+    DisposableEffect(Unit) { onDispose { flush() } }
+
+    val (minimum, maximum) = alertRange(kind, config)
+    val values = remember(minimum, maximum, unit) { thresholdWheelValues(minimum, maximum, unit) }
+    Column(
+        Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(kind.label, style = MaterialTheme.typography.headlineSmall)
+        personName?.let { Text("Alert for $it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics {
+                contentDescription = "Enable ${kind.label} alert"
+                toggleableState = ToggleableState(draft.enabled)
+            },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Alert enabled", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Switch(draft.enabled, { stage(draft.copy(enabled = it)); flush() })
+        }
         Text(
-            "${if (kind.isLow) "Alert at or below" else "Alert at or above"} ${thresholdText(rule.thresholdMgDl, unit)}",
+            "${if (kind.isLow) "Alert at or below" else "Alert at or above"} ${thresholdText(draft.thresholdMgDl, unit)}",
             style = MaterialTheme.typography.titleMedium,
         )
-        ValueWheel(
-            values = thresholdValues,
-            selectedValue = rule.thresholdMgDl,
-            unitLabel = unit.label,
-            description = "${kind.label} glucose threshold",
-            onValueSelected = { currentOnThresholdChange(it) },
+        ValueWheel(values, draft.thresholdMgDl, unit.label, "${kind.label} glucose threshold") {
+            stage(draft.copy(thresholdMgDl = it))
+        }
+        Text("Repeat after ${draft.cooldownMinutes} minutes", style = MaterialTheme.typography.titleMedium)
+        Slider(
+            value = draft.cooldownMinutes.toFloat(),
+            onValueChange = { stage(draft.copy(cooldownMinutes = it.roundToInt().coerceIn(1, 60))) },
+            onValueChangeFinished = ::flush,
+            valueRange = 1f..60f,
+            steps = 58,
+            modifier = Modifier.semantics { contentDescription = "${kind.label} repeat cooldown" },
         )
-        Text("Repeat cooldown: ${rule.cooldownMinutes} minutes", style = MaterialTheme.typography.titleMedium)
-        ValueWheel(
-            values = remember { (1..60).map { WheelValue(it, it.toString()) } },
-            selectedValue = rule.cooldownMinutes,
-            unitLabel = "min",
-            description = "${kind.label} alert repeat cooldown",
-            onValueSelected = { currentOnCooldownChange(it) },
-        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { onSoundChange(kind) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Text("Sound & priority")
+            }
+            TextButton(onClick = { flush(); onDone() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Text("Done")
+            }
+        }
     }
 }
 
 @Composable
 private fun ValueWheel(
-    values: List<WheelValue>,
-    selectedValue: Int,
-    unitLabel: String,
-    description: String,
-    onValueSelected: (Int) -> Unit,
+    values: List<WheelValue>, selectedValue: Int, unitLabel: String, description: String, onValueSelected: (Int) -> Unit,
 ) {
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
-    val textSize = with(LocalDensity.current) { 28.sp.toPx() }
-    val currentOnValueSelected by rememberUpdatedState(onValueSelected)
+    val textSize = with(LocalDensity.current) { 24.sp.toPx() }
     val dividerColor = MaterialTheme.colorScheme.primary
+    val currentOnSelect by rememberUpdatedState(onValueSelected)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         key(values.first().storedValue, values.last().storedValue, values.size, unitLabel) {
-            Box(Modifier.width(168.dp).height(168.dp)) {
+            Box(Modifier.width(160.dp).height(132.dp)) {
                 AndroidView(
                     factory = { context ->
                         NumberPicker(context).apply {
-                            minValue = 0
-                            maxValue = values.lastIndex
+                            minValue = 0; maxValue = values.lastIndex
                             displayedValues = values.map { it.label }.toTypedArray()
                             value = nearestWheelIndex(values, selectedValue)
                             wrapSelectorWheel = false
                             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
                             setBackgroundColor(Color.TRANSPARENT)
-                            setSelectionDividerHeight(0)
-                            setTextColor(textColor)
-                            setTextSize(textSize)
+                            setSelectionDividerHeight(0); setTextColor(textColor); setTextSize(textSize)
                             contentDescription = description
-                            setOnValueChangedListener { _, _, index ->
-                                currentOnValueSelected(values[index].storedValue)
-                            }
+                            setOnValueChangedListener { _, _, index -> currentOnSelect(values[index].storedValue) }
                         }
                     },
                     update = { picker ->
-                        picker.setTextColor(textColor)
-                        picker.setTextSize(textSize)
-                        val selectedIndex = nearestWheelIndex(values, selectedValue)
-                        if (picker.value != selectedIndex) picker.value = selectedIndex
+                        picker.setTextColor(textColor); picker.setTextSize(textSize)
+                        val index = nearestWheelIndex(values, selectedValue)
+                        if (picker.value != index) picker.value = index
                     },
-                    modifier = Modifier.width(168.dp).height(168.dp),
+                    modifier = Modifier.width(160.dp).height(132.dp),
                 )
-                HorizontalDivider(Modifier.align(Alignment.Center).offset(y = (-28).dp), color = dividerColor)
-                HorizontalDivider(Modifier.align(Alignment.Center).offset(y = 28.dp), color = dividerColor)
+                HorizontalDivider(Modifier.align(Alignment.Center).offset(y = (-24).dp), color = dividerColor)
+                HorizontalDivider(Modifier.align(Alignment.Center).offset(y = 24.dp), color = dividerColor)
             }
         }
         Text(unitLabel, style = MaterialTheme.typography.titleLarge)
     }
 }
 
-private val AlertKind.isLow: Boolean
-    get() = this == AlertKind.LOW || this == AlertKind.URGENT_LOW
-
-private val GlucoseUnit.label: String
-    get() = if (this == GlucoseUnit.MG_DL) "mg/dL" else "mmol/L"
-
-private fun thresholdText(mgDl: Int, unit: GlucoseUnit): String =
-    if (unit == GlucoseUnit.MG_DL) "$mgDl mg/dL"
-    else String.format(Locale.getDefault(), "%.1f mmol/L", mgDl / 18.0182)
+private fun alertRange(kind: AlertKind, config: AlertConfig): Pair<Int, Int> = when (kind) {
+    AlertKind.URGENT_LOW -> 40 to config[AlertKind.LOW].thresholdMgDl
+    AlertKind.LOW -> config[AlertKind.URGENT_LOW].thresholdMgDl to (config[AlertKind.HIGH].thresholdMgDl - 1)
+    AlertKind.HIGH -> (config[AlertKind.LOW].thresholdMgDl + 1) to config[AlertKind.URGENT_HIGH].thresholdMgDl
+    AlertKind.URGENT_HIGH -> config[AlertKind.HIGH].thresholdMgDl to 400
+}
+private val AlertKind.isLow get() = this == AlertKind.LOW || this == AlertKind.URGENT_LOW
+private val GlucoseUnit.label get() = if (this == GlucoseUnit.MG_DL) "mg/dL" else "mmol/L"
+private fun thresholdText(mgDl: Int, unit: GlucoseUnit) = if (unit == GlucoseUnit.MG_DL) "$mgDl mg/dL"
+else String.format(Locale.getDefault(), "%.1f mmol/L", mgDl / 18.0182)

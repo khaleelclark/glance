@@ -224,7 +224,11 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getBoolean("enhanced_explicit", true)
         set(value) = prefs.edit().putBoolean("enhanced_explicit", value).apply()
     override var accentHex: String
-        get() = prefs.getString("accent_hex", "#1677D2") ?: "#1677D2"
+        get() {
+            val stored = prefs.getString("accent_hex", "#287F7A") ?: "#287F7A"
+            // Carry the owner's new default through upgrades, retaining other custom colors.
+            return if (stored.equals("#1677D2", ignoreCase = true)) "#287F7A" else stored
+        }
         set(value) = prefs.edit().putString("accent_hex", value).apply()
     override var numericStatusIcon: Boolean
         get() = prefs.getBoolean("numeric_status_icon", true)

@@ -164,6 +164,7 @@ internal fun ReadingHistoryChart(
     val selectedIndex = points.indexOfFirst { it.measuredAt.toEpochMilli() == selectedTime }
         .takeIf { it >= 0 } ?: points.lastIndex
     val selected = points.getOrNull(selectedIndex)
+    val selectedVisible = selected?.takeIf { timeFraction(it.measuredAt, now) in viewport.start..viewport.end }
     val latestOnSelect by rememberUpdatedState(onSelectedTimeChange)
     val timeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(locale).withZone(zoneId)
@@ -201,7 +202,7 @@ internal fun ReadingHistoryChart(
                 val scaleLegend = "Scale: ${axisValue(bottom, points[0], unit, locale)}–" +
                     "${axisValue(top, points[0], unit, locale)} ${unit.label}"
                 val timeTicks = chartTimeTicks(now, zoneId, viewport.span)
-                val selectedDescription = selected?.let { reading ->
+                val selectedDescription = selectedVisible?.let { reading ->
                     val scaleStatus = when {
                         reading.valueMgDl!! > top -> ", above graph scale"
                         reading.valueMgDl < bottom -> ", below graph scale"
@@ -210,12 +211,15 @@ internal fun ReadingHistoryChart(
                     " Selected source reading ${GlucoseFormat.withUnit(reading, unit, locale)}, " +
                         "${bandLabel(reading.valueMgDl)}$scaleStatus, measured ${timeFormat.format(reading.measuredAt)}."
                 }.orEmpty()
+                val windowDescription = if (points.none {
+                    timeFraction(it.measuredAt, now) in viewport.start..viewport.end
+                }) " No source readings in this time window." else ""
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
                     "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. " +
                     "Red below Low; yellow above High; green marks the newest in-range reading. " +
                     "Touch a point to inspect. Use the 3, 6, 12 or 24 hour choices to change the time window." +
-                    selectedDescription
+                    windowDescription + selectedDescription
 
                 Row(Modifier.fillMaxWidth()) {
                     val topRail = when {
@@ -242,9 +246,6 @@ internal fun ReadingHistoryChart(
                     BoxWithConstraints(Modifier.weight(1f)) {
                         val chartWidth = maxWidth
                         val selectedFraction = selected?.let { timeFraction(it.measuredAt, now) }
-                        val selectedVisible = selected?.takeIf {
-                            selectedFraction != null && selectedFraction in viewport.start..viewport.end
-                        }
                         val selectedX = selectedFraction?.takeIf { it in viewport.start..viewport.end }
                             ?.let { chartWidth * viewport.xFraction(it) }
                         val tooltipWidth = minOf((if (compact) 112.dp else 132.dp) * fontScale.coerceAtLeast(1f), chartWidth)
@@ -413,11 +414,12 @@ internal fun ReadingHistoryChart(
                                     }
                                 }
                                 selectedVisible?.let { reading ->
+                                    val palette = readingRangePalette(limits.band(reading.valueMgDl!!))
                                     Surface(
                                         Modifier.offset(x = tooltipX ?: 0.dp).width(tooltipWidth)
                                             .clearAndSetSemantics { },
                                         shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        color = palette.container,
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                     ) {
                                         val scaleStatus = when {
@@ -430,7 +432,7 @@ internal fun ReadingHistoryChart(
                                             Modifier.padding(horizontal = 6.dp, vertical = if (compact) 3.dp else 6.dp),
                                             style = if (scaleStatus.isEmpty()) MaterialTheme.typography.labelLarge
                                             else MaterialTheme.typography.labelMedium,
-                                            color = valueColor(reading.valueMgDl),
+                                            color = palette.onContainer,
                                             textAlign = TextAlign.Center,
                                             maxLines = if (scaleStatus.isEmpty()) 1 else 2,
                                         )

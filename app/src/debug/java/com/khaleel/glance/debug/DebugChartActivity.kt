@@ -66,7 +66,7 @@ class DebugChartActivity : ComponentActivity() {
                             Reading("synthetic", now.minusSeconds((288 - step) * 300L),
                                 value, value,
                                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
-                        }
+                        }.let { if (mode == "emptyWindow") listOf(it[192]) else it }
                     }
                     var selected by remember { mutableStateOf<Long?>(null) }
                     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState())) {
@@ -170,6 +170,20 @@ class ChartGestureInstrumentation : Instrumentation() {
             checks.put("pinchCannotChangeTwentyFourHourPreset", true)
             click("Show latest 6 hours")
             limitChecks(checks)
+            launchLimits("emptyWindow")
+            check(chart().contentDescription.toString().contains("No source readings in this time window"))
+            check(!chart().contentDescription.toString().contains("Selected source reading"))
+            val emptyWindowState = chart().stateDescription.toString()
+            for (label in listOf("Earlier reading", "Later reading")) {
+                val node = chart()
+                check(!node.performAction(node.actionList.first { it.label?.toString() == label }.id))
+            }
+            check(chart().stateDescription.toString() == emptyWindowState)
+            checks.put("emptyPresetDoesNotAnnounceHiddenSelection", true)
+            click("Show latest 12 hours")
+            check(chart().contentDescription.toString().contains("Selected source reading"))
+            check(!chart().contentDescription.toString().contains("No source readings in this time window"))
+            checks.put("widerPresetRestoresRealSelectedSource", true)
             targetContext.filesDir.resolve("chart-gesture-probe.json").writeText(
                 JSONObject().put("synthetic", true).put("device", "API 36 emulator")
                     .put("checks", checks).put("allPassed", true).toString(2))

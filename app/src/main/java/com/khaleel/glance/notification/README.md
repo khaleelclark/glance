@@ -67,3 +67,8 @@ Primary references:
 - https://developer.android.com/reference/android/app/Notification#hasPromotableCharacteristics()
 - https://developer.android.com/privacy-and-security/risks/pending-intent
 - https://developer.android.com/about/versions/14/behavior-changes-all
+
+Numeric alarm cards have a system-owned timeout at the current source reading's
+five-minute freshness boundary. A new sample renews it even with the same number;
+duplicates do not extend it. The card expires if the process dies or no fresh
+sample arrives. Its event remains in Alarm Log, and the ongoing card is unaffected.

@@ -248,3 +248,11 @@ foreground-service retention scenarios including actual Clear all and individual
 swipe. Both alarm and ongoing card display a numeric small icon in the High DEMO
 preview. See [0.27 validation](notification-027-validation.md) for fixture hashes,
 exact source/dirty boundaries, pending review/release work and device limitations.
+
+The 0.27 expiry correction ce47d06 passes 222 JVM tests and 19 native icon checks.
+Three additional actual process-death assertions verify that the ordinary alert
+survives SIGKILL, then system timeout removes it at the near five-minute source
+boundary without manual reopening. The first absence observation is less than
+one second after the deadline; Samsung and natural Doze remain unqualified.
+See [expiry receipt](evidence/api36-alert-expiry-0.27.0.json) and the validation
+report for exact fixture/source/dirty state and the failed harness preconditions.

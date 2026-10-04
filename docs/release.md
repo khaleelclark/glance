@@ -426,6 +426,13 @@ requests also retain eligible number icons. Number preference, hidden lock-scree
 values, source identity and freshness remain enforced; stale/absent/special or
 unrenderable values are not advertised as a current status-bar number.
 
+Numeric alarm cards additionally carry Android's system-owned timeout, based on
+the source measurement's five-minute freshness deadline. New samples renew it
+even if their value is unchanged; duplicates cannot extend it. If the app process
+dies or no fresh sample arrives, expiry removes that alarm card and its number;
+the event remains in encrypted Alarm Log. This timeout does not remove the ongoing
+reading card and requires no new application scheduler or exact-alarm permission.
+
 An opaque per-post delete token prevents dismissed alerts returning during an
 icon update and prevents an older callback clearing a newer alarm. On process
 recreation, prior visible numeric alarms with no in-memory identity scope are

@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "checks": {
+    "lowAlertUsesValueIconAndNamesCategory": true,
+    "urgent_lowAlertUsesValueIconAndNamesCategory": true,
+    "highAlertUsesValueIconAndNamesCategory": true,
+    "urgent_highAlertUsesValueIconAndNamesCategory": true,
+    "numericAlarmUsesRemainingSourceFreshnessTimeout": true,
+    "iconTracksLatestValueWhileAlarmTextKeepsTriggerReading": true,
+    "iconRefreshSetsOnlyAlertOnce": true,
+    "sameValueNewSampleRenewsSystemExpiry": true,
+    "duplicateSampleDoesNotExtendSystemExpiry": true,
+    "iconRefreshUsesChosenUnit": true,
+    "staleReadingDoesNotExposeOldStatusNumber": true,
+    "oldDismissTokenCannotCancelNewAlarm": true,
+    "deleteCallbackPreventsRefreshResurrection": true,
+    "missingHostNotificationIsNotRepostedByRefresh": true,
+    "personChangeClearsOldNumericAlarm": true,
+    "privateAlarmAndPublicVersionUseResourceIcons": true,
+    "disabledNumberSettingAppliesToAlarms": true,
+    "regularAndEnhancedRequestsKeepSameValueIcon": true,
+    "newNotifierDropsUnscopedPriorProcessNumericAlarm": true
+  },
+  "allPassed": true,
+  "scope": "Real NotificationManager/bitmap/delete-intent checks; no live source, Samsung or audible qualification",
+  "device": "API 36 emulator",
+  "fixtureApkSha256": "37877c8b05111a370edde801793fbf701b29dd1f237b0f24681a0bcf3e54adb1",
+  "sourceCommitAtRun": "ce47d069a30b87a638772507f7df42fe9cc5adf1",
+  "sourceDirtyAtRun": false,
+  "liveAccount": "not tested",
+  "SamsungOneUI": "not tested",
+  "audibleAlerts": "not tested"
+}

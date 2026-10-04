@@ -56,11 +56,53 @@ Reproduction (dedicated synthetic API 36 emulator, debug APK only):
 ANDROID_HOME=/home/phoenix/Android/Sdk ./gradlew :app:testDebugUnitTest :app:assembleDebug :app:lintDebug
 adb -s emulator-5556 install -r app/build/outputs/apk/debug/app-debug.apk
 adb -s emulator-5556 shell pm grant com.khaleel.glance android.permission.POST_NOTIFICATIONS
-python3 scripts/validate_alert_icons.py emulator-5556
+python3 scripts/validate_alert_icons.py emulator-5556 --suffix expiry
+python3 scripts/validate_alert_expiry.py emulator-5556
 python3 scripts/validate_notification_retention.py emulator-5556 --version 0.27.0
 ```
 
-Independent bounded source review is tracked and pending. Clean release
+Independent source review accepts the original icon/retention changes with no
+HIGH/MEDIUM blocker, but found one LOW: a numeric ordinary alert could remain
+past the freshness boundary after process death. Correction ce47d06 uses system
+Notification.Builder.setTimeoutAfter based on the source measurement deadline,
+sharing the unchanged five-minute ReadingPolicy.FRESH_WINDOW. Numeric eligibility
+is rechecked against current wall time before posting/updating. New samples renew
+the timeout even when the value is unchanged; duplicate samples do not extend it.
+Expiry removes only the numeric alarm card, keeping its encrypted Alarm Log entry;
+it does not remove the ongoing reading notification. No new permission, application
+scheduler or source poll is introduced.
+
+Corrected debug assembly/lint passes, with 222 JVM tests and zero failures/errors/
+skips. All 19 native icon checks pass on clean ce47d06, fixture SHA-256
+37877c8b05111a370edde801793fbf701b29dd1f237b0f24681a0bcf3e54adb1.
+The added native checks verify the remaining-source timeout, renewal for a new
+sample with the same value, and no extension for a duplicate. Receipt:
+api36-alert-icons-0.27.0-expiry.json. The older 16-check receipt is retained.
+
+Android's [notification timeout contract](https://developer.android.com/reference/android/app/Notification.Builder#setTimeoutAfter(long))
+cancels the notification after its duration. The inspected [Android 16 framework](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/notification/NotificationManagerService.java)
+scheduleTimeoutLocked uses a system-owned exact-and-allow-while-idle elapsed-time
+wake. This is platform-managed expiry, not an app alarm or foreground ticker.
+
+The separate near-boundary process-death probe passes all three assertions on
+the same ce47d06 fixture, with generated docs/scripts/evidence dirty. A source
+reading is already 288 seconds old, leaving 12 seconds of the real five-minute
+freshness window. The background app is actually killed with SIGKILL; its ordinary
+alarm remains visible after death, then the system removes it without a manual
+reopen/render. The first observation without the alert was at 18:18:56.141 UTC,
+after its 18:18:55.291 source deadline (less than one second observation latency).
+This does not promise millisecond scheduling or Samsung behavior. The system's
+delete callback may start a new process after cancellation; its empty ledger
+cannot remove the retained alarm by itself. Receipt: api36-alert-expiry-0.27.0.json.
+
+Early attempts did not pass the probe preconditions: waiting for a window from a
+short-lived activity timed out, and asynchronous fixture/notification posting
+needed explicit completion and presence checks. The final script starts only the
+isolated fixture task, confirms a newly written receipt and system notification,
+then kills the background process. Setup force-stop is distinct from the tested
+SIGKILL; no failed attempt is counted as expiry evidence.
+
+Independent correction closure is tracked and pending. Clean release
 assembly/signing, signer continuity and source push remain pending. Final signed
 APKs are not claimed to run in the emulator. These synthetic checks cannot
 qualify live LibreLinkUp, Samsung One UI, TalkBack, natural overnight/background,

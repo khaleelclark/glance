@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "numericAlertRetainedImmediatelyAfterProcessDeath": true,
+    "systemRemovesAlertAcrossActualFiveMinuteSourceBoundaryWithoutManualReopen": true,
+    "expiredNumericAlertDoesNotRemainInSystemNotificationList": true
+  },
+  "allPassed": true,
+  "sourceCommitAtRun": "ce47d069a30b87a638772507f7df42fe9cc5adf1",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "37877c8b05111a370edde801793fbf701b29dd1f237b0f24681a0bcf3e54adb1",
+  "sourceTime": "2026-10-04T18:13:55.291219Z",
+  "freshnessDeadline": "2026-10-04T18:18:55.291219Z",
+  "expiryObservedAt": "2026-10-04T18:18:56.141365+00:00",
+  "scope": "Actual kill -9 of the background app; ordinary alarm retained, then system Notification timeout removes it near the real five-minute measurement boundary. No manual reopen/render. System delete callback may start a new process; its empty in-memory ledger cannot remove the alarm by itself.",
+  "SamsungOneUI": "not tested",
+  "liveAccount": "not tested",
+  "naturalDoze": "not tested",
+  "audibleAlerts": "not tested"
+}

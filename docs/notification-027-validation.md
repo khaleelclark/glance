@@ -102,8 +102,10 @@ isolated fixture task, confirms a newly written receipt and system notification,
 then kills the background process. Setup force-stop is distinct from the tested
 SIGKILL; no failed attempt is counted as expiry evidence.
 
-Independent correction closure is tracked and pending. Clean release
-assembly/signing, signer continuity and source push remain pending. Final signed
+Independent correction closure completed against exact ce47d069a30b87a638772507f7df42fe9cc5adf1,
+with no HIGH/MEDIUM regression or new concrete LOW. The prior process-death
+LOW is closed in source; see review-027.md. Clean release assembly/signing,
+signer continuity and source push are recorded separately in the delivery manifest. Final signed
 APKs are not claimed to run in the emulator. These synthetic checks cannot
 qualify live LibreLinkUp, Samsung One UI, TalkBack, natural overnight/background,
 battery, physical-watch or audible-alert behavior.

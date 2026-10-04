@@ -82,9 +82,9 @@ application ID and signer for every upgrade; increment versionCode.
    the scale; the value readout on the graph retains the actual value, with
    its measurement time directly below the value in the same top tooltip. The current reading places the
    value, unit, and trend arrow together, with a plain-language trend below;
-   landscape places the graph beside it. Settings has color presets, a
-   touchable color wheel, brightness slider, and a custom six-digit hex field; light and dark themes
-   follow the phone. Use Refresh in the app, and Stop
+   landscape places the graph beside it. Phone screens use black backgrounds,
+   graphite cards and lilac controls. Hold/drag inspects a reading; releasing
+   or cancelling hides the tooltip. Use Refresh in the app, and Stop
    monitoring in Settings to end the session. Test screen-off
    behavior before relying on the chosen polling interval.
 
@@ -165,8 +165,8 @@ LOW/HIGH, invalid and excessively long values retain the Glance icon.
 When lock-screen values are hidden, the original notification also uses the
 Glance icon and no critical text, including while unlocked: publicVersion alone
 cannot reliably hide the original icon/chip on every Samsung surface.
-Promoted Live Updates use the Glance icon beside their chip value, avoiding a
-duplicate number; the numeric icon applies to the regular card. The bitmap has
+Since 0.27, both promoted Live Update requests and regular cards use the eligible
+glucose number icon. Promotion remains controlled by Android and the device. The bitmap has
 padding for OEM icon scaling, but Samsung decimal/three-digit readability still
 needs the owner's check. Android's lock-screen privacy settings still apply.
 

@@ -247,7 +247,7 @@ delete-token assertions on clean 227b943, and the same debug APK passes ten
 foreground-service retention scenarios including actual Clear all and individual
 swipe. Both alarm and ongoing card display a numeric small icon in the High DEMO
 preview. See [0.27 validation](notification-027-validation.md) for fixture hashes,
-exact source/dirty boundaries, pending review/release work and device limitations.
+exact source/dirty boundaries, review closure and device limitations.
 
 The 0.27 expiry correction ce47d06 passes 222 JVM tests and 19 native icon checks.
 Three additional actual process-death assertions verify that the ordinary alert

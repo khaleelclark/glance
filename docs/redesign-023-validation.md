@@ -20,8 +20,10 @@ posting a notification does not prove that Android sounded it.
 
 The log is encrypted in no-backup storage and bounded to 1,000 records and 30
 days. Clearing the log must preserve the existing alert fingerprint/cooldown
-state. Explicit new sign-in, sign-out and deletion of local health data clear
-the log. Default diagnostic exports continue to exclude patient names, values
+state. Explicit new sign-in requires successful log cleanup. Sign-out and local
+health-data deletion attempt cleanup and report partial failures; an unerased
+ledger remains encrypted/hidden and blocks another explicit sign-in until
+cleanup succeeds. Default diagnostic exports continue to exclude patient names, values
 and alarm records. Custom accent choices are preserved; the default accent is
 now ocean blue.
 
@@ -36,10 +38,12 @@ ANDROID_HOME=/home/phoenix/Android/Sdk ./gradlew \
   :wear:testDebugUnitTest :wear:assembleDebug :wear:lintDebug --no-daemon
 ```
 
-Result: **BUILD SUCCESSFUL**. Phone: 201 JVM tests, zero failures/errors/skips;
+Initial result: **BUILD SUCCESSFUL**. Phone: 201 JVM tests, zero failures/errors/skips;
 debug lint zero errors and 74 warnings. Watch: 15 JVM tests, zero
 failures/errors/skips; debug lint zero errors/warnings. No watch runtime change
-was made. Release assembly, release lint, signing and final review remain pending.
+was made. The review corrections below subsequently passed 205 phone JVM tests,
+debug assembly and debug lint without errors. Release assembly/lint/signature
+and final source identity are verified separately in the release manifests.
 
 Alert tests cover exact four-category logging with urgent priority, actual
 post-return time, blocked channels, duplicate samples, cooldowns, failed history
@@ -70,8 +74,8 @@ rejected and successful alert saves, stale/offline/setup states, light/dark,
 1.5×/2.0× font scale, landscape and scrolling appearance/alert sheets.
 [UI receipt](evidence/api36-ui-0.23.0.json).
 
-The UI fixture's production UI source is `ce30b73`; that package remains unchanged
-in the subsequent branding/docs work. Its APK SHA-256 is recorded in the receipt.
+The initial UI fixture's production UI source is `ce30b73`, preceding the small
+review corrections below. Its APK SHA-256 is recorded in the receipt.
 Earlier harness attempts failed because scroll gestures targeted the wrong
 landscape column or skipped the Low control. The corrected harness inspects
 scrollable bounds, uses shorter slower swipes outside chart/wheel gesture areas,
@@ -104,10 +108,40 @@ UI counters check callback behavior, rather than real account/Settings persisten
 ## Independent review and release identity
 
 The alarm integration at `18632b0d2ea3a241e94ce81741b2a55cd1a7ec67` and combined
-UI at `ce30b736362d0310e908eb3d1cdd9408f89f237c` were submitted for bounded
-read-only reviews. Results and any necessary corrections must be consumed before
-release. No final review approval, signed 0.23 APK, source push or signed-upgrade
-pass is claimed here yet.
+UI at `ce30b736362d0310e908eb3d1cdd9408f89f237c` received bounded read-only
+reviews. Their one MEDIUM blocker was the same cleanup ordering issue: a failed
+ledger write could skip notification cleanup after deleting cached readings.
+The production `LocalHealthDataCleanup` path now attempts every independent
+step, rerenders after successful reading cleanup or hides the old card if it
+failed, and reports aggregate failure afterward. Four fault-injection tests
+cover failed ledger/reading cleanup, multiple failures and success.
+
+Two localized LOW UI findings were corrected: the chart viewport pill now uses
+`onPrimaryContainer`, and Logbook values expose a spoken source trend and unit
+instead of relying on the arrow glyph. Sign-out now gives a specific ledger
+cleanup failure message; documentation records the encrypted/hidden residual
+bytes and the required cleanup before another explicit sign-in.
+
+The corrected debug fixture passed five focused native UI checks: reading and
+navigation visibility, spoken Logbook units/trends for all four source values,
+cancelled log clear, cancelled sign-out and the dark chart header. Both light
+and dark Now and Logbook were inspected visually. The fixture SHA-256 and source
+checkpoint are in [the correction receipt](evidence/api36-review-fixes-0.23.0.json).
+Reproduce with:
+
+```sh
+python3 scripts/validate_redesign_023.py emulator-5556 --review-fixes
+```
+
+Cleanup failure-path unit tests simulate previously published cards and check
+independent cleanup invocation. A real Android notification teardown with an
+injected disk failure has not been exercised; the MainActivity effect wiring is
+part of the source review. The focused accessibility checks verify semantics,
+rather than running TalkBack.
+
+Final independent review must approve the corrected source before release
+signing/push. Its exact reviewed source and outcome will accompany the final
+release artifacts; the earlier reviews do not themselves approve the correction.
 
 ## Device limits and owner update
 

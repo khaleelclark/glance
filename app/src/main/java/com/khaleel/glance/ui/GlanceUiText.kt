@@ -87,6 +87,8 @@ class GlanceUiText(
         return title to reading.measured
     }
 
+    internal fun sourceTrendDescription(sourceTrend: Trend): String = trend(sourceTrend, ReadingFreshness.FRESH).second
+
     private fun trend(trend: Trend, freshness: ReadingFreshness): Pair<String, String> {
         if (freshness == ReadingFreshness.STALE || freshness == ReadingFreshness.INVALID_TIME) return "" to "Unavailable"
         return when (trend) {

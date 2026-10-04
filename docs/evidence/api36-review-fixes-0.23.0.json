@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "readingAndNavigationRemainVisible": true,
+    "logbookSpokenValuesIncludeUnitsAndSourceTrend": true,
+    "cancelledLogClearPreservesHistory": true,
+    "cancelledSignOutPreservesAccountFixture": true,
+    "darkChartHeaderStillRenders": true
+  },
+  "allPassed": true,
+  "TalkBack": "not tested",
+  "liveAccount": "not tested",
+  "GalaxyS25Ultra": "not tested",
+  "fixtureApkSha256": "6e04fc9d1aad051ef627bc817874e2f7223aa0c8be0a7ad71fb420c6d29547df",
+  "sourceCommitAtRun": "8e3cd74d12f2dc74983e56c0b328b2b10bf68c53",
+  "sourceDirtyAtRun": true,
+  "fixtureType": "Debug-only synthetic APK; not a release deliverable"
+}

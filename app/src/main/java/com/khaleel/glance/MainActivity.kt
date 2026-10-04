@@ -28,6 +28,7 @@ import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.data.LocalHealthDataCleanup
 import com.khaleel.glance.monitoring.MonitoringService
 import com.khaleel.glance.notification.NotificationVisibility
 import com.khaleel.glance.notification.LiveUpdateSupport
@@ -415,13 +416,18 @@ class MainActivity : ComponentActivity() {
         },
         onOpenDiagnostics = { showDiagnostics = true },
         onDeleteLocalData = {
-            runCatching {
-                controller.clearLocalData()
-                app.alertEngine.clearHistory()
-                app.alertPreferences.clearSnapshot()
-                app.alertEngine.clearNotifications()
-                if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
-            }.onFailure { Toast.makeText(this, "Could not clear all local data. Please try again.", Toast.LENGTH_LONG).show() }
+            val cleared = LocalHealthDataCleanup.run(
+                clearReadings = controller::clearLocalData,
+                clearHistory = app.alertEngine::clearHistory,
+                clearAlertSnapshot = app.alertPreferences::clearSnapshot,
+                clearAlertNotifications = app.alertEngine::clearNotifications,
+                updateMonitoring = { readingsCleared ->
+                    if (readingsCleared && controller.display.value.monitoringEnabled) {
+                        app.showCurrentNotification()
+                    } else app.hideCurrentNotification()
+                },
+            )
+            if (!cleared) Toast.makeText(this, "Could not clear all local data. Please try again.", Toast.LENGTH_LONG).show()
         },
         onSignOut = { signOut() },
         onWidgetValuesChanged = {
@@ -444,9 +450,9 @@ class MainActivity : ComponentActivity() {
     )
 
     /** Clearing the visible log deliberately retains alert deduplication and cooldowns. */
-    private fun clearAlarmLog(): Boolean = runCatching { app.alertEngine.clearHistory() }
+    private fun clearAlarmLog(showError: Boolean = true): Boolean = runCatching { app.alertEngine.clearHistory() }
         .onFailure {
-            Toast.makeText(this, "Could not clear the alarm log. Please try again.", Toast.LENGTH_LONG).show()
+            if (showError) Toast.makeText(this, "Could not clear the alarm log. Please try again.", Toast.LENGTH_LONG).show()
         }.isSuccess
 
     private fun signOut() {
@@ -454,13 +460,16 @@ class MainActivity : ComponentActivity() {
         saveWidgetVisibility(false)
         saveWatchVisibility(false)
         stopMonitoring()
-        clearAlarmLog()
+        val logCleared = clearAlarmLog(showError = false)
         controller.signOut()
         app.alertPreferences.clear()
         refreshSettings()
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)
         setupState = setupState.copy(step = SetupStep.SIGN_IN)
+        if (!logCleared) Toast.makeText(this,
+            "Signed out, but the alarm log could not be erased. A new sign-in requires successful log cleanup. Please try again.",
+            Toast.LENGTH_LONG).show()
     }
 
     private fun saveWidgetVisibility(visible: Boolean) {

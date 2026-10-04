@@ -149,7 +149,7 @@ internal fun ReadingHistoryChart(
                 }
                 Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                     Text("${(viewport.span * 24).toInt()} HR", Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
             if (points.isEmpty()) {

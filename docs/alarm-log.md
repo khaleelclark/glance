@@ -9,7 +9,14 @@ interfaces and semantics.
 
 Explicit new sign-in clears the log before accepting another account session;
 if that clear fails, sign-in stops with a storage error. Sign-out and full local
-health-data deletion also clear the log. A routine restart with the existing
+health-data deletion attempt to clear the log and report storage failure. If
+sign-out cannot erase the encrypted ledger, sign-out still completes, the log
+stays hidden, and another explicit sign-in requires successful cleanup first.
+Local-data deletion independently attempts reading, ledger, alert-state and
+notification cleanup; one failed store does not skip the remaining steps. The
+monitoring card is rerendered after successful reading cleanup, or hidden if
+that cleanup failed, and partial failure is reported afterward.
+A routine restart with the existing
 encrypted session retains its history. No new account-binding or multiple-person
 API is introduced in this release.
 

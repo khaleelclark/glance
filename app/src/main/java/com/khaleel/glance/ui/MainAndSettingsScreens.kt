@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -112,7 +113,7 @@ internal fun CompletedGlanceApp(
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
                 AppDestination.NOW -> MainReadingScreen(displayState, settings, callbacks, text, now, zoneId, locale)
-                AppDestination.LOGBOOK -> LogbookScreen(alertHistory, settings, now, zoneId, locale, callbacks.onClearAlertLog)
+                AppDestination.LOGBOOK -> LogbookScreen(alertHistory, settings, text, now, zoneId, locale, callbacks.onClearAlertLog)
                 AppDestination.SETTINGS -> SettingsScreen(displayState, setupState, settings, callbacks)
             }
         }
@@ -238,7 +239,7 @@ private fun ReadingStatus(state: DisplayState, text: GlanceUiText, callbacks: Gl
 
 @Composable
 private fun LogbookScreen(
-    history: List<AlertHistoryEntry>, settings: UserSettingsUi, now: Instant, zoneId: ZoneId, locale: Locale, onClear: () -> Unit,
+    history: List<AlertHistoryEntry>, settings: UserSettingsUi, text: GlanceUiText, now: Instant, zoneId: ZoneId, locale: Locale, onClear: () -> Unit,
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     val groups = groupAlertHistory(history, zoneId)
@@ -262,7 +263,11 @@ private fun LogbookScreen(
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Row { Text(entry.kind.label, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium); Text(time.format(entry.firedAt), color = MaterialTheme.colorScheme.primary) }
                             Text(entry.person.displayName, style = MaterialTheme.typography.bodyMedium)
-                            Text(GlucoseFormat.withUnit(entry.reading, settings.unit, locale) + trendSymbol(entry.reading.trend).let { if (it.isBlank()) "" else "  $it" },
+                            val readingValue = GlucoseFormat.withUnit(entry.reading, settings.unit, locale)
+                            Text(readingValue + trendSymbol(entry.reading.trend).let { if (it.isBlank()) "" else "  $it" },
+                                modifier = Modifier.clearAndSetSemantics {
+                                    contentDescription = "$readingValue, trend ${text.sourceTrendDescription(entry.reading.trend)}"
+                                },
                                 style = MaterialTheme.typography.headlineSmall)
                             val sourceTime = if (entry.reading.measuredAt.atZone(zoneId).toLocalDate() == day) {
                                 time.format(entry.reading.measuredAt)

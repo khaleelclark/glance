@@ -11,7 +11,8 @@ Version 0.23.0 brings ocean-blue branding, a rounded G logo, a compact reading
 summary with a prominent graph, and Now / Logbook / Settings navigation. Settings
 uses grouped rows and quick-edit sheets. The encrypted local Logbook distinguishes
 Low, Urgent Low, High and Urgent High, with source measurement and posting times.
-Clearing it preserves alert cooldowns; explicit sign-in/sign-out clears its data.
+Clearing it preserves alert cooldowns; explicit sign-in requires log cleanup,
+and sign-out reports any failure to erase it.
 Multiple-person monitoring and its dashboard are deferred. See
 [redesign and alarm-log validation](docs/redesign-023-validation.md).
 

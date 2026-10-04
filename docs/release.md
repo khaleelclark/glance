@@ -132,7 +132,10 @@ from the posting time. It records Android accepting a post, which does not prove
 sound was heard. History is encrypted, excluded from backups and diagnostics,
 and limited to 1,000 records with 30-day pruning on load and append. Clear asks
 for confirmation and preserves alert settings, sample deduplication and cooldowns.
-Explicit new sign-in, sign-out and local health-data deletion clear history.
+Explicit new sign-in requires successful history cleanup. Sign-out and local
+health-data deletion attempt cleanup and report partial storage failures. If
+sign-out cannot erase the ledger, it remains encrypted and hidden; another
+explicit sign-in cannot proceed until log cleanup succeeds.
 
 See [redesign-023-validation.md](redesign-023-validation.md) for the exact
 automated/emulator evidence and remaining physical-device checks. For the owner's

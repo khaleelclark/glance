@@ -4,11 +4,13 @@ Status: work in progress; no live follower account or Galaxy S25 Ultra has been 
 
 ## 0.23.0 focused redesign and alarm log
 
-The integrated phone/watch debug build passes 201/15 JVM tests with zero
+The integrated phone/watch debug build passes 205/15 JVM tests with zero
 failures/errors/skips. Debug lint has zero errors (phone 74 warnings; watch zero).
 Synthetic API 36 verification passes 24 UI checks, a focused landscape window
 selection follow-up, 16 native chart checks and eight real Android Keystore-backed
-alarm-storage checks. Evidence uses DEMO fixtures. See
+alarm-storage checks. Five additional focused UI checks passed after review
+corrections; cleanup failure paths are covered by four fault-injection unit tests.
+Evidence uses DEMO fixtures. See
 [redesign-023-validation.md](redesign-023-validation.md) for commands, exact source
 and fixture boundaries, screenshots, pending review/signing and device limits.
 

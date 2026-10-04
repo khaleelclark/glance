@@ -60,6 +60,66 @@ def screenshot(name):
                                    check=True, capture_output=True, timeout=30).stdout)
 
 
+def fixture_metadata():
+    apk = ui.adb('shell', 'pm', 'path', 'com.khaleel.glance').strip().removeprefix('package:')
+    assert re.fullmatch(r'/data/app/[A-Za-z0-9/_.=+~\-]+/base\.apk', apk)
+    return {
+        'fixtureApkSha256': ui.adb('shell', 'sha256sum', apk).split()[0],
+        'sourceCommitAtRun': subprocess.run(['git', 'rev-parse', 'HEAD'], check=True,
+                                          capture_output=True, text=True).stdout.strip(),
+        'sourceDirtyAtRun': bool(subprocess.run(['git', 'status', '--porcelain'], check=True,
+                                               capture_output=True, text=True).stdout.strip()),
+        'fixtureType': 'Debug-only synthetic APK; not a release deliverable',
+    }
+
+
+def review_fixes():
+    assert ui.SERIAL.startswith('emulator-')
+    assert ui.adb('shell', 'getprop', 'ro.kernel.qemu').strip() == '1'
+    ui.adb('shell', 'run-as', 'com.khaleel.glance', 'pwd')
+    old_night = ui.adb('shell', 'cmd', 'uimode', 'night').strip()
+    checks = {}
+    try:
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'no')
+        ui.start()
+        assert ui.visible('113') and ui.visible('mg/dL') and ui.visible('6 HR')
+        assert ui.visible('Now') and ui.visible('Logbook') and ui.visible('Settings')
+        screenshot('review-light')
+        checks['readingAndNavigationRemainVisible'] = True
+        ui.tap('Logbook', True)
+        for value in (65, 50, 250, 310):
+            assert ui.visible(f'{value} mg/dL, trend Holding steady')
+        screenshot('review-logbook')
+        checks['logbookSpokenValuesIncludeUnitsAndSourceTrend'] = True
+        before = ui.events()
+        ui.tap('Clear', True)
+        ui.tap('Cancel', True)
+        assert ui.events() == before and ui.visible('Urgent High')
+        checks['cancelledLogClearPreservesHistory'] = True
+        ui.tap('Settings', True)
+        ui.scroll_to('Sign out')
+        before = ui.events()
+        ui.tap('Sign out', True)
+        ui.tap('Cancel', True)
+        assert ui.events() == before
+        ui.adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+        ui.settle()
+        assert ui.visible('113')
+        checks['cancelledSignOutPreservesAccountFixture'] = True
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'yes')
+        ui.start()
+        assert ui.visible('113') and ui.visible('6 HR')
+        screenshot('review-dark')
+        checks['darkChartHeaderStillRenders'] = True
+        report = {'synthetic': True, 'device': 'API 36 emulator', 'checks': checks,
+                  'allPassed': True, 'TalkBack': 'not tested', 'liveAccount': 'not tested',
+                  'GalaxyS25Ultra': 'not tested', **fixture_metadata()}
+        (ui.EVIDENCE / 'api36-review-fixes-0.23.0.json').write_text(json.dumps(report, indent=2) + '\n')
+        print(json.dumps(checks))
+    finally:
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'yes' if 'yes' in old_night else 'no')
+
+
 def wheel():
     return next(n for n in ui.nodes() if n.get('class') == 'android.widget.NumberPicker')
 
@@ -279,9 +339,13 @@ def main():
                   'allPassed': error is None, 'failure': error,
                   'liveAccount': 'not tested', 'GalaxyS25Ultra': 'not tested',
                   'settingsPersistence': 'fixture callbacks; encrypted log is checked separately'}
+        report.update(fixture_metadata())
         (ui.EVIDENCE / 'api36-ui-0.23.0.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(CHECKS))
 
 
 if __name__ == '__main__':
-    main()
+    if '--review-fixes' in sys.argv[2:]:
+        review_fixes()
+    else:
+        main()

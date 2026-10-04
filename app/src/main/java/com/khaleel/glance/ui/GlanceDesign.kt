@@ -148,33 +148,17 @@ internal fun SectionTitle(title: String, summary: String? = null) {
 /** A small native mark used in-app; launcher and status variants live in vector resources. */
 @Composable
 internal fun GlanceMark(modifier: Modifier = Modifier, inverse: Boolean = false) {
-    val background = if (inverse) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-    val foreground = if (inverse) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary
-    Box(
-        modifier = modifier.size(36.dp).background(background, RoundedCornerShape(11.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.size(27.dp)) {
-            // Isometric sugar cube, matching the launcher and notification marks.
-            val cube = Path().apply {
-                moveTo(size.width * .5f, size.height * .12f)
-                lineTo(size.width * .86f, size.height * .32f)
-                lineTo(size.width * .86f, size.height * .70f)
-                lineTo(size.width * .5f, size.height * .90f)
-                lineTo(size.width * .14f, size.height * .70f)
-                lineTo(size.width * .14f, size.height * .32f)
-                close()
-                moveTo(size.width * .14f, size.height * .32f)
-                lineTo(size.width * .5f, size.height * .52f)
-                lineTo(size.width * .86f, size.height * .32f)
-                moveTo(size.width * .5f, size.height * .52f)
-                lineTo(size.width * .5f, size.height * .90f)
-            }
-            drawPath(cube, foreground, style = Stroke(1.65.dp.toPx(), cap = StrokeCap.Round,
-                join = androidx.compose.ui.graphics.StrokeJoin.Round))
-            drawCircle(foreground, size.width * .035f, Offset(size.width * .33f, size.height * .53f))
-            drawCircle(foreground, size.width * .035f, Offset(size.width * .70f, size.height * .63f))
+    val foreground = if (inverse) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+    Canvas(modifier.size(28.dp)) {
+        val droplet = Path().apply {
+            moveTo(size.width * .5f, size.height * .1f)
+            cubicTo(size.width * .42f, size.height * .27f, size.width * .22f, size.height * .47f, size.width * .22f, size.height * .64f)
+            cubicTo(size.width * .22f, size.height * .8f, size.width * .34f, size.height * .9f, size.width * .5f, size.height * .9f)
+            cubicTo(size.width * .66f, size.height * .9f, size.width * .78f, size.height * .8f, size.width * .78f, size.height * .64f)
+            cubicTo(size.width * .78f, size.height * .47f, size.width * .58f, size.height * .27f, size.width * .5f, size.height * .1f)
+            close()
         }
+        drawPath(droplet, foreground)
     }
 }
 

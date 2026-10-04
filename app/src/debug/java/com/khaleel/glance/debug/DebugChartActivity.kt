@@ -103,13 +103,24 @@ class ChartGestureInstrumentation : Instrumentation() {
             val right = bounds.left + bounds.width() * 0.8f
             val y = bounds.centerY().toFloat()
             check(initial.stateDescription.toString().startsWith("Showing 6.0 hours"))
-            gesture(listOf(left to y), listOf(right to y))
-            val selected = selectedTime()
-            check(selected > 0)
+            check(!chart().contentDescription.toString().contains("Selected source reading"))
+            checkNoGreenDot()
+            checks.put("idleChartHasNoHoverOrGreenEndpointDot", true)
+            var selected = 0L
+            gesture(listOf(left to y), listOf(right to y)) {
+                selected = checkNotNull(selectedTime())
+                check(selected > 0)
+                check(chart().contentDescription.toString().contains("Selected source reading"))
+            }
+            check(selectedTime() == null)
+            check(!chart().contentDescription.toString().contains("Selected source reading"))
+            checkNoGreenDot()
+            checks.put("heldTouchShowsReadingAndReleaseDismissesInspection", true)
             check(chart().stateDescription.toString().startsWith("Showing 6.0 hours"))
             check(Rect().also { chart().getBoundsInScreen(it) } == bounds)
-            gesture(listOf(right to y), listOf(left to y))
-            check(selectedTime() < selected) { "Reverse scrub: first=$selected, reverse=${selectedTime()}, bounds=$bounds" }
+            gesture(listOf(right to y), listOf(left to y)) {
+                check(checkNotNull(selectedTime()) < selected) { "Reverse scrub: first=$selected, reverse=${selectedTime()}, bounds=$bounds" }
+            }
             gesture(listOf(left to (y - bounds.height() / 3)), listOf(right to (y + bounds.height() / 3)))
             check(Rect().also { chart().getBoundsInScreen(it) } == bounds)
             checks.put("oneFingerScrubsWithoutPanningOrParentScrolling", true)
@@ -145,17 +156,23 @@ class ChartGestureInstrumentation : Instrumentation() {
             settle()
             check(selectedTime() == beforeLift)
             checks.put("liftingOneFingerDoesNotSwitchFromMultiTouchToScrub", true)
+            val cancelled = SystemClock.uptimeMillis()
+            event(cancelled, MotionEvent.ACTION_DOWN, listOf(left to y))
+            event(cancelled, MotionEvent.ACTION_MOVE, listOf(right to y))
+            settle()
+            check(chart().contentDescription.toString().contains("Selected source reading"))
+            event(cancelled, MotionEvent.ACTION_CANCEL, listOf(right to y))
+            settle()
+            check(selectedTime() == null)
+            check(!chart().contentDescription.toString().contains("Selected source reading"))
+            checkNoGreenDot()
+            checks.put("cancelledTouchAlsoDismissesInspection", true)
             check(chart().actionList.none { it.label?.toString() in listOf("Zoom in", "Zoom out", "Earlier time", "Later time") })
             checks.put("accessibilityUsesReadingSelectionAndPresetsWithoutZoom", true)
             val beforeNavigation = chart().stateDescription.toString()
-            fun readingAction(label: String): Boolean {
-                val node = chart()
-                val action = node.actionList.first { it.label?.toString() == label }
-                return node.performAction(action.id).also { settle() }
-            }
             var steps = 0
             while (readingAction("Earlier reading")) { check(++steps <= 73) }
-            val earliest = selectedTime()
+            val earliest = checkNotNull(selectedTime())
             check(earliest >= Instant.parse("2026-10-01T06:00:00Z").toEpochMilli())
             check(!readingAction("Earlier reading"))
             check(chart().stateDescription.toString() == beforeNavigation)
@@ -181,9 +198,13 @@ class ChartGestureInstrumentation : Instrumentation() {
             check(chart().stateDescription.toString() == emptyWindowState)
             checks.put("emptyPresetDoesNotAnnounceHiddenSelection", true)
             click("Show latest 12 hours")
-            check(chart().contentDescription.toString().contains("Selected source reading"))
+            check(!chart().contentDescription.toString().contains("Selected source reading"))
             check(!chart().contentDescription.toString().contains("No source readings in this time window"))
-            checks.put("widerPresetRestoresRealSelectedSource", true)
+            check(readingAction("Latest reading"))
+            check(chart().contentDescription.toString().contains("Selected source reading"))
+            check(readingAction("Dismiss reading"))
+            check(!chart().contentDescription.toString().contains("Selected source reading"))
+            checks.put("widerPresetAllowsExplicitAccessibleInspectionAndDismissal", true)
             targetContext.filesDir.resolve("chart-gesture-probe.json").writeText(
                 JSONObject().put("synthetic", true).put("device", "API 36 emulator")
                     .put("checks", checks).put("allPassed", true).toString(2))
@@ -217,9 +238,11 @@ class ChartGestureInstrumentation : Instrumentation() {
         checks.put("fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty", true)
         checkColorBands(0xC62828, 0x9A6700)
         checks.put("defaultHorizontalLinesAndLowHighTraceColorsRender", true)
+        check(readingAction("Latest reading"))
         check(chart().contentDescription.toString().contains("Selected source reading 380 mg/dL"))
         check(chart().contentDescription.toString().contains("above graph scale"))
         launchLimits("below")
+        check(readingAction("Latest reading"))
         check(chart().contentDescription.toString().contains("Selected source reading 25 mg/dL"))
         check(chart().contentDescription.toString().contains("below graph scale"))
         checks.put("outOfScaleSelectionPreservesActualValues", true)
@@ -285,8 +308,27 @@ class ChartGestureInstrumentation : Instrumentation() {
     private fun chart(): AccessibilityNodeInfo = nodes(uiAutomation.rootInActiveWindow)
         .first { it.contentDescription?.toString()?.contains("source readings over 24 hours") == true }
 
-    private fun selectedTime(): Long = nodes(uiAutomation.rootInActiveWindow)
-        .first { it.text?.startsWith("DEMO selected:") == true }.text.toString().substringAfter(": ").toLong()
+    private fun selectedTime(): Long? = nodes(uiAutomation.rootInActiveWindow)
+        .first { it.text?.startsWith("DEMO selected:") == true }.text.toString().substringAfter(": ").toLongOrNull()
+
+    private fun readingAction(label: String): Boolean {
+        val node = chart()
+        val action = node.actionList.first { it.label?.toString() == label }
+        return node.performAction(action.id).also { settle() }
+    }
+
+    private fun checkNoGreenDot() {
+        val bounds = Rect().also { chart().getBoundsInScreen(it) }
+        val bitmap = checkNotNull(uiAutomation.takeScreenshot())
+        try {
+            val plotTop = bounds.top + (68 * targetContext.resources.displayMetrics.density).toInt()
+            var greenPixels = 0
+            for (y in plotTop until bounds.bottom) for (x in bounds.left until bounds.right) {
+                if (bitmap.getPixel(x, y) and 0xFFFFFF == 0x2E7D32) greenPixels++
+            }
+            check(greenPixels == 0) { "Idle plot still contains $greenPixels solid green marker pixels" }
+        } finally { bitmap.recycle() }
+    }
 
     private fun hours(): Double = chart().stateDescription.toString().substringAfter("Showing ").substringBefore(" hours").toDouble()
 
@@ -296,7 +338,7 @@ class ChartGestureInstrumentation : Instrumentation() {
         settle()
     }
 
-    private fun gesture(from: List<Pair<Float, Float>>, to: List<Pair<Float, Float>>) {
+    private fun gesture(from: List<Pair<Float, Float>>, to: List<Pair<Float, Float>>, whileHeld: (() -> Unit)? = null) {
         val stamp = SystemClock.uptimeMillis()
         event(stamp, MotionEvent.ACTION_DOWN, from.take(1))
         if (from.size == 2) event(stamp, MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), from)
@@ -308,6 +350,8 @@ class ChartGestureInstrumentation : Instrumentation() {
             })
             SystemClock.sleep(16)
         }
+        settle()
+        whileHeld?.invoke()
         if (from.size == 2) event(stamp, MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), to)
         event(stamp, MotionEvent.ACTION_UP, to.take(1))
         settle()

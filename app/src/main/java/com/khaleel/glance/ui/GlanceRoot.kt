@@ -1,6 +1,5 @@
 package com.khaleel.glance.ui
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -38,10 +37,7 @@ fun GlanceRoot(
 ) {
     val text = remember(zoneId, locale) { GlanceUiText(zoneId, locale) }
 
-    val darkTheme = isSystemInDarkTheme()
-    val colorScheme = remember(settings.accentHex, darkTheme) {
-        ThemeAccent.scheme(settings.accentHex, darkTheme)
-    }
+    val colorScheme = remember { ThemeAccent.scheme() }
     val view = LocalView.current
     val activity = remember(view.context) {
         var context = view.context

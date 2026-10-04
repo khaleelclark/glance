@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -157,7 +158,7 @@ internal fun ReadingHistoryChart(
     zoneId: ZoneId,
     locale: Locale,
     selectedTime: Long?,
-    onSelectedTimeChange: (Long) -> Unit,
+    onSelectedTimeChange: (Long?) -> Unit,
     alerts: AlertConfig = AlertConfig.defaults(),
 ) {
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -181,6 +182,7 @@ internal fun ReadingHistoryChart(
     val selected = points.getOrNull(selectedIndex)
     val selectedVisible = selected?.takeIf { timeFraction(it.measuredAt, now) in viewport.start..viewport.end }
     val latestOnSelect by rememberUpdatedState(onSelectedTimeChange)
+    var inspectionVisible by remember(connectionId) { mutableStateOf(false) }
     val timeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withLocale(locale).withZone(zoneId)
 
@@ -217,7 +219,7 @@ internal fun ReadingHistoryChart(
                 val scaleLegend = "Scale: ${axisValue(bottom, points[0], unit, locale)}–" +
                     "${axisValue(top, points[0], unit, locale)} ${unit.label}"
                 val timeTicks = chartTimeTicks(now, zoneId, viewport.span)
-                val selectedDescription = selectedVisible?.let { reading ->
+                val selectedDescription = selectedVisible?.takeIf { inspectionVisible }?.let { reading ->
                     val scaleStatus = when {
                         reading.valueMgDl!! > top -> ", above graph scale"
                         reading.valueMgDl < bottom -> ", below graph scale"
@@ -232,8 +234,8 @@ internal fun ReadingHistoryChart(
                 val chartDescription = "${points.size} source readings over 24 hours. " +
                     "Observed range ${GlucoseFormat.withUnit(minPoint, unit, locale)} to " +
                     "${GlucoseFormat.withUnit(maxPoint, unit, locale)}. $scaleLegend. $limitLegend. " +
-                    "Red below Low; yellow above High; green marks the newest in-range reading. " +
-                    "Touch a point to inspect. Use the 3, 6, 12 or 24 hour choices to change the time window." +
+                    "Red below Low; yellow above High. " +
+                    "Hold and drag to inspect; release to dismiss. Use the 3, 6, 12 or 24 hour choices to change the time window." +
                     windowDescription + selectedDescription
 
                 Row(Modifier.fillMaxWidth()) {
@@ -284,18 +286,28 @@ internal fun ReadingHistoryChart(
                                                 ChartViewport(viewportStart, viewportSpan),
                                             )?.let { latestOnSelect(latestPoints[it].measuredAt.toEpochMilli()) }
                                         }
-                                        // Once a second finger joins, never scrub with the remaining finger.
-                                        var multipointer = false
-                                        do {
-                                            val event = awaitPointerEvent()
-                                            val pressed = event.changes.filter { it.pressed }
-                                            if (pressed.size >= 2) {
-                                                multipointer = true
-                                            } else if (!multipointer) {
-                                                event.changes.firstOrNull { it.id == down.id }?.let { select(it.position.x) }
-                                            }
-                                            event.changes.forEach { it.consume() }
-                                        } while (pressed.isNotEmpty())
+                                        // Inspection belongs to this touch only; cancellation also dismisses it.
+                                        inspectionVisible = true
+                                        select(down.position.x)
+                                        try {
+                                            // Once a second finger joins, ignore the remainder of the gesture.
+                                            var multipointer = false
+                                            do {
+                                                val event = awaitPointerEvent()
+                                                val pressed = event.changes.filter { it.pressed }
+                                                if (pressed.size >= 2) {
+                                                    multipointer = true
+                                                    inspectionVisible = false
+                                                    latestOnSelect(null)
+                                                } else if (!multipointer) {
+                                                    pressed.firstOrNull { it.id == down.id }?.let { select(it.position.x) }
+                                                }
+                                                event.changes.forEach { it.consume() }
+                                            } while (pressed.isNotEmpty())
+                                        } finally {
+                                            inspectionVisible = false
+                                            latestOnSelect(null)
+                                        }
                                     }
                                 },
                             ) {
@@ -311,9 +323,25 @@ internal fun ReadingHistoryChart(
                                                 points, selectedIndex, now, viewport, direction,
                                             ) ?: return false
                                             latestOnSelect(points[index].measuredAt.toEpochMilli())
+                                            inspectionVisible = true
                                             return true
                                         }
                                         customActions = listOf(
+                                            CustomAccessibilityAction("Latest reading") {
+                                                points.lastOrNull { timeFraction(it.measuredAt, now) in viewport.start..viewport.end }
+                                                    ?.let {
+                                                        latestOnSelect(it.measuredAt.toEpochMilli())
+                                                        inspectionVisible = true
+                                                        true
+                                                    } ?: false
+                                            },
+                                            CustomAccessibilityAction("Dismiss reading") {
+                                                if (!inspectionVisible) false else {
+                                                    inspectionVisible = false
+                                                    latestOnSelect(null)
+                                                    true
+                                                }
+                                            },
                                             CustomAccessibilityAction("Earlier reading") { selectAdjacent(-1) },
                                             CustomAccessibilityAction("Later reading") { selectAdjacent(1) },
                                         )
@@ -368,7 +396,7 @@ internal fun ReadingHistoryChart(
                                         clipRect(bottom = highY) { trace(highColor) }
                                         // Color clipping changes only presentation, never source observations.
                                         clipRect(top = lowY) { trace(lowColor) }
-                                        offsets.getOrNull(selectedIndex)?.takeIf { selectedVisible != null }?.let { offset ->
+                                        offsets.getOrNull(selectedIndex)?.takeIf { inspectionVisible && selectedVisible != null }?.let { offset ->
                                             drawLine(
                                                 selectedColor,
                                                 Offset(offset.x, plotTop),
@@ -378,19 +406,6 @@ internal fun ReadingHistoryChart(
                                             if (points[selectedIndex].valueMgDl!! in bottom..top) {
                                                 drawCircle(markerBackingColor, radius = 6.dp.toPx(), center = offset)
                                                 drawCircle(valueColor(points[selectedIndex].valueMgDl!!), radius = 4.dp.toPx(), center = offset)
-                                            }
-                                        }
-                                        offsets.getOrNull(points.lastIndex)?.let { offset ->
-                                            val newest = points.last()
-                                            if (offset.x in 0f..size.width && newest.valueMgDl!! in bottom..top) {
-                                                drawCircle(markerBackingColor, radius = 8.dp.toPx(), center = offset)
-                                                drawCircle(valueColor(newest.valueMgDl), radius = 5.5.dp.toPx(), center = offset)
-                                                drawCircle(
-                                                    markerOutlineColor,
-                                                    radius = 8.dp.toPx(),
-                                                    center = offset,
-                                                    style = Stroke(width = 1.dp.toPx()),
-                                                )
                                             }
                                         }
                                     }
@@ -422,7 +437,7 @@ internal fun ReadingHistoryChart(
                                         }
                                     }
                                 }
-                                selectedVisible?.let { reading ->
+                                selectedVisible?.takeIf { inspectionVisible }?.let { reading ->
                                     val palette = readingRangePalette(limits.band(reading.valueMgDl!!))
                                     Surface(
                                         Modifier.offset(x = tooltipX ?: 0.dp).width(tooltipWidth)

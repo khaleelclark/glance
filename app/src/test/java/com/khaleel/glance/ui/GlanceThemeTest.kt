@@ -10,9 +10,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GlanceThemeTest {
-    @Test fun mutedTealIsTheDefaultWhileCustomPresetsRemainAvailable() {
-        assertEquals("#287F7A", ThemeAccent.DEFAULT)
-        assertTrue(ThemeAccent.presets.any { it.hex == "#087E82" })
+    @Test fun fixedPresentationUsesBlackAndReadableLilacControls() {
+        assertEquals("#B9AEF5", ThemeAccent.DEFAULT)
+        val scheme = ThemeAccent.scheme()
+        assertEquals(Color.Black, scheme.background)
+        assertEquals(Color.Black, scheme.surface)
+        assertTrue(contrast(scheme.primary, scheme.surfaceContainer) >= 4.5f)
+        assertTrue(contrast(scheme.primary, scheme.onPrimary) >= 4.5f)
+        assertTrue(contrast(scheme.onSurfaceVariant, scheme.surfaceContainerLow) >= 4.5f)
+        assertTrue(contrast(scheme.onSurface, scheme.surfaceContainerLow) >= 7f)
     }
 
     @Test fun acceptsAndNormalizesOnlySixDigitHexColors() {
@@ -23,15 +29,6 @@ class GlanceThemeTest {
         assertNull(ThemeAccent.normalize("#XYZXYZ"))
     }
 
-    @Test fun extremeCustomColorsKeepPrimaryReadableOnBothThemes() {
-        for (dark in listOf(false, true)) {
-            for (hex in listOf("#FFFFFF", "#000000", "#FFFF00", "#087E82")) {
-                val scheme = ThemeAccent.scheme(hex, dark)
-                assertTrue("$hex dark=$dark", contrast(scheme.primary, scheme.surfaceContainer) >= 4.5f)
-                assertTrue("$hex dark=$dark", contrast(scheme.primary, scheme.onPrimary) >= 4.5f)
-            }
-        }
-    }
 
     @Test fun wheelColorRoundTripsPresetsAndNeutralColors() {
         for (hex in ThemeAccent.presets.map { it.hex } + listOf("#FFFFFF", "#000000", "#808080", "#FF00FF")) {

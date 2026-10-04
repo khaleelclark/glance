@@ -33,11 +33,11 @@ internal fun readingRangePalette(band: ChartBand?): ReadingRangePalette {
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.surface.luminance() < .5f
     return when (band) {
-        ChartBand.IN_RANGE -> if (dark) ReadingRangePalette(Color(0xFF8BE0A8), Color(0xFF173D28), Color(0xFFDBF9E5))
+        ChartBand.IN_RANGE -> if (dark) ReadingRangePalette(scheme.onSurface, scheme.surfaceContainerLow, scheme.onSurface)
             else ReadingRangePalette(Color(0xFF176B38), Color(0xFFE4F5E9), Color(0xFF123A22))
-        ChartBand.HIGH -> if (dark) ReadingRangePalette(Color(0xFFFFD967), Color(0xFF44380E), Color(0xFFFFF0B4))
+        ChartBand.HIGH -> if (dark) ReadingRangePalette(Color(0xFFFFD967), scheme.surfaceContainerLow, Color(0xFFFFF0B4))
             else ReadingRangePalette(Color(0xFF755600), Color(0xFFFFF3C4), Color(0xFF453200))
-        ChartBand.LOW -> if (dark) ReadingRangePalette(Color(0xFFFF9B9B), Color(0xFF492127), Color(0xFFFFE0E3))
+        ChartBand.LOW -> if (dark) ReadingRangePalette(Color(0xFFFF9B9B), scheme.surfaceContainerLow, Color(0xFFFFE0E3))
             else ReadingRangePalette(Color(0xFFB31F32), Color(0xFFFFE8EB), Color(0xFF5E1320))
         null -> ReadingRangePalette(scheme.onSurface, scheme.surfaceContainerLow, scheme.onSurface)
     }

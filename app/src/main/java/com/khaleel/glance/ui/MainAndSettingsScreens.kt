@@ -7,7 +7,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +30,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -87,7 +85,7 @@ internal enum class AppDestination(val label: String, val glyph: GlanceGlyph) {
     NOW("Now", GlanceGlyph.NOW), LOGBOOK("Logbook", GlanceGlyph.LOGBOOK),
     SETTINGS("Settings", GlanceGlyph.SETTINGS),
 }
-private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, ACCENT, NICKNAME }
+private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, NICKNAME }
 private enum class ConfirmAction { SIGN_OUT, DELETE_DATA }
 
 @Composable
@@ -202,12 +200,15 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
     Surface(Modifier.fillMaxWidth().animateContentSize(), GlanceShapes.extraLarge,
         rangePalette.container, contentColor = rangePalette.onContainer) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text((reading?.freshness ?: "Waiting for first reading") + (band?.let { " · ${readingBandLabel(it)}" } ?: ""),
+            Text(reading?.measured ?: "Waiting for first reading",
                 style = MaterialTheme.typography.labelMedium, color = rangePalette.foreground)
             if (reading == null) {
                 Text("No reading yet", style = MaterialTheme.typography.headlineLarge)
                 Text("Glance is waiting for LibreLinkUp.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
+                if (state.freshness != ReadingFreshness.FRESH) {
+                    Text(reading.freshness, style = MaterialTheme.typography.labelMedium)
+                }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(reading.value, style = MaterialTheme.typography.displayMedium, color = rangePalette.foreground, modifier = Modifier.alignByBaseline())
                     Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.alignByBaseline())
@@ -219,7 +220,6 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
                     Text(reading.trendDescription, style = MaterialTheme.typography.bodyMedium)
                     delta?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 }
-                Text(reading.measured, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -339,8 +339,7 @@ internal fun SettingsScreen(
             AlertSettings(settings.alerts, settings.unit, callbacks.onAlertRuleChanged, callbacks.onAlertSoundChanged,
                 callbacks.onOpenNotificationSettings)
         }
-        SettingsGroup("Appearance & devices") {
-            ValueSettingRow("App color", accentName(settings.accentHex)) { sheet = SettingsSheet.ACCENT }; GroupDivider()
+        SettingsGroup("Devices") {
             SwitchSettingRow("Show widget values", "May be visible while the phone is locked.", settings.widgetValuesVisible, callbacks.onWidgetValuesChanged); GroupDivider()
             SwitchSettingRow("Share watch readings", "Shows values in the watch app and complication.", settings.watchValuesVisible, callbacks.onWatchValuesChanged); GroupDivider()
             SwitchSettingRow("Watch notification", "Allows one silent native watch notification.", settings.watchNotificationsEnabled, callbacks.onWatchNotificationsChanged)
@@ -370,11 +369,6 @@ internal fun SettingsScreen(
                             label = { Text("Nickname") }, placeholder = { Text(settings.sourcePersonName ?: "Original name") },
                             singleLine = true, supportingText = { Text("Up to 40 characters. Shown in Glance and notifications. Leave blank to use the original name.") })
                         Button({ callbacks.onNicknameChanged(draft); sheet = null }, Modifier.fillMaxWidth()) { Text("Save nickname") }
-                    }
-                    SettingsSheet.ACCENT -> {
-                        Text("App color", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
-                        AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
-                        Button({ sheet = null }, Modifier.fillMaxWidth()) { Text("Done") }
                     }
                 }
             }
@@ -449,22 +443,6 @@ private fun ScreenHeader(title: String, subtitle: String? = null, action: @Compo
     } }
 }
 
-@Composable private fun AccentChoice(selectedHex: String, onSelect: (String) -> Unit) {
-    var draft by rememberSaveable(selectedHex) { mutableStateOf(selectedHex) }
-    var custom by rememberSaveable { mutableStateOf(false) }
-    val normalized = ThemeAccent.normalize(draft)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ThemeAccent.presets.forEach { preset -> FilterChip(selectedHex.equals(preset.hex, true), { onSelect(preset.hex) }, label = { Text(preset.name) }, leadingIcon = { Text("●", color = ThemeAccent.color(preset.hex)) }) }
-    }
-    OutlinedButton({ custom = !custom }, Modifier.fillMaxWidth()) { Text(if (custom) "Close custom color" else "Custom color") }
-    AnimatedVisibility(custom) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ColorWheelPicker(normalized ?: selectedHex) { draft = it }
-        OutlinedTextField(draft, { if (it.length <= 7) draft = it }, Modifier.fillMaxWidth(), label = { Text("Hex color") },
-            placeholder = { Text(ThemeAccent.DEFAULT) }, singleLine = true, isError = draft.isNotBlank() && normalized == null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii), supportingText = { Text(if (normalized == null) "Enter six hex digits." else "Adjusted when needed for readable contrast.") })
-        Button({ normalized?.let(onSelect) }, Modifier.fillMaxWidth(), normalized != null && !normalized.equals(selectedHex, true)) { Text("Apply color") }
-    } }
-}
 
 internal fun groupAlertHistory(history: List<AlertHistoryEntry>, zoneId: ZoneId): List<Pair<LocalDate, List<AlertHistoryEntry>>> =
     history.sortedByDescending { it.firedAt }.groupBy { it.firedAt.atZone(zoneId).toLocalDate() }.map { it.key to it.value }
@@ -492,6 +470,5 @@ private fun dayLabel(day: LocalDate, now: Instant, zoneId: ZoneId, locale: Local
     val today = now.atZone(zoneId).toLocalDate()
     return when (day) { today -> "Today"; today.minusDays(1) -> "Yesterday"; else -> DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(day) }
 }
-private fun accentName(hex: String) = ThemeAccent.presets.firstOrNull { it.hex.equals(hex, true) }?.name ?: "Custom"
 private fun permissionStatusShort(status: PermissionStatus) = when (status) { PermissionStatus.UNKNOWN -> "not checked"; PermissionStatus.GRANTED -> "allowed"; PermissionStatus.DENIED -> "not allowed" }
 private fun batteryStatusShort(status: BatteryStatus) = when (status) { BatteryStatus.UNKNOWN -> "not checked"; BatteryStatus.STANDARD -> "standard"; BatteryStatus.UNRESTRICTED -> "unrestricted" }

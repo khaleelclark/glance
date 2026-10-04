@@ -46,7 +46,9 @@ Stop, person change and sign-out are rechecked. Exact source/fixture metadata
 was added to the new version's receipt after collection; the older 0.18 receipt
 was not overwritten. See api36-notification-0.27.0-retention.json.
 Root inspected the High DEMO screenshot: both alert and ongoing card show 240 as
-the small icon; the alert explicitly names High and retains its source time.
+the small icon; the alert explicitly names High and retains its source time. The separate
+status-bar screenshot uses the direct notification fixture above the emulator
+home screen; this isolates icon rendering rather than exercising a live controller.
 
 Reproduction (dedicated synthetic API 36 emulator, debug APK only):
 

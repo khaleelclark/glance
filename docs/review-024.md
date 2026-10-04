@@ -27,8 +27,11 @@ announcing an empty window through chart semantics. Dedicated native checks
 cover the empty six-hour preset and recovery through a wider preset. Correction fc28c35 passed 17 native chart checks at its exact clean source,
 including the empty-window and wider-preset cases. The six selected tooltip
 container/on-container pairs exceed 10:1 contrast; focused light-mode range
-screenshots are inspected separately. Final source correction review remains
-pending.
+screenshots are inspected separately. The final bounded correction review at clean
+fc28c35bede016fca999728be026594b4633a75e closes both LOW findings, finds no
+HIGH/MEDIUM blocker or new concrete LOW, and approves proceeding to clean
+signing/source push. Later source commits only record evidence and review
+notes; production code remains unchanged since this reviewed candidate.
 
 ## Large text correction
 

@@ -1,7 +1,9 @@
 # Glance 0.24 refinement validation
 
 Status: integrated implementation and chart review corrections at fc28c35;
-final source review and clean release verification remain in progress. Base is clean 0.23 source d5a91c9.
+final source review is complete with no HIGH/MEDIUM blocker. Base is clean
+0.23 source d5a91c9. Clean build/signature/push results are supplied separately
+in the generated release manifest and verification report at handoff.
 
 ## Scope
 
@@ -70,8 +72,14 @@ checks and two empty-window/wider-preset checks. Its receipt records clean
 fc28c35, APK SHA-256
 `7734fbcb5b13b8c869dd6be374a8bb406c5f9a339df4171e318796774e77485b`.
 Three focused light-mode source-range screenshots verify the final tooltip
-containers. The final LOW correction review and clean release verification
-remain pending.
+containers. The final LOW correction review at clean fc28c35 closes both findings and finds
+no HIGH/MEDIUM blocker or new concrete LOW. See [review record](review-024.md).
+The repeatable clean release command is `python3 scripts/sign_release.py`;
+final phone/watch unit totals, lint, signatures, APK hashes and exact clean source
+are recorded in generated release manifests and the artifact verification report.
+Source-only approval does not prove that build succeeded; those files and the
+handoff must establish it. The signed APK is not launched in an emulator as part
+of this source/fixture evidence.
 
 ## Device limits
 

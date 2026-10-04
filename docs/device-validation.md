@@ -10,7 +10,9 @@ checks (including empty-window semantics), 11 integrated UI checks and two focus
 inspection caught and corrected graph value/unit/time clipping. These receipts
 use distinct baseline/correction APK hashes and source/dirty states; see
 [refinement-024-validation.md](refinement-024-validation.md) for exact boundaries.
-Final clean signing/source push and independent correction review are pending.
+Final source correction review closes both LOW findings with no HIGH/MEDIUM
+blocker. Generated release manifests/verification reports provide final clean
+unit/lint/signature/source-push evidence separately.
 No live-account/Samsung, TalkBack, overnight, battery, car, physical-watch or
 audible-delivery qualification is claimed.
 

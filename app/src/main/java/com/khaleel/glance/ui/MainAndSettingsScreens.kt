@@ -149,7 +149,7 @@ internal fun MainReadingScreen(
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     var selectedTime by rememberSaveable(state.person?.id) { mutableStateOf<Long?>(null) }
     val summary: @Composable ColumnScope.() -> Unit = {
-        ReadingHeader(state, callbacks)
+        ReadingHeader(state, callbacks, text)
         ReadingHero(state, settings, text, now, locale)
         ReadingStatus(state, text, callbacks)
     }
@@ -169,21 +169,28 @@ internal fun MainReadingScreen(
 }
 
 @Composable
-private fun ReadingHeader(state: DisplayState, callbacks: GlanceCallbacks) {
+private fun ReadingHeader(state: DisplayState, callbacks: GlanceCallbacks, text: GlanceUiText) {
     val refreshEnabled = state.monitoringEnabled && state.runtime == RuntimeState.RUNNING && state.connection !in nonRefreshableConnections
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         GlanceMark()
         Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text("GLANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text("GLANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Surface(Modifier.size(8.dp).semantics {
+                    contentDescription = text.monitoring(state) + (text.connection(state)?.let { ". $it" } ?: "")
+                }, CircleShape, color = when {
+                    !state.monitoringEnabled || state.runtime != RuntimeState.RUNNING -> MaterialTheme.colorScheme.outline
+                    state.connection !in listOf(ConnectionState.READY, ConnectionState.FETCHING) -> MaterialTheme.colorScheme.error
+                    else -> readingRangePalette(ChartBand.IN_RANGE).foreground
+                }) {}
+            }
             Text(state.person?.displayName ?: "Shared reading", Modifier.semantics { heading() },
-                style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         IconButton(callbacks.onRefresh, enabled = refreshEnabled,
             modifier = Modifier.semantics { contentDescription = "Refresh reading" }) {
             GlanceGlyphIcon(GlanceGlyph.REFRESH, color = if (refreshEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        TextButton(onClick = if (state.runtime == RuntimeState.RUNNING) callbacks.onStopMonitoring else callbacks.onResumeMonitoring,
-            modifier = Modifier.heightIn(min = 48.dp)) { Text(if (state.runtime == RuntimeState.RUNNING) "Pause" else "Resume") }
     }
 }
 
@@ -191,27 +198,29 @@ private fun ReadingHeader(state: DisplayState, callbacks: GlanceCallbacks) {
 private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: GlanceUiText, now: Instant, locale: Locale) {
     val reading = text.reading(state, settings.unit, now)
     val delta = readingDeltaText(state.reading, state.history, settings.unit, locale)
+    val band = currentReadingBand(state.reading, state.freshness, settings.alerts)
+    val rangePalette = readingRangePalette(band)
     Surface(Modifier.fillMaxWidth().animateContentSize(), GlanceShapes.extraLarge,
-        MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shadowElevation = 2.dp) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(reading?.freshness ?: "Waiting for first reading", style = MaterialTheme.typography.labelLarge,
-                color = if (state.freshness == ReadingFreshness.FRESH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        rangePalette.container, contentColor = rangePalette.onContainer) {
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text((reading?.freshness ?: "Waiting for first reading") + (band?.let { " · ${readingBandLabel(it)}" } ?: ""),
+                style = MaterialTheme.typography.labelMedium, color = rangePalette.foreground)
             if (reading == null) {
                 Text("No reading yet", style = MaterialTheme.typography.headlineLarge)
                 Text("Glance is waiting for LibreLinkUp.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(reading.value, style = MaterialTheme.typography.displayLarge, modifier = Modifier.alignByBaseline())
-                    Text(reading.unit, style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
+                    Text(reading.value, style = MaterialTheme.typography.displayMedium, color = rangePalette.foreground, modifier = Modifier.alignByBaseline())
+                    Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.alignByBaseline())
                     if (reading.trendSymbol.isNotBlank()) Text(reading.trendSymbol,
-                        style = MaterialTheme.typography.displayMedium.copy(color = MaterialTheme.colorScheme.primary),
+                        style = MaterialTheme.typography.headlineLarge.copy(color = rangePalette.foreground),
                         modifier = Modifier.alignByBaseline().semantics { contentDescription = "Trend ${reading.trendDescription}" })
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(reading.trendDescription, style = MaterialTheme.typography.titleMedium)
-                    delta?.let { Text("· $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Text(reading.trendDescription, style = MaterialTheme.typography.bodyMedium)
+                    delta?.let { Text("· $it", style = MaterialTheme.typography.bodyMedium) }
                 }
-                Text(reading.measured, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(reading.measured, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -220,17 +229,16 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
 @Composable
 private fun ReadingStatus(state: DisplayState, text: GlanceUiText, callbacks: GlanceCallbacks) {
     val connection = text.connection(state)
+    if (connection == null && state.monitoringEnabled && state.runtime == RuntimeState.RUNNING) return
     Row(Modifier.fillMaxWidth().clip(GlanceShapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)
         .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        Surface(Modifier.size(9.dp), CircleShape, color = when {
-            state.runtime != RuntimeState.RUNNING -> MaterialTheme.colorScheme.outline
-            connection != null -> MaterialTheme.colorScheme.error
-            else -> MaterialTheme.colorScheme.primary
-        }) {}
         Column(Modifier.weight(1f)) {
-            Text(text.monitoring(state), style = MaterialTheme.typography.labelLarge)
+            if (!state.monitoringEnabled || state.runtime != RuntimeState.RUNNING) Text(text.monitoring(state), style = MaterialTheme.typography.labelLarge)
             AnimatedVisibility(connection != null) { connection?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) } }
+        }
+        if (!state.monitoringEnabled || state.runtime in listOf(RuntimeState.STOPPED, RuntimeState.UNABLE_TO_START)) {
+            TextButton(callbacks.onResumeMonitoring) { Text("Start monitoring") }
         }
         if (state.connection in reconnectConnections) TextButton(callbacks.onReconnect) { Text("Reconnect") }
         if (state.connection == ConnectionState.LOCAL_ERROR) TextButton(callbacks.onOpenDiagnostics) { Text("Details") }
@@ -245,12 +253,11 @@ private fun LogbookScreen(
     val groups = groupAlertHistory(history, zoneId)
     val time = remember(zoneId, locale) { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).withZone(zoneId) }
     ScreenList {
-        ScreenHeader("Logbook", "Glucose alerts posted by Glance") {
+        ScreenHeader("Logbook") {
             if (history.isNotEmpty()) TextButton({ confirmClear = true }) { Text("Clear") }
         }
         if (history.isEmpty()) GlanceCard(Modifier.fillMaxWidth()) {
             Text("No alerts yet", style = MaterialTheme.typography.titleLarge)
-            Text("When Glance posts a glucose alert, its type and source reading will appear here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         groups.forEach { (day, entries) ->
             Text(dayLabel(day, now, zoneId, locale), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleMedium,
@@ -298,7 +305,7 @@ internal fun SettingsScreen(
     var confirm by remember { mutableStateOf<ConfirmAction?>(null) }
     var help by rememberSaveable { mutableStateOf(false) }
     ScreenList {
-        ScreenHeader("Settings", "Glance, arranged around daily use")
+        ScreenHeader("Settings")
         SettingsGroup("Reading") {
             ValueSettingRow("Units", settings.unit.label) { sheet = SettingsSheet.UNIT }; GroupDivider()
             ValueSettingRow("Refresh cadence", if (settings.intervalMinutes == 1) "Every minute" else "Every 5 minutes") { sheet = SettingsSheet.CADENCE }
@@ -335,7 +342,6 @@ internal fun SettingsScreen(
             SwitchSettingRow("Show widget values", "May be visible while the phone is locked.", settings.widgetValuesVisible, callbacks.onWidgetValuesChanged); GroupDivider()
             SwitchSettingRow("Share watch readings", "Shows values in the watch app and complication.", settings.watchValuesVisible, callbacks.onWatchValuesChanged); GroupDivider()
             SwitchSettingRow("Watch notification", "Allows one silent native watch notification.", settings.watchNotificationsEnabled, callbacks.onWatchNotificationsChanged)
-            Text(settings.watchSyncStatus, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         SettingsGroup("Account & support") {
             ActionSettingRow("Change person", onClick = callbacks.onChangePerson); GroupDivider()
@@ -357,7 +363,6 @@ internal fun SettingsScreen(
                         "Live Update is requested on supported devices; Android may show the graph notification instead.") { callbacks.onEnhancedNotificationChanged(it == "Live Update"); sheet = null }
                     SettingsSheet.ACCENT -> {
                         Text("App color", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
-                        Text("Ocean blue is the Glance default. Custom saved colors remain supported.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
                         Button({ sheet = null }, Modifier.fillMaxWidth()) { Text("Done") }
                     }
@@ -381,9 +386,12 @@ internal fun SettingsScreen(
     verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
 
 @Composable
-private fun ScreenHeader(title: String, subtitle: String, action: @Composable (() -> Unit)? = null) {
+private fun ScreenHeader(title: String, subtitle: String? = null, action: @Composable (() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) { Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineMedium); Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        Column(Modifier.weight(1f)) {
+            Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineMedium)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
         action?.invoke()
     }
 }

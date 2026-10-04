@@ -7,14 +7,16 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.23.0 brings ocean-blue branding, a rounded G logo, a compact reading
-summary with a prominent graph, and Now / Logbook / Settings navigation. Settings
-uses grouped rows and quick-edit sheets. The encrypted local Logbook distinguishes
-Low, Urgent Low, High and Urgent High, with source measurement and posting times.
-Clearing it preserves alert cooldowns; explicit sign-in requires log cleanup,
-and sign-out reports any failure to erase it.
-Multiple-person monitoring and its dashboard are deferred. See
-[redesign and alarm-log validation](docs/redesign-023-validation.md).
+Version 0.24.0 makes the graph the main feature of Now: an open horizontal grid,
+shaded range, and source value/time readouts on the graph. Choose 3 / 6 / 12 / 24
+hours; touch inspects real readings and pinch zoom is removed. Fresh current
+readings use green in range, yellow above High and red below Low, consistently
+with the existing graph limits. Older readings retain explicit freshness labels
+and neutral presentation. The header has a small monitoring dot, a clear Refresh
+arrow and the new eye mark; Pause is removed from Now. Settings and Logbook
+subtitles and graph legends are simplified. The encrypted local Logbook and
+single-person account/runtime controls remain. See
+[0.24 refinement validation](docs/refinement-024-validation.md).
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.
@@ -22,10 +24,9 @@ Its effect on the owner's Proton VPN connection remains unverified. See
 [VPN investigation](docs/vpn-compatibility.md).
 
 The main screen includes a 24-hour graph of validated source samples. Touch
-to inspect readings and pinch to zoom from one hour to the full day. Two-finger
-dragging does not scroll the timeline. **6 hr**, **12 hr** and **24 hr** under the
-graph show the latest time window; 6 hours is the default.
-The graph has a fixed 40–350 mg/dL scale, red below Low and orange above High.
+to inspect readings. **3 hr**, **6 hr**, **12 hr** and **24 hr** select the latest
+time window; 6 hours is the default. Multi-finger gestures do not change it.
+The graph has a fixed 40–350 mg/dL scale, red below Low and yellow above High.
 Enabled ordinary Low/High alert settings supply the limits; disabled alerts use
 70/240 mg/dL. Labels follow the selected unit.
 See [gesture verification](docs/chart-gesture-validation.md) and

@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `28`, and versionName
-`0.23.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `29`, and versionName
+`0.24.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -59,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.23.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.24.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -338,3 +338,25 @@ If an existing session still fails, reconnect in Glance to test a fresh login
 sequence; process restarts intentionally drop temporary cookie state. There is
 no watch runtime change and an existing compatible watch install needs no update.
 See [VPN investigation and verification](vpn-compatibility.md).
+
+## 0.24.0 graph and reading refinement
+
+Now gives the graph more space without a nested rounded card. The horizontal
+value grid and green range band follow the existing ordinary Low/High settings
+(or 70/240 mg/dL defaults when those alerts are disabled). Fresh current readings
+use green/yellow/red range presentation; delayed, stale and unavailable states
+retain truthful labels and neutral presentation. This is display classification,
+not a change to alert policy or a new target-range setting.
+
+Selected source value/unit/time appears on the graph crosshair. Touch scrubs real
+observations. The only time-window controls are 3/6/12/24-hour presets; pinch zoom
+is removed. A small accessible activity dot replaces the running-status strip,
+Refresh uses a clear arrow, and Pause is removed from Now. Stopped/error states
+still offer recovery; system Stop, Settings stop and sign-out retain their
+existing effects. The native logo is now an eye mark. Redundant Settings,
+Logbook and graph explanatory text is removed.
+
+See [refinement validation](refinement-024-validation.md) for exact build,
+synthetic fixture and physical-device boundaries. Update the owner's existing
+Studio build through the same computer/debug key rather than installing a
+differently signed personal APK over it.

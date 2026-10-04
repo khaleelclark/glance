@@ -114,26 +114,25 @@ class ChartGestureInstrumentation : Instrumentation() {
             check(Rect().also { chart().getBoundsInScreen(it) } == bounds)
             checks.put("oneFingerScrubsWithoutPanningOrParentScrolling", true)
 
-            // Start near the middle and spread fingers to zoom around that time.
             val beforePinchSelection = selectedTime()
             val middle = bounds.centerX().toFloat()
             gesture(listOf((middle - 35) to y, (middle + 35) to y),
                 listOf((middle - 100) to y, (middle + 100) to y))
-            check(hours() in 1.0..3.0)
-            checks.put("twoFingerPinchZoomsIn", true)
+            check(hours() == 6.0)
+            checks.put("pinchDoesNotChangePresetWindow", true)
             check(selectedTime() == beforePinchSelection)
             checks.put("twoFingerGesturesDoNotChangeSelectedReading", true)
             val beforeDrag = chart().stateDescription.toString()
             gesture(listOf(left to y, (left + 80) to y), listOf((left + 80) to y, (left + 160) to y))
             check(chart().stateDescription.toString() == beforeDrag)
             checks.put("twoFingerDragDoesNotScrollTimeline", true)
-            click("Show latest 12 hours")
-            check(hours() == 12.0)
+            for (preset in listOf(3, 6, 12, 24)) {
+                click("Show latest $preset hours")
+                check(hours() == preset.toDouble())
+            }
+            checks.put("threeSixTwelveTwentyFourHourPresetsWork", true)
             click("Show latest 6 hours")
-            check(hours() == 6.0)
-            checks.put("sixAndTwelveHourChoicesResetToLatestWindow", true)
 
-            // After lifting the second finger, the remaining finger must not scrub.
             val stamp = SystemClock.uptimeMillis()
             event(stamp, MotionEvent.ACTION_DOWN, listOf(left to y))
             event(stamp, MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), listOf(left to y, right to y))
@@ -145,29 +144,13 @@ class ChartGestureInstrumentation : Instrumentation() {
             event(stamp, MotionEvent.ACTION_UP, listOf(right to y))
             settle()
             check(selectedTime() == beforeLift)
-            checks.put("liftingOneFingerDoesNotSwitchFromPanToScrub", true)
-
+            checks.put("liftingOneFingerDoesNotSwitchFromMultiTouchToScrub", true)
+            check(chart().actionList.none { it.label?.toString() in listOf("Zoom in", "Zoom out", "Earlier time", "Later time") })
+            checks.put("accessibilityUsesReadingSelectionAndPresetsWithoutZoom", true)
             click("Show latest 24 hours")
-            check(hours() == 24.0)
             gesture(listOf((middle - 100) to y, (middle + 100) to y), listOf((middle - 15) to y, (middle + 15) to y))
             check(hours() == 24.0)
-            checks.put("zoomOutStopsAtTwentyFourHoursAndResetWorks", true)
-            val maximum = chart()
-            val maximumZoomOut = maximum.actionList.first { it.label?.toString() == "Zoom out" }
-            check(!maximum.performAction(maximumZoomOut.id))
-            checks.put("accessibilityBoundedZoomReportsNoChange", true)
-            click("Show latest 6 hours")
-            repeat(3) {
-                gesture(listOf((middle - 15) to y, (middle + 15) to y), listOf((middle - 110) to y, (middle + 110) to y))
-            }
-            check(hours() == 1.0)
-            checks.put("zoomInStopsAtOneHour", true)
-            val fresh = chart()
-            val zoomOut = fresh.actionList.first { it.label?.toString() == "Zoom out" }
-            check(fresh.performAction(zoomOut.id))
-            settle()
-            check(hours() == 2.0)
-            checks.put("accessibilityZoomActionWorks", true)
+            checks.put("pinchCannotChangeTwentyFourHourPreset", true)
             click("Show latest 6 hours")
             limitChecks(checks)
             targetContext.filesDir.resolve("chart-gesture-probe.json").writeText(

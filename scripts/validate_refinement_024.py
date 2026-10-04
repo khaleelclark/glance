@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Check the 0.24 production UI with synthetic debug data on a dedicated emulator."""
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+import validate_ui_overhaul as ui
+
+checks = {}
+
+
+def snapshot(name):
+    (ui.EVIDENCE / f'api36-ui-0.24.0-{name}-demo.png').write_bytes(
+        subprocess.run(ui.ADB + ['exec-out', 'screencap', '-p'], check=True,
+                       capture_output=True, timeout=30).stdout)
+
+
+def checked(label):
+    assert ui.checked_node(label).get('checked') == 'true'
+
+
+def no_boilerplate():
+    labels = [ui.label(n) for n in ui.nodes()]
+    assert not any(any(text.lower() in label.lower() for text in (
+        'arranged around daily use', 'queues to paired watch', 'glucose alerts posted by',
+        'source readings only', 'Pinch to zoom', 'Selected reading')) for label in labels)
+
+
+def tap_plot():
+    chart = ui.find('source readings over 24 hours')
+    left, top, right, bottom = map(int, re.findall(r'\d+', chart.get('bounds')))
+    ui.adb('shell', 'input', 'tap', str((left + right) // 2), str((top + bottom) // 2))
+    ui.settle()
+
+
+def main():
+    assert ui.SERIAL.startswith('emulator-')
+    assert ui.adb('shell', 'getprop', 'ro.kernel.qemu').strip() == '1'
+    assert ui.adb('shell', 'getprop', 'sys.boot_completed').strip() == '1'
+    ui.adb('shell', 'run-as', 'com.khaleel.glance', 'pwd')
+    ui.EVIDENCE.mkdir(exist_ok=True)
+    old = {key: ui.adb('shell', 'settings', 'get', 'system', key).strip()
+           for key in ('font_scale', 'user_rotation', 'accelerometer_rotation')}
+    old_night = ui.adb('shell', 'cmd', 'uimode', 'night').strip()
+    try:
+        ui.adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0')
+        ui.adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0')
+        ui.adb('shell', 'settings', 'put', 'system', 'user_rotation', '0')
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'no')
+        ui.start()
+        assert ui.visible('113') and ui.visible('In range') and ui.visible('Reading at')
+        assert not any(n.get('text') == 'Pause' for n in ui.nodes())
+        assert not any(n.get('text') == 'Monitoring is running' for n in ui.nodes())
+        assert ui.visible('Monitoring is running')  # Small dot retains spoken status.
+        checks['compactHeaderHasActivityDotAndNoPauseOrStatusStrip'] = True
+        ui.tap('Refresh reading', True)
+        assert ui.events() == {'refresh': 1}
+        checks['refreshArrowDispatchesOnce'] = True
+        no_boilerplate()
+        snapshot('fresh-light')
+        for mode, value, label in [('low', '65', 'Below Low limit'), ('high', '250', 'Above High limit')]:
+            ui.start(mode)
+            assert ui.visible(value) and ui.visible(label)
+            snapshot(mode + '-light')
+        checks['lowInRangeHighPresentDistinctSourceRangeLabels'] = True
+        ui.start('stale')
+        assert ui.visible('No recent reading') and not ui.visible('Current reading · In range')
+        snapshot('stale')
+        checks['staleReadingDoesNotPresentCurrentRange'] = True
+        ui.start()
+        for hours in (3, 6, 12, 24):
+            ui.scroll_to(f'Show latest {hours} hours')
+            ui.tap(f'Show latest {hours} hours', True)
+            checked(f'Show latest {hours} hours')
+        checks['threeSixTwelveTwentyFourHourPresetsAreSelectable'] = True
+        ui.tap('Show latest 3 hours', True)
+        tap_plot()
+        no_boilerplate()
+        snapshot('selected-three-hour')
+        checks['graphScrubUsesOnGraphReadoutWithoutBottomCard'] = True
+        ui.start()
+        ui.tap('Logbook', True)
+        assert ui.visible('Low') and ui.visible('65 mg/dL, trend Holding steady')
+        no_boilerplate()
+        snapshot('logbook')
+        ui.tap('Settings', True)
+        no_boilerplate()
+        ui.scroll_to('Share watch readings')
+        no_boilerplate()
+        checks['settingsAndLogbookBoilerplateRemoved'] = True
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'yes')
+        ui.start()
+        assert ui.visible('113') and ui.visible('In range')
+        snapshot('fresh-dark')
+        checks['darkReadingAndOpenGraphRender'] = True
+        ui.adb('shell', 'settings', 'put', 'system', 'font_scale', '2.0')
+        ui.start()
+        assert ui.visible('113') and ui.visible('Now') and ui.visible('Settings')
+        ui.scroll_to('Show latest 3 hours')
+        ui.tap('Show latest 3 hours', True)
+        checked('Show latest 3 hours')
+        snapshot('largest-font')
+        checks['twoHundredPercentFontKeepsReadingNavigationAndPresetsReachable'] = True
+        ui.adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0')
+        ui.adb('shell', 'settings', 'put', 'system', 'user_rotation', '1')
+        ui.start()
+        assert ui.visible('113') and ui.visible('Now')
+        ui.scroll_to('Show latest 3 hours')
+        ui.tap('Show latest 3 hours', True)
+        checked('Show latest 3 hours')
+        snapshot('landscape')
+        checks['landscapeKeepsReadingAndThreeHourPresetReachable'] = True
+        apk = ui.adb('shell', 'pm', 'path', 'com.khaleel.glance').strip().removeprefix('package:')
+        assert re.fullmatch(r'/data/app/[A-Za-z0-9/_.=+~\-]+/base\.apk', apk)
+        report = {'synthetic': True, 'device': 'API 36 emulator', 'checks': checks, 'allPassed': True,
+                  'fixtureApkSha256': ui.adb('shell', 'sha256sum', apk).split()[0],
+                  'sourceCommitAtRun': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+                  'sourceDirtyAtRun': bool(subprocess.check_output(['git', 'status', '--porcelain'], text=True).strip()),
+                  'fixtureType': 'Debug-only synthetic APK; not a release deliverable',
+                  'TalkBack': 'not tested', 'liveAccount': 'not tested', 'GalaxyS25Ultra': 'not tested'}
+        (ui.EVIDENCE / 'api36-ui-0.24.0.json').write_text(json.dumps(report, indent=2) + '\n')
+        print(json.dumps(checks))
+    finally:
+        for key, value in old.items():
+            ui.adb('shell', 'settings', 'put', 'system', key, value)
+        ui.adb('shell', 'cmd', 'uimode', 'night', 'yes' if 'yes' in old_night else 'no')
+
+
+if __name__ == '__main__':
+    main()

@@ -72,7 +72,11 @@ class DebugUiActivity : ComponentActivity() {
         }
         java.io.File(filesDir, "ui-events.json").writeText("{}")
         val history = (0..288).map { step ->
-            val value = if (step == 288) 113.0 else 150 + 105 * kotlin.math.sin(step / 9.0)
+            val value = if (step == 288) when (mode) {
+                "low" -> 65.0
+                "high" -> 250.0
+                else -> 113.0
+            } else 150 + 105 * kotlin.math.sin(step / 9.0)
             val ageSeconds = if (mode == "stale") 1200L else 60L
             Reading("synthetic", now.minusSeconds((288 - step) * 300L + ageSeconds), value, value,
                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)

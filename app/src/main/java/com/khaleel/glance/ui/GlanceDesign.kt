@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
@@ -150,35 +151,20 @@ internal fun GlanceMark(modifier: Modifier = Modifier, inverse: Boolean = false)
     val background = if (inverse) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
     val foreground = if (inverse) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary
     Box(
-        modifier = modifier.size(42.dp).background(background, RoundedCornerShape(14.dp)),
+        modifier = modifier.size(36.dp).background(background, RoundedCornerShape(11.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(27.dp)) {
-            val stroke = Stroke(width = 3.2.dp.toPx(), cap = StrokeCap.Round)
-            val inset = 3.dp.toPx()
-            drawArc(
-                color = foreground,
-                startAngle = 38f,
-                sweepAngle = 284f,
-                useCenter = false,
-                topLeft = Offset(inset, inset),
-                size = Size(size.width - inset * 2, size.height - inset * 2),
-                style = stroke,
-            )
-            drawLine(
-                color = foreground,
-                start = Offset(size.width * .54f, size.height * .55f),
-                end = Offset(size.width * .83f, size.height * .55f),
-                strokeWidth = stroke.width,
-                cap = StrokeCap.Round,
-            )
-            drawLine(
-                color = foreground,
-                start = Offset(size.width * .82f, size.height * .55f),
-                end = Offset(size.width * .82f, size.height * .76f),
-                strokeWidth = stroke.width,
-                cap = StrokeCap.Round,
-            )
+            val eye = Path().apply {
+                moveTo(size.width * .10f, size.height * .5f)
+                cubicTo(size.width * .2f, size.height * .26f, size.width * .35f, size.height * .20f, size.width * .5f, size.height * .20f)
+                cubicTo(size.width * .65f, size.height * .20f, size.width * .8f, size.height * .26f, size.width * .9f, size.height * .5f)
+                cubicTo(size.width * .8f, size.height * .74f, size.width * .65f, size.height * .8f, size.width * .5f, size.height * .8f)
+                cubicTo(size.width * .35f, size.height * .8f, size.width * .2f, size.height * .74f, size.width * .10f, size.height * .5f)
+                close()
+            }
+            drawPath(eye, foreground, style = Stroke(2.dp.toPx()))
+            drawCircle(foreground, size.width * .13f, center)
         }
     }
 }
@@ -215,12 +201,16 @@ internal fun GlanceGlyphIcon(
                 }
             }
             GlanceGlyph.REFRESH -> {
-                drawArc(color, -55f, 280f, false,
-                    topLeft = Offset(size.width * .18f, size.height * .18f),
-                    size = Size(size.width * .64f, size.height * .64f), style = stroke)
-                val tip = Offset(size.width * .77f, size.height * .16f)
-                drawLine(color, tip, Offset(size.width * .61f, size.height * .18f), line, StrokeCap.Round)
-                drawLine(color, tip, Offset(size.width * .77f, size.height * .32f), line, StrokeCap.Round)
+                val refresh = Path().apply {
+                    moveTo(size.width * .82f, size.height * .40f)
+                    cubicTo(size.width * .72f, size.height * .17f, size.width * .44f, size.height * .10f, size.width * .24f, size.height * .27f)
+                    cubicTo(size.width * .03f, size.height * .46f, size.width * .12f, size.height * .79f, size.width * .38f, size.height * .85f)
+                    cubicTo(size.width * .61f, size.height * .91f, size.width * .82f, size.height * .75f, size.width * .86f, size.height * .59f)
+                    moveTo(size.width * .82f, size.height * .17f)
+                    lineTo(size.width * .82f, size.height * .40f)
+                    lineTo(size.width * .59f, size.height * .40f)
+                }
+                drawPath(refresh, color, style = stroke)
             }
             GlanceGlyph.BACK -> {
                 drawLine(color, Offset(size.width * .72f, size.height * .18f), Offset(size.width * .30f, size.height * .50f), line, StrokeCap.Round)

@@ -70,6 +70,24 @@ import java.util.Locale
 
 internal val chartWindow: Duration = Duration.ofHours(24)
 private val gapLimit = Duration.ofMinutes(20)
+internal const val chartPresetVisualHeightDp = 36
+internal const val chartPresetTouchHeightDp = 48
+
+internal data class ChartGeometryDp(
+    val height: Int,
+    val topRail: Int,
+    val bottomRail: Int,
+) {
+    val plotHeight: Int get() = height - topRail - bottomRail
+}
+
+/** Reserve a two-line selected-reading tooltip while giving the source plot more room. */
+internal fun chartGeometryDp(compact: Boolean, fontScale: Float): ChartGeometryDp = when {
+    compact && fontScale >= 1.5f -> ChartGeometryDp(height = 230, topRail = 110, bottomRail = 8)
+    compact -> ChartGeometryDp(height = 190, topRail = 60, bottomRail = 8)
+    fontScale >= 1.5f -> ChartGeometryDp(height = 376, topRail = 110, bottomRail = 8)
+    else -> ChartGeometryDp(height = 336, topRail = 68, bottomRail = 8)
+}
 
 internal fun chartPoints(history: List<Reading>, connectionId: String?, now: Instant): List<Reading> =
     history.filter {
@@ -144,12 +162,8 @@ internal fun ReadingHistoryChart(
 ) {
     val compact = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val fontScale = LocalDensity.current.fontScale
-    val chartHeight = when {
-        compact && fontScale >= 1.5f -> 210.dp
-        compact -> 170.dp
-        fontScale >= 1.5f -> 340.dp
-        else -> 300.dp
-    }
+    val geometry = chartGeometryDp(compact, fontScale)
+    val chartHeight = geometry.height.dp
     val points = chartPoints(history, connectionId, now)
     val limits = chartLimits(alerts)
     var viewportStart by rememberSaveable(connectionId) { mutableStateOf(0.75) }
@@ -222,12 +236,8 @@ internal fun ReadingHistoryChart(
                     windowDescription + selectedDescription
 
                 Row(Modifier.fillMaxWidth()) {
-                    val topRail = when {
-                        fontScale >= 1.5f -> 64.dp
-                        compact -> 38.dp
-                        else -> 46.dp
-                    }
-                    val bottomRail = if (fontScale >= 1.5f) 44.dp else if (compact) 26.dp else 30.dp
+                    val topRail = geometry.topRail.dp
+                    val bottomRail = geometry.bottomRail.dp
                     val plotHeight = chartHeight - topRail - bottomRail
                     Box(Modifier.width(48.dp * fontScale.coerceAtLeast(1f)).height(chartHeight)) {
                         Text(
@@ -237,7 +247,9 @@ internal fun ReadingHistoryChart(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         for (value in chartGridLabelValues(compact || fontScale >= 1.5f)) {
-                            val y = if (value == chartBottomMgDl) topRail + plotHeight + 4.dp
+                            val y = if (value == chartBottomMgDl) {
+                                topRail + plotHeight - if (fontScale >= 1.5f) 30.dp else 12.dp
+                            }
                             else topRail + plotHeight * chartYFraction(value).toFloat() - 8.dp
                             Text(axisValue(value, points[0], unit, locale), Modifier.offset(y = y),
                                 style = MaterialTheme.typography.labelSmall)
@@ -248,13 +260,9 @@ internal fun ReadingHistoryChart(
                         val selectedFraction = selected?.let { timeFraction(it.measuredAt, now) }
                         val selectedX = selectedFraction?.takeIf { it in viewport.start..viewport.end }
                             ?.let { chartWidth * viewport.xFraction(it) }
-                        val tooltipWidth = minOf((if (compact) 112.dp else 132.dp) * fontScale.coerceAtLeast(1f), chartWidth)
-                        val timeLabelWidth = minOf((if (compact) 112.dp else 152.dp) * fontScale.coerceAtLeast(1f), chartWidth)
+                        val tooltipWidth = minOf(132.dp * fontScale.coerceAtLeast(1f), chartWidth)
                         val tooltipX = selectedX?.let {
                             clampedOverlayStart(it.value, tooltipWidth.value, chartWidth.value).dp
-                        }
-                        val timeLabelX = selectedX?.let {
-                            clampedOverlayStart(it.value, timeLabelWidth.value, chartWidth.value).dp
                         }
                         val railTimeFormat = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT, FormatStyle.SHORT)
                             .withLocale(locale).withZone(zoneId)
@@ -427,27 +435,27 @@ internal fun ReadingHistoryChart(
                                             reading.valueMgDl < bottom -> " · below scale"
                                             else -> ""
                                         }
-                                        Text(
-                                            GlucoseFormat.withUnit(reading, unit, locale) + scaleStatus,
-                                            Modifier.padding(horizontal = 6.dp, vertical = if (compact) 3.dp else 6.dp),
-                                            style = if (scaleStatus.isEmpty()) MaterialTheme.typography.labelLarge
-                                            else MaterialTheme.typography.labelMedium,
-                                            color = palette.onContainer,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = if (scaleStatus.isEmpty()) 1 else 2,
-                                        )
+                                        Column(
+                                            Modifier.padding(horizontal = 6.dp, vertical = if (compact) 3.dp else 5.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            Text(
+                                                GlucoseFormat.withUnit(reading, unit, locale) + scaleStatus,
+                                                style = if (scaleStatus.isEmpty()) MaterialTheme.typography.labelLarge
+                                                else MaterialTheme.typography.labelMedium,
+                                                color = palette.onContainer,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = if (scaleStatus.isEmpty()) 1 else 2,
+                                            )
+                                            Text(
+                                                railTimeFormat.format(reading.measuredAt),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = palette.onContainer,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                            )
+                                        }
                                     }
-                                    Text(
-                                        railTimeFormat.format(reading.measuredAt),
-                                        Modifier.offset(x = timeLabelX ?: 0.dp, y = chartHeight - bottomRail + 5.dp)
-                                            .width(timeLabelWidth)
-                                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), RoundedCornerShape(4.dp))
-                                            .clearAndSetSemantics { },
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                    )
                                 }
                             }
                             val axisTimeFormat = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
@@ -486,10 +494,9 @@ internal fun ReadingHistoryChart(
                     for (hours in listOf(3, 6, 12, 24)) {
                         val target = ChartViewport.latest(hours)
                         val active = viewport == target
-                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(10.dp),
-                            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
-                            contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant) {
-                            Box(Modifier.heightIn(min = 48.dp).selectable(selected = active, role = Role.RadioButton,
+                        Box(
+                            Modifier.weight(1f).heightIn(min = chartPresetTouchHeightDp.dp)
+                                .selectable(selected = active, role = Role.RadioButton,
                                 onClick = {
                                     setViewport(target)
                                     if (selected == null || timeFraction(selected.measuredAt, now) !in target.start..target.end) {
@@ -497,8 +504,17 @@ internal fun ReadingHistoryChart(
                                             ?.let { latestOnSelect(it.measuredAt.toEpochMilli()) }
                                     }
                                 }).semantics { contentDescription = "Show latest $hours hours" },
-                                contentAlignment = Alignment.Center) {
-                                Text("$hours hr", style = MaterialTheme.typography.labelLarge)
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Surface(
+                                Modifier.fillMaxWidth().heightIn(min = chartPresetVisualHeightDp.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("$hours hr", style = MaterialTheme.typography.labelLarge)
+                                }
                             }
                         }
                     }

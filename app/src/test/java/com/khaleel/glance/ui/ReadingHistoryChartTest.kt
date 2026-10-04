@@ -83,6 +83,25 @@ class ReadingHistoryChartTest {
         assertEquals(0f, clampedOverlayStart(20f, 120f, 80f), 0.001f)
     }
 
+    @Test fun chartGeometryMakesRoomForCombinedTooltipAndIncreasesPlotArea() {
+        assertEquals(ChartGeometryDp(336, 68, 8), chartGeometryDp(compact = false, fontScale = 1f))
+        assertEquals(ChartGeometryDp(376, 110, 8), chartGeometryDp(compact = false, fontScale = 2f))
+        assertEquals(ChartGeometryDp(190, 60, 8), chartGeometryDp(compact = true, fontScale = 1f))
+        assertEquals(ChartGeometryDp(230, 110, 8), chartGeometryDp(compact = true, fontScale = 2f))
+
+        assertEquals(true, chartGeometryDp(compact = false, fontScale = 2f).topRail >= 106)
+        assertEquals(true, chartGeometryDp(compact = true, fontScale = 2f).topRail >= 106)
+        assertEquals(true, chartGeometryDp(compact = false, fontScale = 2f).plotHeight > 232)
+        assertEquals(true, chartGeometryDp(compact = true, fontScale = 2f).plotHeight > 102)
+    }
+
+    @Test fun compactPresetVisualKeepsFullTouchTarget() {
+        assertEquals(36, chartPresetVisualHeightDp)
+        assertEquals(48, chartPresetTouchHeightDp)
+        assertEquals(true, chartPresetTouchHeightDp >= 48)
+        assertEquals(true, chartPresetVisualHeightDp < chartPresetTouchHeightDp)
+    }
+
     @Test fun presetTicksAreOrderedAcrossDaylightSavingChange() {
         val end = Instant.parse("2026-11-01T08:47:00Z")
         val ticks = chartTimeTicks(end, ZoneId.of("America/Chicago"), ChartViewport.latest(3).span)

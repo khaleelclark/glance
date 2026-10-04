@@ -218,3 +218,17 @@ checks pass against production 24f6500 (only review-document edit dirty).
 `evidence/api36-nickname-0.25.0-account-reset.json` covers the sign-out-equivalent
 settings reset, explicit Ocean selection, and subsequent settings recreation.
 No full background/device qualification is implied.
+
+## 0.26 temporary inspection and fixed black presentation
+
+Twenty native chart checks pass at clean 464aa90; ten production-screen checks
+pass at fdfc16a with generated evidence only dirty. Production is unchanged since
+8cadd4d. Receipts: evidence/api36-chart-0.26.0.json and api36-ui-0.26.0.json.
+The synthetic debug APK hash is
+92271cd66ad25540ff3775bd6486e03c27530436d8924a56487fbfdcd9cfa34e.
+The chart runner checks held/released/cancelled touches, absence of idle marker
+pixels, accessible inspection/dismissal and existing scale/source/gesture rules.
+Screen checks cover top source time and actual age once, stale labels, absence
+of theme controls, both system modes and 200% portrait/landscape reachability.
+Root inspected the screenshots; these tests do not qualify Samsung One UI,
+TalkBack, physical watch, live LibreLinkUp, overnight operation or battery.

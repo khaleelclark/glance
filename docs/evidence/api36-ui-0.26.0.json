@@ -1,0 +1,24 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "sourceTimeAndActualAgeAppearOnceAboveGlucose": true,
+    "idleMainGraphHasNoSelectedReadingHover": true,
+    "ageAdvancesInsteadOfHardcodedJustNow": true,
+    "presetsDoNotReopenHover": true,
+    "staleWarningAndSourceAgeRemainHonest": true,
+    "lowHighSourceValuesStillRender": true,
+    "themePickerRemovedFromSettings": true,
+    "fixedPresentationWorksUnderBothSystemModes": true,
+    "portraitAtTwoHundredPercentKeepsHeaderAndPresetsReachable": true,
+    "landscapeAtTwoHundredPercentKeepsHeaderAndPresetsReachable": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "92271cd66ad25540ff3775bd6486e03c27530436d8924a56487fbfdcd9cfa34e",
+  "sourceCommitAtRun": "fdfc16a69ef544ee8c24afdcf622138ebc87c303",
+  "sourceDirtyAtRun": true,
+  "scope": "Production GlanceRoot with synthetic state and callbacks; screenshots need visual inspection for colors/clipping",
+  "liveAccount": "not tested",
+  "SamsungOneUI": "not tested",
+  "TalkBack": "not tested"
+}

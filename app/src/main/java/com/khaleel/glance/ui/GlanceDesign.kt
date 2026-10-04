@@ -155,16 +155,25 @@ internal fun GlanceMark(modifier: Modifier = Modifier, inverse: Boolean = false)
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(27.dp)) {
-            val eye = Path().apply {
-                moveTo(size.width * .10f, size.height * .5f)
-                cubicTo(size.width * .2f, size.height * .26f, size.width * .35f, size.height * .20f, size.width * .5f, size.height * .20f)
-                cubicTo(size.width * .65f, size.height * .20f, size.width * .8f, size.height * .26f, size.width * .9f, size.height * .5f)
-                cubicTo(size.width * .8f, size.height * .74f, size.width * .65f, size.height * .8f, size.width * .5f, size.height * .8f)
-                cubicTo(size.width * .35f, size.height * .8f, size.width * .2f, size.height * .74f, size.width * .10f, size.height * .5f)
+            // Isometric sugar cube, matching the launcher and notification marks.
+            val cube = Path().apply {
+                moveTo(size.width * .5f, size.height * .12f)
+                lineTo(size.width * .86f, size.height * .32f)
+                lineTo(size.width * .86f, size.height * .70f)
+                lineTo(size.width * .5f, size.height * .90f)
+                lineTo(size.width * .14f, size.height * .70f)
+                lineTo(size.width * .14f, size.height * .32f)
                 close()
+                moveTo(size.width * .14f, size.height * .32f)
+                lineTo(size.width * .5f, size.height * .52f)
+                lineTo(size.width * .86f, size.height * .32f)
+                moveTo(size.width * .5f, size.height * .52f)
+                lineTo(size.width * .5f, size.height * .90f)
             }
-            drawPath(eye, foreground, style = Stroke(2.dp.toPx()))
-            drawCircle(foreground, size.width * .13f, center)
+            drawPath(cube, foreground, style = Stroke(1.65.dp.toPx(), cap = StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round))
+            drawCircle(foreground, size.width * .035f, Offset(size.width * .33f, size.height * .53f))
+            drawCircle(foreground, size.width * .035f, Offset(size.width * .70f, size.height * .63f))
         }
     }
 }

@@ -2,6 +2,7 @@ package com.khaleel.glance.debug
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,12 +31,8 @@ import com.khaleel.glance.alerts.AlertKind
 class DebugUiActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val light = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK !=
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        window.decorView.windowInsetsController?.setSystemBarsAppearance(
-            if (light) android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
-            android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
-        )
+        enableEdgeToEdge()
+        window.isNavigationBarContrastEnforced = false
         val mode = intent.getStringExtra("mode") ?: "fresh"
         val now = Instant.parse("2026-10-01T12:00:00Z")
         if (mode == "alarmStorage") {
@@ -82,12 +79,13 @@ class DebugUiActivity : ComponentActivity() {
                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
         }
         val reading = history.last()
-        val display = DisplayState(true, RuntimeState.RUNNING,
+        val initialDisplay = DisplayState(true, RuntimeState.RUNNING,
             if (mode == "offline") ConnectionState.OFFLINE else ConnectionState.READY,
             Connection("synthetic", "DEMO · Alex"), reading,
             if (mode == "stale") ReadingFreshness.STALE else ReadingFreshness.FRESH,
             now, null, history)
         setContent {
+            var display by remember { mutableStateOf(initialDisplay) }
             var alarmHistory by remember { mutableStateOf<List<AlertHistoryEntry>>(
                 if (mode == "emptyLog") emptyList() else AlertKind.entries.mapIndexed { index, kind ->
                     val value = when (kind) {
@@ -104,7 +102,7 @@ class DebugUiActivity : ComponentActivity() {
             ) }
             var settings by remember { mutableStateOf(UserSettingsUi(
                 GlucoseUnit.MG_DL, false, 1, false, true,
-                liveUpdateStatus = "DEMO · regular card", watchSyncStatus = "DEMO · watch disconnected")) }
+                liveUpdateStatus = "DEMO · regular card", watchSyncStatus = "DEMO · watch disconnected", sourcePersonName = "DEMO · Alex")) }
             val callbacks = GlanceCallbacks(
                 onSignIn = { event("signIn") }, onSelectConnection = { event("selectPerson") },
                 onConfirmConnection = { event("confirmPerson") }, onRetryConnections = { event("retryPeople") },
@@ -141,6 +139,11 @@ class DebugUiActivity : ComponentActivity() {
                 onKeepNotificationVisibleChanged = { settings = settings.copy(keepNotificationVisible = it); event("keep") },
                 onWatchValuesChanged = { settings = settings.copy(watchValuesVisible = it); event("watch") },
                 onWatchNotificationsChanged = { settings = settings.copy(watchNotificationsEnabled = it); event("watchNotification") },
+                onNicknameChanged = { nickname ->
+                    settings = settings.copy(nickname = nickname.trim())
+                    display = display.copy(person = display.person?.copy(displayName = nickname.trim().takeIf { it.isNotBlank() }?.let { "DEMO · $it" } ?: "DEMO · Alex"))
+                    event("nickname")
+                },
                 onClearAlertLog = { alarmHistory = emptyList(); event("clearLog") },
             )
             Box(Modifier.fillMaxSize()) {
@@ -158,12 +161,10 @@ class DebugUiActivity : ComponentActivity() {
                     else -> SetupStep.COMPLETE
                 },
                     PermissionStatus.GRANTED, BatteryStatus.UNRESTRICTED),
-                settings, callbacks, modifier = Modifier.padding(bottom = 40.dp),
+                settings, callbacks, modifier = Modifier,
                 now = now, zoneId = ZoneId.of("UTC"), locale = Locale.US,
                 alertHistory = alarmHistory)
-            Text("DEMO · UI preview", Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-                .background(Color(0xFFE4E8E8)).padding(horizontal = 12.dp, vertical = 4.dp),
-                color = Color(0xFF172122))
+
             }
         }
     }

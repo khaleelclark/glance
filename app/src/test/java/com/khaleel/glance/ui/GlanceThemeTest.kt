@@ -10,8 +10,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GlanceThemeTest {
-    @Test fun oceanBlueIsTheDefaultWhileLegacyLagoonRemainsAvailable() {
-        assertEquals("#1677D2", ThemeAccent.DEFAULT)
+    @Test fun mutedTealIsTheDefaultWhileCustomPresetsRemainAvailable() {
+        assertEquals("#287F7A", ThemeAccent.DEFAULT)
         assertTrue(ThemeAccent.presets.any { it.hex == "#087E82" })
     }
 

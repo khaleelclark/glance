@@ -15,9 +15,10 @@ internal data class PickerColor(val hue: Float, val saturation: Float, val brigh
 internal data class AccentPreset(val name: String, val hex: String)
 
 internal object ThemeAccent {
-    const val DEFAULT = "#1677D2"
+    const val DEFAULT = "#287F7A"
     val presets = listOf(
-        AccentPreset("Ocean", DEFAULT),
+        AccentPreset("Teal", DEFAULT),
+        AccentPreset("Ocean", "#1677D2"),
         AccentPreset("Lagoon", "#087E82"),
         AccentPreset("Berry", "#7046A3"),
         AccentPreset("Forest", "#397B50"),
@@ -84,9 +85,9 @@ internal object ThemeAccent {
 
     fun scheme(hex: String, dark: Boolean): ColorScheme {
         val requested = color(hex)
-        val background = if (dark) Color(0xFF0E171F) else Color(0xFFF5F7FA)
-        val surface = if (dark) Color(0xFF15212B) else Color(0xFFFFFFFF)
-        val card = if (dark) Color(0xFF1B2A35) else Color(0xFFF0F4F8)
+        val background = if (dark) Color(0xFF111817) else Color(0xFFF6F8F7)
+        val surface = if (dark) Color(0xFF192320) else Color(0xFFFFFFFF)
+        val card = if (dark) Color(0xFF22302B) else Color(0xFFEFF4F1)
         val primary = readableAgainst(requested, card, dark)
         val onPrimary = if (contrast(primary, Color.White) >= contrast(primary, Color.Black)) {
             Color.White
@@ -94,9 +95,9 @@ internal object ThemeAccent {
             Color.Black
         }
         val container = if (dark) lerp(background, primary, 0.3f) else lerp(background, primary, 0.16f)
-        val onBackground = if (dark) Color(0xFFF2F6FA) else Color(0xFF17212B)
-        val onVariant = if (dark) Color(0xFFB8C6D1) else Color(0xFF536270)
-        val outline = if (dark) Color(0xFF617280) else Color(0xFF788895)
+        val onBackground = if (dark) Color(0xFFF2F7F4) else Color(0xFF19251F)
+        val onVariant = if (dark) Color(0xFFBDCBC3) else Color(0xFF53665B)
+        val outline = if (dark) Color(0xFF657A6C) else Color(0xFF7B8C81)
         val base = if (dark) darkColorScheme() else lightColorScheme()
         return base.copy(
             primary = primary,
@@ -117,13 +118,13 @@ internal object ThemeAccent {
             onSurface = onBackground,
             surfaceVariant = card,
             onSurfaceVariant = onVariant,
-            surfaceContainerLowest = if (dark) Color(0xFF0A1218) else Color.White,
+            surfaceContainerLowest = if (dark) Color(0xFF0B1210) else Color.White,
             surfaceContainerLow = surface,
             surfaceContainer = card,
             surfaceContainerHigh = lerp(card, primary, 0.05f),
             surfaceContainerHighest = lerp(card, primary, 0.08f),
-            surfaceBright = if (dark) Color(0xFF263641) else Color.White,
-            surfaceDim = if (dark) Color(0xFF0E171F) else Color(0xFFE2E8EE),
+            surfaceBright = if (dark) Color(0xFF2D3D34) else Color.White,
+            surfaceDim = if (dark) Color(0xFF111817) else Color(0xFFE3EAE5),
             surfaceTint = primary,
             inverseSurface = onBackground,
             inverseOnSurface = background,

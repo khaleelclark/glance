@@ -64,6 +64,8 @@ data class UserSettingsUi(
     val watchValuesVisible: Boolean = false,
     val watchNotificationsEnabled: Boolean = false,
     val watchSyncStatus: String = "Waiting for watch sync",
+    val nickname: String = "",
+    val sourcePersonName: String? = null,
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)
@@ -104,4 +106,5 @@ data class GlanceCallbacks(
     val onWatchValuesChanged: (Boolean) -> Unit = {},
     val onWatchNotificationsChanged: (Boolean) -> Unit = {},
     val onClearAlertLog: () -> Unit = {},
+    val onNicknameChanged: (String) -> Unit = {},
 )

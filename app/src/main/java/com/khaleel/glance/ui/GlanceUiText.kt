@@ -106,7 +106,7 @@ class GlanceUiText(
     private fun age(measuredAt: Instant, now: Instant): String {
         val seconds = Duration.between(measuredAt, now).seconds
         if (seconds < -120) return "time unavailable"
-        if (seconds < 60) return "just now"
+        if (seconds < 60) return "Just Now"
         val minutes = seconds / 60
         if (minutes < 60) return if (minutes == 1L) "1 min ago" else "$minutes min ago"
         val hours = minutes / 60

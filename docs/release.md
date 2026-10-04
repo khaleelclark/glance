@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
 Glance uses application ID `com.khaleel.glance`, versionCode `29`, and versionName
-`0.24.0`. The Android Studio project is the root of this repository. The private
+`0.25.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -59,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.24.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.25.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -361,3 +361,29 @@ See [refinement validation](refinement-024-validation.md) for exact build,
 synthetic fixture and physical-device boundaries. Update the owner's existing
 Studio build through the same computer/debug key rather than installing a
 differently signed personal APK over it.
+
+
+## 0.25.0 personal polish
+
+Sugar-cube marks replace the eye throughout phone and watch resources. Muted teal
+replaces the prior default Ocean blue; other custom colors remain available.
+The selected source time is directly below the value in the top graph tooltip.
+The graph is taller, hour controls are visually smaller with accessible touch
+targets, and the status indicator sits beside Refresh. The trend/delta separator
+is removed and the freshest age reads “Just Now”.
+
+Settings → Reading → Follower nickname changes the displayed name, including
+the ongoing notification. Blank restores the source name; source connection IDs
+and readings are unaffected. Nicknames are stored encrypted per connection and
+cleared at account boundaries.
+
+The app draws its own surface behind the transparent system navigation bar and
+disables Android's three-button contrast scrim, following
+[Android's edge-to-edge guidance](https://developer.android.com/develop/ui/views/layout/edge-to-edge).
+Buttons remain light in dark mode and dark in light mode for readability.
+Samsung-specific rendering remains an on-phone check.
+
+See [0.25 validation](refinement-025-validation.md) for exact candidate and results.
+Update with Android Studio using the same computer's existing signing key and
+`git pull --ff-only` on main. This preserves the installed app's settings. A
+personal signed APK cannot replace a build signed with another key.

@@ -7,6 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.graphics.luminance
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.Modifier
 import com.khaleel.glance.alerts.AlertHistoryEntry
 import com.khaleel.glance.core.DisplayState
@@ -37,6 +41,21 @@ fun GlanceRoot(
     val darkTheme = isSystemInDarkTheme()
     val colorScheme = remember(settings.accentHex, darkTheme) {
         ThemeAccent.scheme(settings.accentHex, darkTheme)
+    }
+    val view = LocalView.current
+    val activity = remember(view.context) {
+        var context = view.context
+        while (context is android.content.ContextWrapper && context !is android.app.Activity) context = context.baseContext
+        context as? android.app.Activity
+    }
+    SideEffect {
+        activity?.window?.let { window ->
+            // Draw the actual app surface behind gesture and three-button navigation.
+            window.isNavigationBarContrastEnforced = false
+            val insets = WindowCompat.getInsetsController(window, view)
+            insets.isAppearanceLightStatusBars = colorScheme.background.luminance() > .5f
+            insets.isAppearanceLightNavigationBars = colorScheme.surface.luminance() > .5f
+        }
     }
     MaterialTheme(colorScheme = colorScheme, typography = GlanceTypography, shapes = GlanceShapes) {
         Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {

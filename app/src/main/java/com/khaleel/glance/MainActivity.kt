@@ -5,14 +5,13 @@ import com.khaleel.glance.core.ConnectionState
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -72,12 +71,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         app.honorExplicitSystemStop()
-        val lightTheme = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK !=
-            Configuration.UI_MODE_NIGHT_YES
-        window.decorView.windowInsetsController?.setSystemBarsAppearance(
-            if (lightTheme) WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS else 0,
-            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
-        )
+        enableEdgeToEdge()
+        window.isNavigationBarContrastEnforced = false
         accountState = AccountUiState(if (controller.hasAccount) AccountStatus.SIGNED_IN else AccountStatus.SIGNED_OUT)
         setupState = SetupUiState(
             step = when {
@@ -217,6 +212,8 @@ class MainActivity : ComponentActivity() {
             app.watchPreferences.valuesVisible,
             app.watchPreferences.notificationsEnabled,
             app.watchPublisher.syncStatus,
+            nickname = controller.nickname,
+            sourcePersonName = controller.sourcePersonName,
         )
     }
 
@@ -377,6 +374,14 @@ class MainActivity : ComponentActivity() {
             } catch (_: android.content.ActivityNotFoundException) {
                 startActivity(LiveUpdateSupport.appSettingsIntent(this))
             }
+        },
+        onNicknameChanged = { nickname ->
+            when (controller.setNickname(nickname)) {
+                is SourceResult.Success -> renderSettingsChange()
+                is SourceResult.Failure -> Toast.makeText(this,
+                    "Could not save nickname; previous name retained.", Toast.LENGTH_LONG).show()
+            }
+            refreshSettings()
         },
         onAccentHexChanged = { controller.settings.accentHex = it; refreshSettings() },
         onAlertRuleChanged = { kind, rule ->

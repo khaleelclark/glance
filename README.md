@@ -7,16 +7,12 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.24.0 makes the graph the main feature of Now: an open horizontal grid,
-shaded range, and source value/time readouts on the graph. Choose 3 / 6 / 12 / 24
-hours; touch inspects real readings and pinch zoom is removed. Fresh current
-readings use green in range, yellow above High and red below Low, consistently
-with the existing graph limits. Older readings retain explicit freshness labels
-and neutral presentation. The header has a small monitoring dot, a clear Refresh
-arrow and the new eye mark; Pause is removed from Now. Settings and Logbook
-subtitles and graph legends are simplified. The encrypted local Logbook and
-single-person account/runtime controls remain. See
-[0.24 refinement validation](docs/refinement-024-validation.md).
+Version 0.25.0 adds a sugar-cube logo and muted teal appearance, a taller graph
+with smaller hour controls, and the selected time directly below its value in the
+top graph tooltip. The status dot sits beside Refresh, and the system navigation
+bar follows the app surface. Set **Settings → Reading → Follower nickname** to
+show an alias in the app and notifications; leave it blank to restore the source
+name. Source identity and glucose values stay unchanged.
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.

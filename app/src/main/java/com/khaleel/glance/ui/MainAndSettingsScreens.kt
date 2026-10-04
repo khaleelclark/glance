@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -86,7 +87,7 @@ internal enum class AppDestination(val label: String, val glyph: GlanceGlyph) {
     NOW("Now", GlanceGlyph.NOW), LOGBOOK("Logbook", GlanceGlyph.LOGBOOK),
     SETTINGS("Settings", GlanceGlyph.SETTINGS),
 }
-private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, ACCENT }
+private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, ACCENT, NICKNAME }
 private enum class ConfirmAction { SIGN_OUT, DELETE_DATA }
 
 @Composable
@@ -174,19 +175,17 @@ private fun ReadingHeader(state: DisplayState, callbacks: GlanceCallbacks, text:
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         GlanceMark()
         Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Text("GLANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Surface(Modifier.size(8.dp).semantics {
-                    contentDescription = text.monitoring(state) + (text.connection(state)?.let { ". $it" } ?: "")
-                }, CircleShape, color = when {
-                    !state.monitoringEnabled || state.runtime != RuntimeState.RUNNING -> MaterialTheme.colorScheme.outline
-                    state.connection !in listOf(ConnectionState.READY, ConnectionState.FETCHING) -> MaterialTheme.colorScheme.error
-                    else -> readingRangePalette(ChartBand.IN_RANGE).foreground
-                }) {}
-            }
+            Text("GLANCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             Text(state.person?.displayName ?: "Shared reading", Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+        Surface(Modifier.size(8.dp).semantics {
+            contentDescription = text.monitoring(state) + (text.connection(state)?.let { ". $it" } ?: "")
+        }, CircleShape, color = when {
+            !state.monitoringEnabled || state.runtime != RuntimeState.RUNNING -> MaterialTheme.colorScheme.outline
+            state.connection !in listOf(ConnectionState.READY, ConnectionState.FETCHING) -> MaterialTheme.colorScheme.error
+            else -> readingRangePalette(ChartBand.IN_RANGE).foreground
+        }) {}
         IconButton(callbacks.onRefresh, enabled = refreshEnabled,
             modifier = Modifier.semantics { contentDescription = "Refresh reading" }) {
             GlanceGlyphIcon(GlanceGlyph.REFRESH, color = if (refreshEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -218,7 +217,7 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(reading.trendDescription, style = MaterialTheme.typography.bodyMedium)
-                    delta?.let { Text("· $it", style = MaterialTheme.typography.bodyMedium) }
+                    delta?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                 }
                 Text(reading.measured, style = MaterialTheme.typography.bodyMedium)
             }
@@ -307,6 +306,9 @@ internal fun SettingsScreen(
     ScreenList {
         ScreenHeader("Settings")
         SettingsGroup("Reading") {
+            if (display.person != null) {
+                ValueSettingRow("Follower nickname", settings.nickname.ifBlank { settings.sourcePersonName ?: "Original name" }) { sheet = SettingsSheet.NICKNAME }; GroupDivider()
+            }
             ValueSettingRow("Units", settings.unit.label) { sheet = SettingsSheet.UNIT }; GroupDivider()
             ValueSettingRow("Refresh cadence", if (settings.intervalMinutes == 1) "Every minute" else "Every 5 minutes") { sheet = SettingsSheet.CADENCE }
         }
@@ -361,6 +363,14 @@ internal fun SettingsScreen(
                         "One minute checks sooner; five minutes uses less battery and network.") { callbacks.onIntervalChanged(if (it == "Every minute") 1 else 5); sheet = null }
                     SettingsSheet.PRESENTATION -> SheetChoices("Notification presentation", listOf("Graph" to !settings.enhancedNotification, "Live Update" to settings.enhancedNotification),
                         "Live Update is requested on supported devices; Android may show the graph notification instead.") { callbacks.onEnhancedNotificationChanged(it == "Live Update"); sheet = null }
+                    SettingsSheet.NICKNAME -> {
+                        var draft by rememberSaveable(display.person?.id, settings.nickname) { mutableStateOf(settings.nickname) }
+                        Text("Follower nickname", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
+                        OutlinedTextField(draft, { draft = it.codePoints().limit(40).toArray().let { points -> String(points, 0, points.size) } }, Modifier.fillMaxWidth(),
+                            label = { Text("Nickname") }, placeholder = { Text(settings.sourcePersonName ?: "Original name") },
+                            singleLine = true, supportingText = { Text("Up to 40 characters. Shown in Glance and notifications. Leave blank to use the original name.") })
+                        Button({ callbacks.onNicknameChanged(draft); sheet = null }, Modifier.fillMaxWidth()) { Text("Save nickname") }
+                    }
                     SettingsSheet.ACCENT -> {
                         Text("App color", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
                         AccentChoice(settings.accentHex, callbacks.onAccentHexChanged)
@@ -407,7 +417,7 @@ private fun ScreenHeader(title: String, subtitle: String? = null, action: @Compo
     Modifier.fillMaxWidth().heightIn(min = 58.dp).clickable(onClick = onClick).padding(vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
     Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-    Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    Text(value, Modifier.widthIn(max = 150.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, maxLines = 2, overflow = TextOverflow.Ellipsis)
     Text("›", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

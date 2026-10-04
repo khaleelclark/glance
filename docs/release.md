@@ -388,3 +388,30 @@ See [0.25 validation](refinement-025-validation.md) for exact candidate and resu
 Update with Android Studio using the same computer's existing signing key and
 `git pull --ff-only` on main. This preserves the installed app's settings. A
 personal signed APK cannot replace a build signed with another key.
+
+## 0.26.0 black presentation and temporary graph inspection
+
+The owner-requested smaller droplet replaces the sugar cube in native phone,
+launcher, notification and watch marks. Phone screens use true black, graphite
+surfaces, readable off-white text and restrained lilac controls in both system
+modes. The App color row and custom-picker sheet are removed. Legacy stored
+colors remain stored but do not affect the fixed presentation; account/settings
+persistence and nickname behavior are unchanged.
+
+The hero starts with its source measurement time and computed age, once above
+the glucose value. The former Current reading / In range title is removed.
+Delayed, stale, invalid-time and absent labels remain truthful. Fresh low/high
+values retain red/yellow emphasis in a graphite card.
+
+The graph no longer draws the permanent in-range endpoint circle. Hold/drag
+selects a real visible sample; releasing all fingers or cancelling hides tooltip,
+crosshair and selected marker and clears the touch selection. Once a second
+finger joins, the gesture remains inert until every finger lifts. Scale, gaps,
+real readings, limits and 3/6/12/24-hour presets are unchanged. Accessible
+Latest/Earlier/Later reading actions provide explicit inspection, and Dismiss
+reading hides it without a touch. Out-of-scale arrows remain source-faithful.
+
+See [0.26 validation](refinement-026-validation.md). Update an existing Studio
+installation from the same computer/debug signer. The personal APK can only
+update an installation with its existing personal signer. Live-account/Samsung,
+TalkBack, overnight/battery and physical-watch qualification remain outstanding.

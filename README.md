@@ -7,13 +7,14 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.25.0 adds a sugar-cube logo and muted teal appearance, a taller graph
-with smaller hour controls, and the selected time directly below its value in the
-top graph tooltip. The status dot sits beside Refresh, and the system navigation
-bar follows the app surface. Set **Settings → Reading → Follower nickname** to
-show an alias in the app and notifications; leave it blank to restore the source
-name. Source identity and glucose values stay unchanged.
-See [0.25 verification](docs/refinement-025-validation.md).
+Version 0.26.0 uses a smaller droplet logo, a fixed black background, graphite
+cards and lilac controls. The custom color picker is removed. The reading card
+starts with **Reading at <source time> · <actual age>**; delayed/stale/time warnings
+remain explicit. Hold and drag the graph to inspect a real reading; release or
+cancel to dismiss the tooltip and selection. The permanent endpoint dot is gone.
+Screen-reader reading actions also offer **Latest reading** and **Dismiss reading**.
+Follower nicknames remain under Settings → Reading and carry into notifications.
+See [0.26 verification](docs/refinement-026-validation.md).
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.
@@ -30,9 +31,8 @@ See [gesture verification](docs/chart-gesture-validation.md) and
 [limit verification](docs/chart-limits-validation.md). The notification shows the current glucose,
 trend arrow, and recent change when available; Refresh remains in the app.
 Refresh retries connection failures even while automatic polling is backing off;
-provider rate limits still apply. Stop monitoring and a choice of app colors are available in Settings. Custom
-colors can be chosen on a color wheel with a brightness slider or entered as
-six-digit hex values.
+provider rate limits still apply. Stop monitoring is available in Settings. The
+app uses the fixed black/lilac appearance in either system display mode.
 
 Optional Low, Urgent Low, High, and Urgent High alerts can be enabled separately
 in Settings. Each has a threshold and a repeat cooldown (five minutes by

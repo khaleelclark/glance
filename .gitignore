@@ -9,3 +9,5 @@ local.properties
 /release/
 captures/
 *.hprof
+
+__pycache__/

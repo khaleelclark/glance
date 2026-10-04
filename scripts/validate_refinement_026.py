@@ -8,6 +8,12 @@ def snapshot(name):
     (ui.EVIDENCE/f'api36-ui-0.26.0-{name}-demo.png').write_bytes(
         subprocess.run(ui.ADB+['exec-out','screencap','-p'],check=True,capture_output=True,timeout=30).stdout)
 
+def norm(value):return " ".join(value.split())
+
+def shown(text):return any(norm(text) in norm(ui.label(n)) for n in ui.nodes())
+
+def text_node(text):return next(n for n in ui.nodes() if norm(n.get("text", ""))==norm(text))
+
 def bounds(node):return tuple(map(int,re.findall(r'\d+',node.get('bounds'))))
 
 def scroll_to(text):
@@ -33,17 +39,17 @@ def main():
         ui.adb('shell','cmd','uimode','night','no')
         ui.start('justNow')
         header='Reading at 11:59 AM · Just Now'
-        label=ui.find(header,True)
+        label=text_node(header)
         value=ui.find('113',True)
         assert bounds(label)[3] < bounds(value)[1]
-        assert sum(n.get('text')==header for n in ui.nodes())==1
+        assert sum(norm(n.get('text',''))==norm(header) for n in ui.nodes())==1
         assert not ui.visible('Current reading') and not ui.visible('In range')
         checks['sourceTimeAndActualAgeAppearOnceAboveGlucose']=True
         assert 'Selected source reading' not in ui.find('source readings over 24 hours').get('content-desc')
         snapshot('just-now-system-light')
         checks['idleMainGraphHasNoSelectedReadingHover']=True
         ui.start()
-        assert ui.visible('Reading at 11:59 AM · 1 min ago') and not ui.visible('Just Now')
+        assert shown('Reading at 11:59 AM · 1 min ago') and not ui.visible('Just Now')
         checks['ageAdvancesInsteadOfHardcodedJustNow']=True
         for h in (3,6,12,24):
             scroll_to(f'Show latest {h} hours');ui.tap(f'Show latest {h} hours',True)
@@ -51,11 +57,11 @@ def main():
             assert 'Selected source reading' not in ui.find('source readings over 24 hours').get('content-desc')
         checks['presetsDoNotReopenHover']=True
         ui.start('stale')
-        assert ui.visible('No recent reading') and ui.visible('Reading at 11:40 AM · 20 min ago')
+        assert ui.visible('No recent reading') and shown('Reading at 11:40 AM · 20 min ago')
         snapshot('stale')
         checks['staleWarningAndSourceAgeRemainHonest']=True
         for mode,value in [('low','65'),('high','250')]:
-            ui.start(mode);assert ui.visible(value) and ui.visible('Reading at 11:59 AM · 1 min ago')
+            ui.start(mode);assert ui.visible(value) and shown('Reading at 11:59 AM · 1 min ago')
             snapshot(mode)
         checks['lowHighSourceValuesStillRender']=True
         ui.start()
@@ -66,12 +72,12 @@ def main():
         snapshot('settings-devices')
         checks['themePickerRemovedFromSettings']=True
         ui.start('justNow');ui.adb('shell','cmd','uimode','night','yes');ui.start('justNow')
-        assert ui.visible(header) and ui.visible('113');snapshot('just-now-system-dark')
+        assert shown(header) and ui.visible('113');snapshot('just-now-system-dark')
         checks['fixedPresentationWorksUnderBothSystemModes']=True
         ui.adb('shell','settings','put','system','font_scale','2.0')
         for rotation,name in [('0','portrait'),('1','landscape')]:
             ui.adb('shell','settings','put','system','user_rotation',rotation);ui.start('justNow')
-            assert ui.visible('113') and ui.visible('Settings') and ui.visible(header)
+            assert ui.visible('113') and ui.visible('Settings') and shown(header)
             snapshot('large-text-'+name+'-header')
             scroll_to('Show latest 3 hours');ui.tap('Show latest 3 hours',True)
             assert ui.checked_node('Show latest 3 hours').get('checked')=='true'

@@ -147,6 +147,23 @@ class ChartGestureInstrumentation : Instrumentation() {
             checks.put("liftingOneFingerDoesNotSwitchFromMultiTouchToScrub", true)
             check(chart().actionList.none { it.label?.toString() in listOf("Zoom in", "Zoom out", "Earlier time", "Later time") })
             checks.put("accessibilityUsesReadingSelectionAndPresetsWithoutZoom", true)
+            val beforeNavigation = chart().stateDescription.toString()
+            fun readingAction(label: String): Boolean {
+                val node = chart()
+                val action = node.actionList.first { it.label?.toString() == label }
+                return node.performAction(action.id).also { settle() }
+            }
+            var steps = 0
+            while (readingAction("Earlier reading")) { check(++steps <= 73) }
+            val earliest = selectedTime()
+            check(earliest >= Instant.parse("2026-10-01T06:00:00Z").toEpochMilli())
+            check(!readingAction("Earlier reading"))
+            check(chart().stateDescription.toString() == beforeNavigation)
+            steps = 0
+            while (readingAction("Later reading")) { check(++steps <= 73) }
+            check(!readingAction("Later reading"))
+            check(chart().stateDescription.toString() == beforeNavigation)
+            checks.put("accessibleReadingNavigationStopsAtPresetEdgesWithoutPanning", true)
             click("Show latest 24 hours")
             gesture(listOf((middle - 100) to y, (middle + 100) to y), listOf((middle - 15) to y, (middle + 15) to y))
             check(hours() == 24.0)
@@ -174,44 +191,53 @@ class ChartGestureInstrumentation : Instrumentation() {
     private fun texts(): List<String> = nodes(uiAutomation.rootInActiveWindow).mapNotNull { it.text?.toString() }
 
     private fun limitChecks(checks: JSONObject) {
+        fun limits(low: String, high: String) {
+            val description = chart().contentDescription.toString()
+            check(description.contains("Low: $low") && description.contains("High: $high"))
+            check(texts().none { it.startsWith("Low ") || it.startsWith("High ") })
+        }
         launchLimits()
-        check("Low 70" in texts() && "High 240" in texts())
+        limits("70", "240")
         check("350" in texts() && "40" in texts())
         check(chart().contentDescription.toString().contains("Scale: 40–350 mg/dL"))
         checks.put("fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty", true)
-        checkColorBands(0xC62828, 0xB85C00)
+        checkColorBands(0xC62828, 0x9A6700)
         checks.put("defaultHorizontalLinesAndLowHighTraceColorsRender", true)
-        check("380 mg/dL" in texts())
-        check(texts().any { it.startsWith("Outside graph scale") })
+        check(chart().contentDescription.toString().contains("Selected source reading 380 mg/dL"))
+        check(chart().contentDescription.toString().contains("above graph scale"))
         launchLimits("below")
-        check("25 mg/dL" in texts())
-        check(texts().any { it.startsWith("Outside graph scale") })
+        check(chart().contentDescription.toString().contains("Selected source reading 25 mg/dL"))
+        check(chart().contentDescription.toString().contains("below graph scale"))
         checks.put("outOfScaleSelectionPreservesActualValues", true)
         launchLimits(lowEnabled = true, highEnabled = true)
-        check("Low 85" in texts() && "High 210" in texts())
-        checkColorBands(0xC62828, 0xB85C00, 85.0, 210.0)
+        limits("85", "210")
+        checkColorBands(0xC62828, 0x9A6700, 85.0, 210.0)
         launchLimits(lowEnabled = true)
-        check("Low 85" in texts() && "High 240" in texts())
+        limits("85", "240")
         launchLimits(highEnabled = true)
-        check("Low 70" in texts() && "High 210" in texts())
+        limits("70", "210")
         checks.put("enabledOrdinaryLimitsSyncIndependently", true)
         launchLimits("mmol")
-        check("Low 3.9" in texts() && "High 13.3" in texts())
+        limits("3.9", "13.3")
         check("19.4" in texts() && "2.2" in texts())
-        checkColorBands(0xC62828, 0xB85C00)
+        checkColorBands(0xC62828, 0x9A6700)
         checks.put("mmolScaleAndLimitsConvertWithIdenticalColorGeometry", true)
         launchLimits("dark")
-        checkColorBands(0xFF6B6B, 0xFFB74D)
+        checkColorBands(0xFF6B6B, 0xFFCA65)
         checks.put("darkThemeHorizontalLinesAndLowHighColorsRender", true)
     }
 
-    private fun checkColorBands(red: Int, orange: Int, low: Double = 70.0, high: Double = 240.0) {
+    private fun checkColorBands(red: Int, yellow: Int, low: Double = 70.0, high: Double = 240.0) {
         val bounds = Rect().also { chart().getBoundsInScreen(it) }
-        val inset = 16f * targetContext.resources.displayMetrics.density
+        val density = targetContext.resources.displayMetrics.density
+        val compact = targetContext.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val large = targetContext.resources.configuration.fontScale >= 1.5f
+        val plotTop = bounds.top + (if (large) 64f else if (compact) 38f else 46f) * density
+        val plotBottom = bounds.bottom - (if (large) 44f else if (compact) 26f else 30f) * density
         val bitmap = checkNotNull(uiAutomation.takeScreenshot())
         try {
             fun lineHasColor(value: Double, expected: Int): Boolean {
-                val y = (bounds.top + inset + (bounds.height() - 2 * inset) * (350 - value) / 310).toInt()
+                val y = (plotTop + (plotBottom - plotTop) * (350 - value) / 310).toInt()
                 var hits = 0
                 for (x in bounds.left + 12 until bounds.right - 12 step 5) {
                     if ((y - 3..y + 3).any { row -> bitmap.getPixel(x, row) and 0xFFFFFF == expected }) hits++
@@ -219,11 +245,11 @@ class ChartGestureInstrumentation : Instrumentation() {
                 return hits >= bounds.width() / 15
             }
             check(lineHasColor(low, red)) { "Low horizontal line pixels missing" }
-            check(lineHasColor(high, orange)) { "High horizontal line pixels missing" }
+            check(lineHasColor(high, yellow)) { "High horizontal line pixels missing" }
             fun traceHasColor(expected: Int, lowBand: Boolean): Boolean {
-                val edge = (bounds.top + inset + (bounds.height() - 2 * inset) * (350 - if (lowBand) low else high) / 310).toInt()
-                val rows = if (lowBand) edge + 8 until (bounds.bottom - inset).toInt() - 8
-                    else (bounds.top + inset).toInt() + 8 until edge - 8
+                val edge = (plotTop + (plotBottom - plotTop) * (350 - if (lowBand) low else high) / 310).toInt()
+                val rows = if (lowBand) edge + 8 until plotBottom.toInt() - 8
+                    else plotTop.toInt() + 8 until edge - 8
                 var count = 0
                 for (y in rows) for (x in bounds.left + 8 until bounds.right - 8) {
                     if (bitmap.getPixel(x, y) and 0xFFFFFF == expected) count++
@@ -231,7 +257,7 @@ class ChartGestureInstrumentation : Instrumentation() {
                 return count > 20
             }
             check(traceHasColor(red, true)) { "Low trace pixels missing" }
-            check(traceHasColor(orange, false)) { "High trace pixels missing" }
+            check(traceHasColor(yellow, false)) { "High trace pixels missing" }
         } finally { bitmap.recycle() }
     }
 

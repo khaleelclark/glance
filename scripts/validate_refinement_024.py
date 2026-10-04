@@ -25,7 +25,7 @@ def no_boilerplate():
     labels = [ui.label(n) for n in ui.nodes()]
     assert not any(any(text.lower() in label.lower() for text in (
         'arranged around daily use', 'queues to paired watch', 'glucose alerts posted by',
-        'source readings only', 'Pinch to zoom', 'Selected reading')) for label in labels)
+        'source readings only', 'Pinch to zoom')) for label in labels)
 
 
 def tap_plot():
@@ -76,7 +76,10 @@ def main():
             checked(f'Show latest {hours} hours')
         checks['threeSixTwelveTwentyFourHourPresetsAreSelectable'] = True
         ui.tap('Show latest 3 hours', True)
+        before = ui.find('source readings over 24 hours').get('content-desc')
         tap_plot()
+        after = ui.find('source readings over 24 hours').get('content-desc')
+        assert before != after and 'Selected source reading' in after and 'measured' in after
         no_boilerplate()
         snapshot('selected-three-hour')
         checks['graphScrubUsesOnGraphReadoutWithoutBottomCard'] = True
@@ -87,6 +90,7 @@ def main():
         snapshot('logbook')
         ui.tap('Settings', True)
         no_boilerplate()
+        ui.tap('More', True)
         ui.scroll_to('Share watch readings')
         no_boilerplate()
         checks['settingsAndLogbookBoilerplateRemoved'] = True
@@ -95,6 +99,11 @@ def main():
         assert ui.visible('113') and ui.visible('In range')
         snapshot('fresh-dark')
         checks['darkReadingAndOpenGraphRender'] = True
+        for mode, value, label in [('low', '65', 'Below Low limit'), ('high', '250', 'Above High limit')]:
+            ui.start(mode)
+            assert ui.visible(value) and ui.visible(label)
+            snapshot(mode + '-dark')
+        checks['darkLowAndHighReadingsRender'] = True
         ui.adb('shell', 'settings', 'put', 'system', 'font_scale', '2.0')
         ui.start()
         assert ui.visible('113') and ui.visible('Now') and ui.visible('Settings')

@@ -72,14 +72,15 @@ application ID and signer for every upgrade; increment versionCode.
    requests the status chip Live Update by default where Android supports it;
    promoted cards stay expanded. Turn that switch off in Settings for the large,
    collapsible card. The main screen has a 24-hour timeline of validated source
-   samples: use one finger to inspect exact readings and pinch to change the
-   visible window from one to 24 hours. Two-finger dragging does not pan time.
-   **6 hr**, **12 hr** and **24 hr** reset to the latest window; 6 hours is the
-   default. Its vertical scale
+   samples: use one finger to inspect exact readings on the graph.
+   **3 hr**, **6 hr**, **12 hr** and **24 hr** select the latest window;
+   6 hours is the default. Pinch and two-finger dragging do not change the window
+   or selected reading. Its vertical scale
    stays at 40–350 mg/dL, converted to the selected unit. Low/High lines follow
    enabled ordinary alert settings, falling back independently to 70/240 when
-   off. Below Low is red; above High is orange. Edge arrows mark readings outside
-   the scale, and the selected-reading card always retains the actual value. The current reading places the
+   off. Below Low is red; above High is yellow. Edge arrows mark readings outside
+   the scale; the value readout on the graph retains the actual value, with
+   its measurement time aligned beneath the crosshair. The current reading places the
    value, unit, and trend arrow together, with a plain-language trend below;
    landscape places the graph beside it. Settings has color presets, a
    touchable color wheel, brightness slider, and a custom six-digit hex field; light and dark themes

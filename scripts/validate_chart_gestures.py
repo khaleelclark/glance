@@ -3,6 +3,7 @@
 import json
 import argparse
 import os
+import re
 from pathlib import Path
 import subprocess
 
@@ -39,6 +40,13 @@ def main():
     result = json.loads(adb("shell", "run-as", PKG, "cat", "files/chart-gesture-probe.json"))
     if not result["allPassed"] or not all(result["checks"].values()):
         raise RuntimeError("Incomplete gesture checks")
+    apk = adb("shell", "pm", "path", PKG).strip().removeprefix("package:")
+    if not re.fullmatch(r"/data/app/[A-Za-z0-9/_.=+~\-]+/base\.apk", apk):
+        raise RuntimeError("Unexpected fixture path")
+    result["fixtureApkSha256"] = adb("shell", "sha256sum", apk).split()[0]
+    result["sourceCommitAtRun"] = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    result["sourceDirtyAtRun"] = bool(subprocess.check_output(["git", "status", "--porcelain"], text=True).strip())
+    result["fixtureType"] = "Debug-only synthetic APK; not a release deliverable"
     result["GalaxyS25Ultra"] = "not tested"
     result["liveAccount"] = "not tested"
     evidence = ROOT / "docs/evidence"

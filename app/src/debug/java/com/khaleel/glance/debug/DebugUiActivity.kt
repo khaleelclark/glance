@@ -74,7 +74,7 @@ class DebugUiActivity : ComponentActivity() {
                 "high" -> 250.0
                 else -> 113.0
             } else 150 + 105 * kotlin.math.sin(step / 9.0)
-            val ageSeconds = if (mode == "stale") 1200L else 60L
+            val ageSeconds = when (mode) { "stale" -> 1200L; "justNow" -> 15L; else -> 60L }
             Reading("synthetic", now.minusSeconds((288 - step) * 300L + ageSeconds), value, value,
                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
         }

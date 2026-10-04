@@ -93,6 +93,10 @@ def main():
         snapshot('button-navigation-light')
         no_boilerplate()
         snapshot('fresh-light')
+        ui.start('justNow')
+        assert ui.visible('Just Now') and not ui.visible('just now')
+        checks['freshestAgeUsesTitleCase'] = True
+        ui.start()
         for mode, value, label in [('low', '65', 'Below Low limit'), ('high', '250', 'Above High limit')]:
             ui.start(mode)
             assert ui.visible(value) and ui.visible(label)
@@ -172,7 +176,7 @@ def main():
         checks['landscapeKeepsReadingAndThreeHourPresetReachable'] = True
         apk = ui.adb('shell', 'pm', 'path', 'com.khaleel.glance').strip().removeprefix('package:')
         assert re.fullmatch(r'/data/app/[A-Za-z0-9/_.=+~\-]+/base\.apk', apk)
-        assert len(checks) == 13 and all(checks.values())
+        assert len(checks) == 14 and all(checks.values())
         report = {'synthetic': True, 'device': 'API 36 emulator', 'checks': checks, 'allPassed': True,
                   'fixtureApkSha256': ui.adb('shell', 'sha256sum', apk).split()[0],
                   'sourceCommitAtRun': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),

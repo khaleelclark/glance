@@ -92,4 +92,29 @@ data class DisplayState(
     val nextAllowedFetch: Instant?,
     val history: List<Reading> = emptyList(),
     val providerRetryAt: Instant? = null,
+    val people: List<PersonDisplayState> = emptyList(),
 )
+
+/** Account roster; each reading and history remain scoped to the named provider connection. */
+data class PersonDisplayState(
+    val person: Connection,
+    val reading: Reading?,
+    val freshness: ReadingFreshness,
+    val connection: ConnectionState = ConnectionState.READY,
+    val lastSuccessfulFetch: Instant? = null,
+    val history: List<Reading> = emptyList(),
+)
+
+/** Viewing a person does not change the primary notification/widget/watch person. */
+fun DisplayState.forPerson(personId: String): DisplayState? {
+    if (person?.id == personId) return this
+    val entry = people.firstOrNull { it.person.id == personId } ?: return null
+    return copy(
+        person = entry.person,
+        reading = entry.reading,
+        freshness = entry.freshness,
+        connection = entry.connection,
+        lastSuccessfulFetch = entry.lastSuccessfulFetch,
+        history = entry.history,
+    )
+}

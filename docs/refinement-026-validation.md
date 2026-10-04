@@ -46,8 +46,12 @@ Host KVM access uses the already configured kvm group via sg; no permission
 configuration was changed. API 30 launch resources compile but were not run.
 Android's launch-window attributes follow the official [splash-screen guidance](https://developer.android.com/develop/ui/views/launch/splash-screen).
 
-Independent launch-window closure, clean release tests/signing, signer continuity,
-artifact publication and source push remain pending. The final signed APK is
+Independent source closure accepts exact clean
+ca538e7930817e1168c35bde0d302d646b58f76c, closes the launch-window LOW and finds
+no HIGH/MEDIUM regression or new concrete LOW. All review findings are closed.
+Final clean-build/signing results, signer continuity, checksums and publication
+are recorded separately under release/ in the delivery manifest and verification
+bundle; they are not inferred from these debug checks. The final signed APK is
 not claimed to run in the emulator. Synthetic debug evidence cannot qualify
 live LibreLinkUp, Samsung One UI, TalkBack, overnight/background, battery,
 physical watch or audible-alert delivery.

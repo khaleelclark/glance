@@ -19,8 +19,13 @@ One LOW: the application still inherited a platform light launch theme, allowing
 a brief light-to-black flash before Compose. Correction ca538e7 assigns a dark
 native theme with explicit black window/background/system bars and light system
 icons, plus black API 31+ splash with the existing smaller native droplet.
-Runtime Compose/inset settings are unchanged. Focused independent source closure
-is tracked and remains pending; source approval is not inferred from root tests.
+Runtime Compose/inset settings are unchanged. Independent read-only closure of
+exact clean ca538e7930817e1168c35bde0d302d646b58f76c accepted the correction,
+found no HIGH/MEDIUM regression or new concrete LOW, and closed the launch-window
+finding. git diff --check ca538e7^..ca538e7 passed. No HIGH/MEDIUM blocker or open
+LOW remains in these bounded 0.26 source reviews. Only documentation/evidence
+commits follow this production candidate; source approval is separate from runtime
+and signed-release qualification.
 
 Native chart/screen and cold-launch evidence is separately recorded in
 refinement-026-validation.md. Final release hashes, signatures and clean-build

@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """Inject one/two-finger events into the production chart on a debug emulator."""
 import json
+import argparse
 import os
 from pathlib import Path
 import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = Path(os.environ.get("ANDROID_HOME", Path.home() / "Android/Sdk"))
-SERIAL = sys.argv[1] if len(sys.argv) == 2 else "emulator-5556"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("serial", nargs="?", default="emulator-5556")
+parser.add_argument("--version", default="0.21.0", help="Version label for the evidence file")
+args = parser.parse_args()
+if not all(c.isalnum() or c in ".-" for c in args.version):
+    parser.error("version must contain only letters, digits, dots or hyphens")
+SERIAL = args.serial
 ADB = [str(SDK / "platform-tools/adb"), "-s", SERIAL]
 PKG = "com.khaleel.glance"
 
@@ -35,7 +41,9 @@ def main():
         raise RuntimeError("Incomplete gesture checks")
     result["GalaxyS25Ultra"] = "not tested"
     result["liveAccount"] = "not tested"
-    (ROOT / "docs/evidence/api36-chart-0.21.0.json").write_text(json.dumps(result, indent=2) + "\n")
+    evidence = ROOT / "docs/evidence"
+    evidence.mkdir(exist_ok=True)
+    (evidence / f"api36-chart-{args.version}.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result["checks"]))
 
 

@@ -46,6 +46,14 @@ separate from this bounded source approval.
 At 24f6500, UserSettings.clear preserves the completed installation migration
 marker while resetting account preferences. The debug Android probe exercises
 clear → default teal → explicit Ocean → store recreation. This targets the exact
-remaining lifecycle finding. Independent closure and focused native result are
-pending; root build/native/visual evidence and final artifact verification remain
-separate from source review.
+remaining lifecycle finding. Independent source closure against exact clean
+24f650085f062b7db67cc8c4bc174385966b5581 accepted this correction and found no
+HIGH/MEDIUM regression or new concrete LOW. The remaining Ocean lifecycle LOW
+is closed. The focused native receipt passes all seven checks, including the
+new reset lifecycle. No HIGH/MEDIUM blocker or open LOW remains in the bounded
+0.25 reviews. Only documentation/evidence commits follow that production source.
+
+Source closure is separate from release qualification. Final clean-build,
+signature, APK hash and debug-component evidence is recorded under release/
+and in the delivery verification report. Live-account/Samsung, TalkBack,
+overnight, battery, physical-watch and audible-alert checks remain unqualified.

@@ -53,8 +53,8 @@ profile api36-ui-0.25.0-font-fix.json passes three checks at 1466ebf, with gener
 evidence only dirty. Root inspected normal-font axis separation and both
 portrait/landscape 200% tooltip and preset screenshots: full 113 mg/dL and full
 localized measurement date/time are visible together, with reachable presets.
-Canvas plot geometry and source rules remained unchanged since review candidate
-30d3f02; only documentation/evidence has followed.
+Canvas plot geometry and source rules remain unchanged since review candidate
+30d3f02. A later non-chart account-reset correction is recorded below.
 
 The final integrated source review accepted nickname cleanup and chart behavior
 but found one remaining LOW: account reset erased the one-time accent migration
@@ -65,8 +65,16 @@ Ocean → UserSettings recreation. Fixture SHA-256:
 9e9fc507fca86f884be54e04c7ec0644ed6429eea88771262702748c11f6b9cf.
 At run time only review documentation was dirty; production was clean 24f6500.
 Independent axis source closure of 30d3f02 found no HIGH/MEDIUM regression or new
-LOW and accepted the label separation. Final accent closure, clean release
-signing, signer checks, artifact publication and push remain pending.
+LOW and accepted the label separation. Final accent source closure against
+exact clean 24f650085f062b7db67cc8c4bc174385966b5581 closes the remaining LOW,
+with no HIGH/MEDIUM regression or new concrete LOW. Docs/evidence alone follow
+that production candidate.
+
+Final release hashes, clean source commit, clean-build unit/lint totals,
+signer continuity and debug/demo exclusion are recorded by scripts/sign_release.py
+and release/verify-0.25.0.py under release/. The final delivery verification
+report combines that artifact evidence with these bounded emulator/source
+reviews. A signed release APK is not claimed to have run in the emulator.
 
 Live LibreLinkUp, Samsung One UI, TalkBack, overnight/background, battery,
 physical watch and audible-alert qualification are not claimed by emulator

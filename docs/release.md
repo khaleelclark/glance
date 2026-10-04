@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `27`, and versionName
-`0.22.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `28`, and versionName
+`0.23.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -25,6 +25,12 @@ or `local.properties`. Run:
 
 This produces `app/build/outputs/apk/release/app-release-unsigned.apk`.
 Android Studio can run the debug variant without the personal signing key.
+
+The owner's current phone installation was updated successfully through Android
+Studio on the same computer. Use that same computer and debug key for this update:
+pull `main`, select the `app` debug variant and Run it on the connected phone.
+The release-signed APK cannot update a differently signed debug installation.
+Cancel an uninstall prompt to preserve local settings and inspect its error.
 
 ## Keep the upgrade key
 
@@ -53,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.22.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.23.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -66,9 +72,10 @@ application ID and signer for every upgrade; increment versionCode.
    requests the status chip Live Update by default where Android supports it;
    promoted cards stay expanded. Turn that switch off in Settings for the large,
    collapsible card. The main screen has a 24-hour timeline of validated source
-   samples: use one finger to inspect exact readings, two fingers to browse
-   time, and pinch to change the visible window from one to 24 hours.
-   **Show 24 hours** and **Latest 3 hours** reset the view. Its vertical scale
+   samples: use one finger to inspect exact readings and pinch to change the
+   visible window from one to 24 hours. Two-finger dragging does not pan time.
+   **6 hr**, **12 hr** and **24 hr** reset to the latest window; 6 hours is the
+   default. Its vertical scale
    stays at 40–350 mg/dL, converted to the selected unit. Low/High lines follow
    enabled ordinary alert settings, falling back independently to 70/240 when
    off. Below Low is red; above High is orange. Edge arrows mark readings outside
@@ -80,9 +87,10 @@ application ID and signer for every upgrade; increment versionCode.
    monitoring in Settings to end the session. Test screen-off
    behavior before relying on the chosen polling interval.
 
-Optional threshold alerts start **off**. In Settings, enable each desired level,
-scroll the value wheel to choose its threshold, and scroll the repeat wheel to
-set a cooldown from one to 60 minutes (five minutes initially). Urgent Low and Urgent High take precedence
+Optional threshold alerts start **off**. In Settings, tap a level to open its
+edit sheet, scroll the value wheel to choose its threshold, and use the repeat
+slider to set a cooldown from one to 60 minutes (five minutes initially).
+Urgent Low and Urgent High take precedence
 over their ordinary level. A new, fresh numeric reading can sound at most once
 per category per cooldown; repeated source responses never sound again. Each
 category's sound and priority are chosen in its own Android notification-channel settings.
@@ -109,6 +117,27 @@ limits, and next retry time. If terms or policy acceptance is required, complete
 that in the official LibreLinkUp app, then reconnect in Glance. After a
 force-stop or Android Task Manager Stop, open Glance and explicitly resume.
 Reinstall only after checking the state and preserving the signing key.
+
+## 0.23.0 focused redesign and alarm log
+
+The default accent is ocean blue (`#1677D2`), with a rounded native G logo on
+the phone and watch. Existing custom accents remain supported. Now places the
+reading above a larger source graph; signed-in navigation is Now / Logbook /
+Settings. Common settings use compact rows and quick-edit sheets. Multiple-person
+monitoring, dashboards and per-person thresholds remain deferred.
+
+Logbook distinguishes Low, Urgent Low, High and Urgent High notifications posted
+by Glance. Each row retains the source reading and measurement time separately
+from the posting time. It records Android accepting a post, which does not prove
+sound was heard. History is encrypted, excluded from backups and diagnostics,
+and limited to 1,000 records with 30-day pruning on load and append. Clear asks
+for confirmation and preserves alert settings, sample deduplication and cooldowns.
+Explicit new sign-in, sign-out and local health-data deletion clear history.
+
+See [redesign-023-validation.md](redesign-023-validation.md) for the exact
+automated/emulator evidence and remaining physical-device checks. For the owner's
+existing Android Studio installation, update using the same computer's `app`
+debug variant; a release APK with a different signer cannot update that install.
 
 ## Samsung Live Update and glucose icon (0.15.0)
 

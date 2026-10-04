@@ -2,6 +2,21 @@
 
 Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
 
+## 0.23.0 focused redesign and alarm log
+
+The integrated phone/watch debug build passes 201/15 JVM tests with zero
+failures/errors/skips. Debug lint has zero errors (phone 74 warnings; watch zero).
+Synthetic API 36 verification passes 24 UI checks, a focused landscape window
+selection follow-up, 16 native chart checks and eight real Android Keystore-backed
+alarm-storage checks. Evidence uses DEMO fixtures. See
+[redesign-023-validation.md](redesign-023-validation.md) for commands, exact source
+and fixture boundaries, screenshots, pending review/signing and device limits.
+
+No 0.23 live-account, physical Samsung, TalkBack, overnight, battery, car or watch
+qualification is claimed. The owner's previously successful Android Studio
+update supports using the same computer's `app` debug variant to preserve signer
+continuity; it does not qualify this redesign's device behavior.
+
 ## Build host and toolchain, 2026-09-27
 
 | Item | Result |

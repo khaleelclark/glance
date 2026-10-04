@@ -8,10 +8,12 @@ brand accent; Material roles are explicitly derived from the selected accent so
 controls do not fall back to the library's purple defaults. Existing saved custom
 colors continue to render, and the earlier teal remains available as Lagoon.
 
-The launcher and status assets use the same rounded, open **G** mark. They are
+The launcher, status and watch glyph assets use the same rounded, open **G** mark. They are
 native Android vectors with no raster source, patient data, or borrowed artwork.
 The launcher uses a blue field and white mark; the notification glyph remains a
-monochrome alpha-safe white vector for Android tinting.
+monochrome alpha-safe white vector for Android tinting. The regular notification's
+source-history thumbnail uses a bright ocean-blue trace; its data geometry and
+privacy behavior are unchanged.
 
 ## Information architecture
 
@@ -20,8 +22,8 @@ The signed-in shell has persistent bottom navigation:
 - **Now** combines a compact person header, value/unit/source trend, source time,
   an observation-only delta when a real prior sample exists, runtime/connection
   status, and the full glucose graph. Refresh and Pause/Resume are compact actions.
-- **Logbook** lists real local alert history only. It groups by local fire date,
-  preserves the exact alert type, person, source value/trend/time, and fired time,
+- **Logbook** lists real local alert history only. It groups by local posting date,
+  preserves the exact alert type, person, source value/trend/time, and posting time,
   and requires confirmation before clearing only the alert log.
 - **Settings** keeps common values in compact grouped rows. Units, cadence,
   notification presentation and appearance use bottom sheets;
@@ -82,9 +84,10 @@ completed without errors. Four new tests cover real-sample delta
 selection/formatting/suppression, local-day log grouping, the ocean-blue default,
 and retention of the legacy teal choice.
 
-No emulator, live account, signing, push, or user-image publication was performed.
-The lead still needs to integrate the host's alert-history collection, then run
-synthetic API 36 visual/interaction checks. Physical Galaxy S25
+Those checks describe the isolated design worktree. The lead has now integrated
+the host's alert-history collection and responsive sheet/inset fixes; combined
+validation is recorded in [redesign-023-validation.md](redesign-023-validation.md).
+No private user-image publication was performed. Physical Galaxy S25
 Ultra checks remain necessary for TalkBack order, 200% font/display scale, dark-mode
 contrast, bottom-sheet keyboard/gesture behavior, Samsung navigation insets, and
 comfortable chart height. The private LibreLinkUp reference photos were inspected

@@ -46,7 +46,7 @@ internal object NotificationSparkline {
             canvas.drawLine(8f, position, 120f, position, paint)
             canvas.drawLine(position, 8f, position, 120f, paint)
         }
-        paint.color = Color.rgb(145, 150, 255)
+        paint.color = Color.rgb(96, 176, 244)
         paint.strokeWidth = 5f
         paint.strokeCap = Paint.Cap.ROUND
         var previousX = 0f

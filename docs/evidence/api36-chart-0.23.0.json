@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "oneFingerScrubsWithoutPanningOrParentScrolling": true,
+    "twoFingerPinchZoomsIn": true,
+    "twoFingerGesturesDoNotChangeSelectedReading": true,
+    "twoFingerDragDoesNotScrollTimeline": true,
+    "sixAndTwelveHourChoicesResetToLatestWindow": true,
+    "liftingOneFingerDoesNotSwitchFromPanToScrub": true,
+    "zoomOutStopsAtTwentyFourHoursAndResetWorks": true,
+    "accessibilityBoundedZoomReportsNoChange": true,
+    "zoomInStopsAtOneHour": true,
+    "accessibilityZoomActionWorks": true,
+    "fixedScaleAndDisabledSavedLimitsFallBackToSeventyTwoForty": true,
+    "defaultHorizontalLinesAndLowHighTraceColorsRender": true,
+    "outOfScaleSelectionPreservesActualValues": true,
+    "enabledOrdinaryLimitsSyncIndependently": true,
+    "mmolScaleAndLimitsConvertWithIdenticalColorGeometry": true,
+    "darkThemeHorizontalLinesAndLowHighColorsRender": true
+  },
+  "allPassed": true,
+  "GalaxyS25Ultra": "not tested",
+  "liveAccount": "not tested",
+  "fixtureApkSha256": "c9ef098971ec4d19afc15072c09a721bff0e911f165459c1f7fd1126f17e3348",
+  "fixtureType": "Debug-only synthetic APK; not a release deliverable",
+  "sourceCommitAtRun": "ce30b736362d0310e908eb3d1cdd9408f89f237c",
+  "sourceDirtyAtRun": true,
+  "productionChangesSinceBase": "Ocean-blue NotificationSparkline trace; tested chart/alerts/debug probe packages unchanged"
+}

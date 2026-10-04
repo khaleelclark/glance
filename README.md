@@ -7,7 +7,15 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.22.0 adds temporary, LibreView-only HTTPS cookie handling as a VPN
+Version 0.23.0 brings ocean-blue branding, a rounded G logo, a compact reading
+summary with a prominent graph, and Now / Logbook / Settings navigation. Settings
+uses grouped rows and quick-edit sheets. The encrypted local Logbook distinguishes
+Low, Urgent Low, High and Urgent High, with source measurement and posting times.
+Clearing it preserves alert cooldowns; explicit sign-in/sign-out clears its data.
+Multiple-person monitoring and its dashboard are deferred. See
+[redesign and alarm-log validation](docs/redesign-023-validation.md).
+
+The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.
 Its effect on the owner's Proton VPN connection remains unverified. See
 [VPN investigation](docs/vpn-compatibility.md).
@@ -44,6 +52,12 @@ From a terminal with `ANDROID_HOME` or `local.properties` pointing to your SDK:
 ```sh
 ./gradlew :app:assembleDebug :app:testDebugUnitTest
 ```
+
+If the installed phone app came from Android Studio, pull the current `main` on
+the same computer and Run the `app` debug variant again. Keep that computer's
+existing debug signing key to update without removing settings. The personal
+release APK uses a separate key and cannot replace a differently signed debug
+installation; cancel any uninstall prompt and inspect the installer error first.
 
 The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`. For a signed
 personal APK, key backup, install and upgrade instructions, see

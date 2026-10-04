@@ -21,7 +21,7 @@ entry includes the exact `AlertKind`, `Connection`, source `Reading` (including
 value and source measurement timestamp), and alert firing timestamp.
 
 The observable list is newest first, deduplicated by event ID, limited to 1,000
-events, and pruned after 30 days. Loading bounds the parsed input and rejects
+events, and pruned to 30 days on load and append. Loading bounds the parsed input and rejects
 invalid enums, timestamps, numeric fields, special-value alerts, and
 cross-person reading identities. Names, internal connection IDs, readings, and
 source details remain only in encrypted no-backup storage; the alarm

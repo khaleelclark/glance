@@ -5,33 +5,53 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 sys.dont_write_bytecode = True
 import validate_ui_overhaul as ui
 
 CHECKS = {}
 
 
-def scroll_to(text, upward=False):
-    for _ in range(12):
+def scroll_to(text, upward=False, clearance=0):
+    for _ in range(20):
         current = ui.nodes()
-        if any(text in ui.label(n) for n in current):
-            return
         scrollers = [n for n in current if n.get('scrollable') == 'true']
+        targets = [n for n in current if text in ui.label(n)]
+        if targets and not clearance:
+            return
+        for target in targets:
+            tx1, ty1, tx2, ty2 = map(int, re.findall(r'\d+', target.get('bounds')))
+            for container in scrollers:
+                cx1, cy1, cx2, cy2 = map(int, re.findall(r'\d+', container.get('bounds')))
+                if cx1 <= (tx1 + tx2) // 2 <= cx2 and cy1 <= ty1 and ty2 + clearance <= cy2:
+                    return
         assert scrollers, 'No scrollable container for: ' + text
         for node in scrollers:
             x1, y1, x2, y2 = map(int, re.findall(r'\d+', node.get('bounds')))
             if y2 - y1 < 150:
                 continue
             x = x1 + 12  # Stay outside the chart/wheel's pointer-consuming area.
-            top, bottom = int(y1 + (y2 - y1) * .2), int(y1 + (y2 - y1) * .8)
+            travel = min(650, int((y2 - y1) * .35))
+            mid = (y1 + y2) // 2
+            top, bottom = mid - travel // 2, mid + travel // 2
             ui.adb('shell', 'input', 'swipe', str(x), str(top if upward else bottom),
-                   str(x), str(bottom if upward else top), '250')
+                   str(x), str(bottom if upward else top), '500')
             ui.settle()
     raise AssertionError('Scroll target missing: ' + text)
 
 
 ui.scroll_to = scroll_to
 ui.scroll_up_to = lambda text: scroll_to(text, upward=True)
+
+
+def start(mode='fresh'):
+    # Each fixture starts at Now with no restored test scroll/sheet state.
+    ui.adb('shell', 'am', 'start', '-W', '-S', '-f', '0x10008000', '-n',
+           'com.khaleel.glance/.debug.DebugUiActivity', '--es', 'mode', mode)
+    time.sleep(2)
+
+
+ui.start = start
 
 
 def screenshot(name):
@@ -228,7 +248,9 @@ def main():
         ui.adb('shell', 'settings', 'put', 'system', 'user_rotation', '1')
         ui.start()
         assert ui.visible('113') and ui.visible('Glucose trend')
-        ui.scroll_to('Show latest 12 hours')
+        scroll_to('Show latest 12 hours', clearance=120)
+        ui.tap('Show latest 12 hours', True)
+        assert ui.checked_node('Show latest 12 hours').get('checked') == 'true'
         screenshot('landscape')
         CHECKS['landscapeHasReadingGraphAndTimeChoices'] = True
         ui.tap('Settings', True)

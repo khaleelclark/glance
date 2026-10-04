@@ -1,0 +1,17 @@
+{
+  "synthetic": true,
+  "checks": {
+    "encryptedNicknameSurvivesStoreRecreation": true,
+    "nicknameAndConnectionIdAreAbsentFromCiphertext": true,
+    "unicodeAndWhitespaceNormalizeOnDevice": true,
+    "otherAccountClearsStoredAliases": true,
+    "blankAliasDeletesEncryptedFile": true,
+    "legacyBlueMigratesAndCustomAccentSurvives": true
+  },
+  "allPassed": true,
+  "sourceCommitAtRun": "3dd3c425d0d899dddecc7f236de3376f04f16dfa",
+  "scope": "Pre-chart integration; Android Keystore and accent migration only",
+  "fixtureApkSha256": "e362ea29ede1363deb88a3c9b55cd35d9b86ceadff62d2b1f8f02eedcd5de865",
+  "sourceDirtyAtRun": true,
+  "dirtyScope": "Generated Python cache and evidence only; production unchanged during native probe."
+}

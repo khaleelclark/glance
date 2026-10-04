@@ -5,7 +5,14 @@ integrated as bb5ff96, with teal upgrade migration at 265b228. Initial phone
 checks: 214 JVM tests, zero failures/errors/skips; debug assembly successful;
 debug lint zero errors. That first invocation overlapped addition of a debug
 probe, so it is preliminary evidence rather than final release qualification.
-The complete integrated checks will follow the chart handoff.
+The complete integrated checks will follow the chart handoff. Native preliminary
+nickname checks passed all six assertions in the real Android Keystore store,
+including recreation, account isolation, encrypted bytes, Unicode normalization,
+blank restoration and accent migration. Light/dark button-navigation screenshots
+were inspected: the navigation background matches the app bar and buttons remain
+readable. These previews retain the old chart until the chart handoff.
+Evidence: docs/evidence/api36-nickname-0.25.0-preliminary.json and the two
+api36-ui-0.25.0-preliminary light/dark DEMO images.
 
 Requested changes: sugar/insulin-related logo (native sugar cube selected), new
 muted teal default, source timestamp immediately below selected graph value,

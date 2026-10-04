@@ -60,6 +60,7 @@ def main():
     assert ui.adb('shell', 'getprop', 'ro.kernel.qemu').strip() == '1'
     assert ui.adb('shell', 'getprop', 'sys.boot_completed').strip() == '1'
     ui.adb('shell', 'run-as', 'com.khaleel.glance', 'pwd')
+    ui.adb('shell', 'cmd', 'statusbar', 'collapse')
     ui.EVIDENCE.mkdir(exist_ok=True)
     old = {key: ui.adb('shell', 'settings', 'get', 'system', key).strip()
            for key in ('font_scale', 'user_rotation', 'accelerometer_rotation')}
@@ -201,6 +202,7 @@ def font_fix():
     assert ui.SERIAL.startswith('emulator-')
     assert ui.adb('shell', 'getprop', 'ro.kernel.qemu').strip() == '1'
     ui.adb('shell', 'run-as', 'com.khaleel.glance', 'pwd')
+    ui.adb('shell', 'cmd', 'statusbar', 'collapse')
     old = {key: ui.adb('shell', 'settings', 'get', 'system', key).strip()
            for key in ('font_scale', 'user_rotation', 'accelerometer_rotation')}
     old_night = ui.adb('shell', 'cmd', 'uimode', 'night').strip()

@@ -190,3 +190,20 @@ Settings persistence, credential retention, account/person switching, TalkBack,
 Samsung rendering/gestures, screen-off/battery reliability or physical watch
 behavior. Signed upgrade acceptance/launch is recorded separately in the release
 upgrade JSON; it does not exercise credentials or settings retention.
+
+
+## 0.25 personal polish — synthetic checks
+
+At 6c54812, 17 native chart assertions and 15 production-screen assertions
+passed on the API 36 emulator. Evidence is in `api36-chart-0.25.0.json` and
+`api36-ui-0.25.0.json` under `docs/evidence/`; all data is synthetic. Native
+nickname checks exercise actual Android Keystore storage; UI callbacks remain
+synthetic. The original screen images retain the normal-font 40/50 overlap
+caught during visual inspection. Presentation fix 30d3f02 passed 217 phone
+unit tests with zero failures/errors/skips and zero debug lint errors. Focused
+corrected font/axis inspection and native rerun are pending.
+
+Button-navigation screenshots show the app surface behind the system buttons
+in light/dark modes. They do not establish Samsung One UI rendering. Live
+account, Samsung, TalkBack, physical watch, overnight/background, battery and
+audible-delivery qualification remain outstanding.

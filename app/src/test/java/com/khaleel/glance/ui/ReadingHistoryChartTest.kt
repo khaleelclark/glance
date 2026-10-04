@@ -49,49 +49,46 @@ class ReadingHistoryChartTest {
         assertEquals(true, ticks.all { it >= Instant.parse("2026-09-26T21:47:00Z") })
     }
 
-    @Test fun timeChoicesShowLatestSixTwelveOrTwentyFourHours() {
+    @Test fun timeChoicesShowLatestThreeSixTwelveOrTwentyFourHoursWithSixDefault() {
+        assertEquals(ChartViewport(0.875, 0.125), ChartViewport.latest(3))
         assertEquals(ChartViewport(0.75, 0.25), ChartViewport.latest(6))
         assertEquals(ChartViewport(0.5, 0.5), ChartViewport.latest(12))
         assertEquals(ChartViewport(0.0, 1.0), ChartViewport.latest(24))
         assertEquals(ChartViewport.latest(6), ChartViewport())
-        for (hours in listOf(6, 12, 24)) assertEquals(1.0, ChartViewport.latest(hours).end, 0.000001)
+        for (hours in listOf(3, 6, 12, 24)) assertEquals(1.0, ChartViewport.latest(hours).end, 0.000001)
     }
 
-    @Test fun zoomKeepsTimeUnderFingersAndPansInVisibleTimeUnits() {
-        val original = ChartViewport(0.5, 0.25)
-        val zoomed = original.transform(0.0, 2.0, 0.3)
-        assertEquals(original.start + original.span * 0.3, zoomed.start + zoomed.span * 0.3, 0.000001)
-        val panned = zoomed.transform(0.5, 1.0, 0.5)
-        assertEquals(zoomed.start - zoomed.span / 2, panned.start, 0.000001)
-    }
-
-    @Test fun viewportStopsAtRetainedDayAndOneHourZoomLimit() {
-        assertEquals(ChartViewport(0.0, 1.0), ChartViewport().transform(0.0, 0.0001, 0.5))
-        val minimum = ChartViewport().transform(0.0, 1000.0, 0.5)
-        assertEquals(1.0 / 24, minimum.span, 0.000001)
-        assertEquals(0.0, minimum.transform(1000.0, 1.0, 0.5).start, 0.000001)
-        assertEquals(1.0, minimum.transform(-1000.0, 1.0, 0.5).end, 0.000001)
-    }
-
-    @Test fun selectionAtZoomOnlyUsesVisibleRealSamples() {
+    @Test fun selectionWithinPresetOnlyUsesVisibleRealSamples() {
         val points = listOf(reading("patrick", 18, 100.0), reading("patrick", 12, 120.0), reading("patrick", 6, 90.0))
         assertEquals(1, nearestChartPointIndex(points, now, 240f, 0f, ChartViewport(0.4, 0.2)))
         assertEquals(2, nearestChartPointIndex(points, now, 240f, 120f, ChartViewport()))
     }
 
-    @Test fun malformedGestureDoesNotMoveViewport() {
-        val viewport = ChartViewport()
-        assertEquals(viewport, viewport.transform(Double.NaN, 1.0, 0.5))
-        assertEquals(viewport, viewport.transform(0.0, 0.0, 0.5))
-        assertEquals(viewport, viewport.transform(0.0, Double.POSITIVE_INFINITY, 0.5))
+    @Test fun accessibilityReadingNavigationStopsAtPresetEdgesWithoutMovingWindow() {
+        val points = listOf(reading("patrick", 8, 100.0), reading("patrick", 5, 120.0), reading("patrick", 2, 90.0))
+        val latestSix = ChartViewport.latest(6)
+
+        assertEquals(1, adjacentVisibleChartPointIndex(points, 2, now, latestSix, -1))
+        assertEquals(2, adjacentVisibleChartPointIndex(points, 1, now, latestSix, 1))
+        assertEquals(null, adjacentVisibleChartPointIndex(points, 1, now, latestSix, -1))
+        assertEquals(null, adjacentVisibleChartPointIndex(points, 2, now, latestSix, 1))
+        assertEquals(null, adjacentVisibleChartPointIndex(points, 0, now, latestSix, 1))
+        assertEquals(null, adjacentVisibleChartPointIndex(points, 1, now, latestSix, 0))
     }
 
-    @Test fun zoomedTicksAreOrderedAcrossDaylightSavingChange() {
+    @Test fun selectedReadoutClampsToBothChartEdgesAndHandlesNarrowCharts() {
+        assertEquals(0f, clampedOverlayStart(0f, 120f, 300f), 0.001f)
+        assertEquals(180f, clampedOverlayStart(300f, 120f, 300f), 0.001f)
+        assertEquals(90f, clampedOverlayStart(150f, 120f, 300f), 0.001f)
+        assertEquals(0f, clampedOverlayStart(20f, 120f, 80f), 0.001f)
+    }
+
+    @Test fun presetTicksAreOrderedAcrossDaylightSavingChange() {
         val end = Instant.parse("2026-11-01T08:47:00Z")
-        val ticks = chartTimeTicks(end, ZoneId.of("America/Chicago"), 1.0 / 24)
+        val ticks = chartTimeTicks(end, ZoneId.of("America/Chicago"), ChartViewport.latest(3).span)
         assertEquals(true, ticks.zipWithNext().all { (a, b) -> a < b })
         assertEquals(true, ticks.all { it in end.minusSeconds(86400)..end })
-        assertEquals(true, ticks.all { it.atZone(ZoneId.of("America/Chicago")).minute % 30 == 0 })
+        assertEquals(true, ticks.all { it.atZone(ZoneId.of("America/Chicago")).minute == 0 })
     }
 
     private fun reading(person: String, hoursAgo: Long, value: Double) = Reading(

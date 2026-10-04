@@ -29,12 +29,9 @@ internal fun chartLimits(alerts: AlertConfig): ChartLimits = ChartLimits(
 internal fun chartYFraction(valueMgDl: Double): Double =
     (chartTopMgDl - valueMgDl) / (chartTopMgDl - chartBottomMgDl)
 
-/** Endpoints stay labeled; the legend keeps exact limits if nearby axis labels collide. */
-internal fun chartAxisValues(limits: ChartLimits, minimumSeparationMgDl: Double = 30.0): List<Double> {
-    val labels = mutableListOf(chartTopMgDl)
-    for (value in listOf(limits.highMgDl, limits.lowMgDl).distinct().sortedDescending()) {
-        if (value - chartBottomMgDl >= minimumSeparationMgDl && labels.last() - value >= minimumSeparationMgDl) labels += value
-    }
-    labels += chartBottomMgDl
-    return labels
-}
+/** The plot always keeps its regular 50 mg/dL source-scale grid. */
+internal fun chartGridValues(): List<Double> = (350 downTo 50 step 50).map(Int::toDouble)
+
+/** Landscape keeps every grid line but reduces labels and always names both scale endpoints. */
+internal fun chartGridLabelValues(compact: Boolean = false): List<Double> =
+    chartGridValues().filterIndexed { index, value -> !compact || (index % 2 == 0 && value > 50.0) } + chartBottomMgDl

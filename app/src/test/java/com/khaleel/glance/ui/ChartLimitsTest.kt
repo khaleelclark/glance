@@ -45,14 +45,15 @@ class ChartLimitsTest {
         assertEquals(0.0, chartYFraction(350.0), 0.000001)
         assertEquals(true, chartYFraction(25.0) > 1.0)
         assertEquals(true, chartYFraction(400.0) < 0.0)
-        assertEquals(listOf(350.0, 240.0, 70.0, 40.0), chartAxisValues(ChartLimits(70.0, 240.0)))
+        assertEquals(listOf(350.0, 300.0, 250.0, 200.0, 150.0, 100.0, 50.0), chartGridValues())
+        assertEquals(chartGridValues() + chartBottomMgDl, chartGridLabelValues())
+        assertEquals(listOf(350.0, 250.0, 150.0, 40.0), chartGridLabelValues(compact = true))
     }
 
-    @Test fun limitsOutsideScaleStayExactAndLabelsNeverExceedScale() {
+    @Test fun limitsOutsideScaleStayExactWithoutChangingRegularGrid() {
         val limits = chartLimits(config(true, 80, true, 380))
         assertEquals(380.0, limits.highMgDl, 0.0)
-        assertEquals(listOf(350.0, 80.0, 40.0), chartAxisValues(limits))
-        assertEquals(listOf(350.0, 40.0), chartAxisValues(ChartLimits(40.0, 349.0)))
+        assertEquals(listOf(350.0, 300.0, 250.0, 200.0, 150.0, 100.0, 50.0), chartGridValues())
     }
 
     @Test fun independentlyDisabledLimitCanOverlapAndRedHasDefinedPriority() {

@@ -5,6 +5,8 @@ import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.forPerson
+import java.util.UUID
 
 interface AlertStore {
     fun config(): AlertConfig
@@ -17,6 +19,7 @@ interface AlertDelivery {
     fun canPost(kind: AlertKind): Boolean
     fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean)
     fun clear()
+    fun clearPerson(personId: String) = clear()
 }
 
 /** Evaluates only successful polls whose result was actually published for the selected person. */
@@ -26,6 +29,11 @@ class AlertEngine(
     private val clock: Clock,
     private val currentDisplay: () -> DisplayState,
     private val currentPrivacy: () -> Boolean,
+    private val history: AlertHistoryPersistence = NoAlertHistory,
+    private val personStore: (String) -> AlertStore = { preferences },
+    private val currentPersonDisplay: (String) -> DisplayState? = { personId ->
+        currentDisplay().forPerson(personId)
+    },
 ) {
     @Synchronized
     fun onPollResult(
@@ -35,21 +43,14 @@ class AlertEngine(
         showOnLockScreen: Boolean,
     ) {
         val returned = (result as? SourceResult.Success)?.value ?: return
-        val current = display.reading ?: return
-        if (display.person?.id != returned.connectionId ||
-            current.connectionId != returned.connectionId ||
-            current.measuredAt != returned.measuredAt ||
-            current.valueMgDl != returned.valueMgDl ||
-            current.specialValue != returned.specialValue
-        ) return
-        val live = currentDisplay()
-        if (!live.monitoringEnabled || live.person?.id != returned.connectionId ||
-            live.reading?.measuredAt != current.measuredAt ||
-            live.reading?.valueMgDl != current.valueMgDl
-        ) return
+        if (!matchesPublished(display, returned)) return
+        val live = currentPersonDisplay(returned.connectionId) ?: return
+        if (!matchesPublished(live, returned)) return
 
-        val prior = preferences.snapshot()
-        val evaluation = AlertPolicy.evaluate(preferences.config(), prior, display, clock.now())
+        val store = personStore(returned.connectionId)
+        val prior = store.snapshot()
+        val firedAt = clock.now()
+        val evaluation = AlertPolicy.evaluate(store.config(), prior, live, firedAt)
         if (evaluation.snapshot == prior) return
         val kind = evaluation.kind
         if (kind != null) notifier.ensureChannels()
@@ -58,9 +59,38 @@ class AlertEngine(
             // A blocked channel did not fire; preserve its previous cooldown deadline.
             evaluation.snapshot.copy(lastFiredAt = prior.lastFiredAt)
         } else evaluation.snapshot
-        preferences.saveSnapshot(toSave)
-        if (kind != null && deliver) notifier.post(kind, display, unit, showOnLockScreen && currentPrivacy())
-        else if (evaluation.clearExisting) notifier.clear()
+        store.saveSnapshot(toSave)
+        if (kind != null && deliver) {
+            try {
+                notifier.post(kind, live, unit, showOnLockScreen && currentPrivacy())
+            } catch (error: Exception) {
+                // The sample stays consumed, but a failed post must not start a false cooldown.
+                runCatching {
+                    store.saveSnapshot(evaluation.snapshot.copy(lastFiredAt = prior.lastFiredAt))
+                }.exceptionOrNull()?.let(error::addSuppressed)
+                throw error
+            }
+            val person = live.person ?: return
+            val reading = live.reading ?: return
+            // A delivered alert must not be repeated merely because its optional audit write failed.
+            runCatching {
+                history.append(AlertHistoryEntry(UUID.randomUUID().toString(), person, kind, reading, firedAt))
+            }
+        } else if (evaluation.clearExisting) {
+            notifier.clearPerson(returned.connectionId)
+        }
+    }
+
+    private fun matchesPublished(display: DisplayState, returned: Reading): Boolean {
+        val current = display.reading ?: return false
+        return display.monitoringEnabled &&
+            display.runtime == com.khaleel.glance.core.RuntimeState.RUNNING &&
+            display.person?.id == returned.connectionId &&
+            current.connectionId == returned.connectionId &&
+            current.measuredAt == returned.measuredAt &&
+            current.valueMgDl == returned.valueMgDl &&
+            current.specialValue == returned.specialValue &&
+            current.sourceRecordId == returned.sourceRecordId
     }
 
     @Synchronized

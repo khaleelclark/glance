@@ -322,7 +322,7 @@ internal fun SettingsScreen(
                 GroupDivider()
             }
             SwitchSettingRow("Glucose number icon", "Fresh values only, when privacy allows.", settings.numericStatusIcon, callbacks.onNumericStatusIconChanged); GroupDivider()
-            SwitchSettingRow("Keep notification visible", "Restore it after clearing while monitoring.", settings.keepNotificationVisible, callbacks.onKeepNotificationVisibleChanged)
+            SwitchSettingRow("Keep notification visible", "Protected from Clear all; restored after swiping while monitoring.", settings.keepNotificationVisible, callbacks.onKeepNotificationVisibleChanged)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(callbacks.onRestoreNotification, Modifier.weight(1f),
                     display.monitoringEnabled && setup.notificationPermission == PermissionStatus.GRANTED) { Text("Show notification") }

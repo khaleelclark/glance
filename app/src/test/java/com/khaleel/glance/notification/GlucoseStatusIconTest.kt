@@ -17,6 +17,15 @@ class GlucoseStatusIconTest {
         reading, ReadingFreshness.FRESH, now, null,
     )
 
+    @Test fun `all four glucose alert ranges still use the source number`() {
+        for (value in listOf(50.0, 65.0, 240.0, 305.0)) {
+            assertEquals(value.toInt().toString(), GlucoseStatusIcon.text(state.copy(reading = reading.copy(
+                valueMgDl = value, sourceValue = value,
+            )), GlucoseUnit.MG_DL, true))
+        }
+        assertNull(GlucoseStatusIcon.text(state.copy(person = Connection("other", "Other")), GlucoseUnit.MG_DL, true))
+    }
+
     @Test fun `fresh value uses chosen unit including decimals and three digits`() {
         assertEquals("112", GlucoseStatusIcon.text(state, GlucoseUnit.MG_DL, true))
         assertEquals("6.2", GlucoseStatusIcon.text(state, GlucoseUnit.MMOL_L, true))

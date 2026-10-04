@@ -73,7 +73,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     private val encryptedStore by lazy { SecureFileStore(this) }
     val alertHistory by lazy { EncryptedAlertHistoryStore(encryptedStore, DeviceClock) }
     val alertPreferences by lazy { AlertPreferences(this) }
-    val alertNotifier by lazy { GlucoseAlertNotifier(this) }
+    val alertNotifier by lazy { GlucoseAlertNotifier(this) { controller.settings.numericStatusIcon } }
     val alertEngine by lazy {
         AlertEngine(
             alertPreferences, alertNotifier, DeviceClock,
@@ -117,6 +117,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             renderer(presentation).apply { createChannel() }.build()
 
         override fun render(presentation: MonitoringPresentation) {
+            alertEngine.refreshIcons(presentation.display, controller.settings.unit, controller.settings.showOnLockScreen)
             watchPublisher.refresh()
             val generation = notificationPublication.generation()
             val unit = controller.settings.unit

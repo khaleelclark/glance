@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Synthetic 0.18 retention checks on a dedicated API 36 emulator, never a phone."""
 import json
+import argparse
 import os
 from pathlib import Path
 import re
@@ -11,7 +12,14 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 SDK = Path(os.environ.get("ANDROID_HOME", Path.home() / "Android" / "Sdk"))
-SERIAL = sys.argv[1] if len(sys.argv) == 2 else "emulator-5556"
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("serial", nargs="?", default="emulator-5556")
+parser.add_argument("--version", default="0.18", help="Evidence filename version")
+args = parser.parse_args()
+if not re.fullmatch(r"[A-Za-z0-9.-]+", args.version):
+    parser.error("Invalid version")
+SERIAL = args.serial
+PREFIX = "api36-notification-" + args.version
 ADB = [str(SDK / "platform-tools" / "adb"), "-s", SERIAL]
 EVIDENCE = ROOT / "docs" / "evidence"
 
@@ -28,7 +36,7 @@ def fixture(mode, *extra):
 def probe(label):
     fixture("notification-probe")
     result = adb("shell", "run-as", "com.khaleel.glance", "cat", "files/notification-probe.txt")
-    (EVIDENCE / f"api36-notification-0.18-{label}.txt").write_text(result)
+    (EVIDENCE / f"{PREFIX}-{label}.txt").write_text(result)
     return dict(line.split(": ", 1) for line in result.splitlines())
 
 
@@ -82,7 +90,7 @@ def main():
         fixture("privacy-storage-probe")
         legacy = json.loads(adb("shell", "run-as", "com.khaleel.glance", "cat", "files/privacy-storage-probe.json"))
         assert all(legacy.values()), legacy
-        (EVIDENCE / "api36-notification-0.18-legacy-privacy.json").write_text(json.dumps(legacy, indent=2) + "\n")
+        (EVIDENCE / f"{PREFIX}-legacy-privacy.json").write_text(json.dumps(legacy, indent=2) + "\n")
         checks["legacy_grant_not_reimported_after_process_recreation_other_settings_preserved"] = True
         fixture("demo-clear")
         fixture("notification-retention", "--ez", "keep", "true")
@@ -123,14 +131,14 @@ def main():
         checks["real_swipe_restores_regular_card"] = True
         shade()
         image = subprocess.run(ADB + ["exec-out", "screencap", "-p"], check=True, capture_output=True).stdout
-        (EVIDENCE / "api36-notification-0.18-retained.png").write_bytes(image)
+        (EVIDENCE / f"{PREFIX}-retained.png").write_bytes(image)
         fixture("notification-privacy", "--ez", "visible", "true")
         posted_probe("public-values")
         fixture("notification-privacy", "--ez", "visible", "false")
         posted_probe("private-values")
         privacy = json.loads(adb("shell", "run-as", "com.khaleel.glance", "cat", "files/notification-privacy-probe.json"))
         assert all(privacy.values()), privacy
-        (EVIDENCE / "api36-notification-0.18-privacy.json").write_text(json.dumps(privacy, indent=2) + "\n")
+        (EVIDENCE / f"{PREFIX}-privacy.json").write_text(json.dumps(privacy, indent=2) + "\n")
         checks["privacy_off_posts_redacted_card_without_numeric_icon_graph_or_chip"] = True
         fixture("notification-restore")
         fixture("notification-retention", "--ez", "keep", "false")
@@ -156,7 +164,7 @@ def main():
             fixture("dismiss-saved")
             assert probe(label)["Monitoring card posted"] == "false"
             checks[label + "_rejects_old_delete_intent"] = True
-        (EVIDENCE / "api36-notification-0.18-retention.json").write_text(
+        (EVIDENCE / f"{PREFIX}-retention.json").write_text(
             json.dumps({"sdk": adb("shell", "getprop", "ro.build.version.sdk").strip(),
                         "checks": checks, "promotion_on_emulator": False,
                         "samsung_now_bar": "not tested"}, indent=2) + "\n")

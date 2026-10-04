@@ -17,6 +17,8 @@ interface AlertDelivery {
     fun ensureChannels()
     fun canPost(kind: AlertKind): Boolean
     fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean)
+    fun refreshIcon(display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) = Unit
+    fun dismiss(token: String) = Unit
     fun clear()
 }
 
@@ -81,6 +83,16 @@ class AlertEngine(
 
     @Synchronized
     fun clearNotifications() = notifier.clear()
+
+    /** Update only an already-visible alert; do not evaluate thresholds or reset cooldowns. */
+    @Synchronized
+    fun refreshIcons(display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
+        if (currentDisplay() != display) return
+        notifier.refreshIcon(display, unit, showOnLockScreen && currentPrivacy())
+    }
+
+    @Synchronized
+    fun dismissNotification(token: String) = notifier.dismiss(token)
 
     /** Clears only the visible alarm ledger; alert deduplication and cooldowns remain intact. */
     @Synchronized

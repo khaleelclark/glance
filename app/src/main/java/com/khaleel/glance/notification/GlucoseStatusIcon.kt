@@ -26,7 +26,7 @@ object GlucoseStatusIcon {
         if (!enabled || !lockScreenVisible || !state.monitoringEnabled || state.runtime != RuntimeState.RUNNING ||
             state.freshness != ReadingFreshness.FRESH
         ) return null
-        val reading = state.reading ?: return null
+        val reading = state.reading?.takeIf { it.connectionId == state.person?.id } ?: return null
         if (GlucoseFormat.numericValue(reading, unit) == null) return null
         return GlucoseFormat.value(reading, unit, Locale.US)
             .takeIf { it.length <= 4 && it.matches(Regex("[0-9]+(\\.[0-9])?")) }

@@ -7,19 +7,29 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.net.Uri
+import android.os.Bundle
 import android.provider.Settings
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseFormat
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.RuntimeState
+import com.khaleel.glance.notification.GlucoseStatusIcon
+import java.util.UUID
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 
 /** Separate dismissible alerts; the quiet ongoing monitoring card remains unchanged. */
-class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
+class GlucoseAlertNotifier(
+    private val context: Context,
+    private val numericStatusIcon: () -> Boolean = { true },
+) : AlertDelivery {
     private val manager = context.getSystemService(NotificationManager::class.java)
+    private data class ActiveAlert(val kind: AlertKind, val personId: String, val token: String, var iconText: String?)
+    private var activeAlert: ActiveAlert? = null
 
     override fun ensureChannels() {
         AlertKind.entries.forEach { kind ->
@@ -56,6 +66,7 @@ class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
                 it != NotificationManager.IMPORTANCE_NONE
             } == true
 
+    @Synchronized
     override fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
         val person = display.person ?: return
         val reading = display.reading ?: return
@@ -65,6 +76,8 @@ class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
             .format(reading.measuredAt)
         val title = "${kind.label} · ${person.displayName}"
         val detail = "${GlucoseFormat.withUnit(reading, unit, Locale.getDefault())} at $time"
+        val token = UUID.randomUUID().toString()
+        val iconText = GlucoseStatusIcon.text(display, unit, numericStatusIcon(), showOnLockScreen)
         val open = PendingIntent.getActivity(
             context, 5100, Intent().setClassName(context, "com.khaleel.glance.MainActivity")
                 .setAction("com.khaleel.glance.action.OPEN_ALERT"),
@@ -76,11 +89,21 @@ class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
             .setContentText(detail)
             .setCategory(if (kind.urgent) Notification.CATEGORY_ALARM else Notification.CATEGORY_STATUS)
             .setContentIntent(open)
+            .setDeleteIntent(PendingIntent.getBroadcast(
+                context, notificationId(kind),
+                Intent(context, AlertDismissReceiver::class.java)
+                    .setAction(AlertDismissReceiver.ACTION_DISMISSED)
+                    .setData(Uri.parse("glance-alert://dismiss/$token"))
+                    .putExtra(AlertDismissReceiver.EXTRA_TOKEN, token),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ))
+            .addExtras(Bundle().apply { putString(ICON_TOKEN, token) })
             .setAutoCancel(true)
             .setOnlyAlertOnce(false)
             .setWhen(reading.measuredAt.toEpochMilli())
             .setShowWhen(true)
             .setVisibility(if (showOnLockScreen) Notification.VISIBILITY_PUBLIC else Notification.VISIBILITY_PRIVATE)
+        iconText?.let { builder.setSmallIcon(GlucoseStatusIcon.create(it)) }
         if (!showOnLockScreen) {
             builder.setPublicVersion(
                 Notification.Builder(context, channelId(kind))
@@ -93,13 +116,54 @@ class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
         }
         clear()
         manager.notify(notificationId(kind), builder.build())
+        activeAlert = ActiveAlert(kind, person.id, token, iconText)
     }
 
+    @Synchronized
+    override fun refreshIcon(display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
+        val active = activeAlert ?: run {
+            // A prior process cannot prove the identity/freshness of a retained numeric alert icon.
+            clear()
+            return
+        }
+        if (!display.monitoringEnabled || display.runtime != RuntimeState.RUNNING ||
+            display.person?.id != active.personId || display.reading?.connectionId != active.personId
+        ) {
+            clear()
+            return
+        }
+        val posted = manager.activeNotifications.firstOrNull {
+            it.id == notificationId(active.kind) && it.notification.extras.getString(ICON_TOKEN) == active.token
+        } ?: run { activeAlert = null; return }
+        if (!showOnLockScreen && posted.notification.visibility == Notification.VISIBILITY_PUBLIC) {
+            clear()
+            return
+        }
+        val text = GlucoseStatusIcon.text(display, unit, numericStatusIcon(), showOnLockScreen)
+        if (text == active.iconText) return
+        val builder = Notification.Builder.recoverBuilder(context, posted.notification)
+            .setSmallIcon(R.drawable.ic_glance_status)
+            .setOnlyAlertOnce(true)
+        text?.let { builder.setSmallIcon(GlucoseStatusIcon.create(it)) }
+        // Preserve the alarm's original title, triggering reading/time, channel and delete token.
+        manager.notify(posted.id, builder.build())
+        active.iconText = text
+    }
+
+    @Synchronized
+    override fun dismiss(token: String) {
+        // A delayed delete intent from an older alarm cannot remove a newer one.
+        if (activeAlert?.token == token) clear()
+    }
+
+    @Synchronized
     override fun clear() {
+        activeAlert = null
         AlertKind.entries.forEach { manager.cancel(notificationId(it)) }
     }
 
     companion object {
+        private const val ICON_TOKEN = "com.khaleel.glance.alerts.ICON_TOKEN"
         fun channelId(kind: AlertKind): String = "glucose_alert_${kind.name.lowercase()}"
         private fun notificationId(kind: AlertKind): Int = 5200 + kind.ordinal
     }

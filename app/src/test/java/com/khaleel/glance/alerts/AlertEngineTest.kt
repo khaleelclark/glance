@@ -27,6 +27,36 @@ class AlertEngineTest {
     private val start = Instant.parse("2026-09-27T12:00:00Z")
     private val person = Connection("patrick", "Patrick")
 
+    @Test fun iconRefreshDoesNotFireAnotherAlarmOrChangeHistoryAndCooldowns() {
+        val store = MemoryStore()
+        val delivery = MemoryDelivery()
+        val history = MemoryHistory()
+        val sample = reading(305.0, start)
+        var live = display(sample)
+        val engine = AlertEngine(store, delivery, MutableClock(start), { live }, { true }, history)
+        engine.onPollResult(SourceResult.Success(sample), live, GlucoseUnit.MG_DL, true)
+        val snapshot = store.state
+        val entries = history.events.value
+        live = display(reading(310.0, start.plusSeconds(60)))
+        engine.refreshIcons(live, GlucoseUnit.MG_DL, true)
+        assertEquals(listOf(live), delivery.refreshed)
+        assertEquals(listOf(AlertKind.URGENT_HIGH), delivery.posted)
+        assertEquals(snapshot, store.state)
+        assertEquals(entries, history.events.value)
+    }
+
+    @Test fun iconRefreshRejectsOldDisplayAndUsesCurrentPrivacy() {
+        val delivery = MemoryDelivery()
+        val old = display(reading(305.0, start))
+        val live = display(reading(310.0, start.plusSeconds(60)))
+        val engine = AlertEngine(MemoryStore(), delivery, MutableClock(start), { live }, { false })
+        engine.refreshIcons(old, GlucoseUnit.MG_DL, true)
+        assertTrue(delivery.refreshed.isEmpty())
+        engine.refreshIcons(live, GlucoseUnit.MMOL_L, true)
+        assertEquals(listOf(live), delivery.refreshed)
+        assertEquals(false, delivery.lastRefreshPrivacy)
+    }
+
     @Test fun onlySuccessfulPostsLogAndCooldownSurvivesEngineRecreation() {
         val store = MemoryStore()
         val delivery = MemoryDelivery()
@@ -308,6 +338,8 @@ class AlertEngineTest {
         var clears = 0
         var lastVisibleOnLockScreen: Boolean? = null
         val posted = mutableListOf<AlertKind>()
+        val refreshed = mutableListOf<DisplayState>()
+        var lastRefreshPrivacy: Boolean? = null
         override fun ensureChannels() = Unit
         override fun canPost(kind: AlertKind) = allowed
         override fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
@@ -315,6 +347,10 @@ class AlertEngineTest {
             lastVisibleOnLockScreen = showOnLockScreen
         }
         override fun clear() { clears++ }
+        override fun refreshIcon(display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
+            refreshed += display
+            lastRefreshPrivacy = showOnLockScreen
+        }
     }
 
     private class MemoryHistory(private val failAppend: Boolean = false) : AlertHistoryPersistence {

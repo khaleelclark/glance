@@ -86,8 +86,8 @@ class GlucoseNotificationRenderer(
                 else Notification.VISIBILITY_PRIVATE,
             )
 
-        // A promoted chip already has the reading as text: retain the app glyph to avoid duplication.
-        GlucoseStatusIcon.text(state, unit, numericStatusIcon && !promoted, lockScreenVisible)?.let {
+        // Keep the fresh glucose number even when an alert or promoted chip takes the app's icon slot.
+        GlucoseStatusIcon.text(state, unit, numericStatusIcon, lockScreenVisible)?.let {
             builder.setSmallIcon(GlucoseStatusIcon.create(it))
         }
 

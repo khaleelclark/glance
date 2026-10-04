@@ -71,6 +71,10 @@ def main():
         ui.adb('shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0')
         ui.adb('shell', 'settings', 'put', 'system', 'user_rotation', '0')
         ui.adb('shell', 'cmd', 'uimode', 'night', 'no')
+        ui.start('nicknameStorage')
+        storage = json.loads(ui.adb('shell', 'run-as', 'com.khaleel.glance', 'cat', 'files/nickname-storage-check.json'))
+        assert len(storage) == 6 and all(storage.values())
+        checks['androidKeystoreNicknameRoundTripAndAccentMigration'] = True
         ui.start()
         assert ui.visible('113') and ui.visible('In range') and ui.visible('Reading at')
         assert not any(n.get('text') == 'Pause' for n in ui.nodes())
@@ -176,7 +180,7 @@ def main():
         checks['landscapeKeepsReadingAndThreeHourPresetReachable'] = True
         apk = ui.adb('shell', 'pm', 'path', 'com.khaleel.glance').strip().removeprefix('package:')
         assert re.fullmatch(r'/data/app/[A-Za-z0-9/_.=+~\-]+/base\.apk', apk)
-        assert len(checks) == 14 and all(checks.values())
+        assert len(checks) == 15 and all(checks.values())
         report = {'synthetic': True, 'device': 'API 36 emulator', 'checks': checks, 'allPassed': True,
                   'fixtureApkSha256': ui.adb('shell', 'sha256sum', apk).split()[0],
                   'sourceCommitAtRun': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),

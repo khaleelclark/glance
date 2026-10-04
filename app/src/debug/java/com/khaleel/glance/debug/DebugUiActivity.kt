@@ -35,6 +35,9 @@ class DebugUiActivity : ComponentActivity() {
         window.isNavigationBarContrastEnforced = false
         val mode = intent.getStringExtra("mode") ?: "fresh"
         val now = Instant.parse("2026-10-01T12:00:00Z")
+        if (mode == "nicknameStorage") {
+            java.io.File(filesDir, "nickname-storage-check.json").writeText(runNicknameStorageProbe(this).toString())
+        }
         if (mode == "alarmStorage") {
             java.io.File(filesDir, "alarm-log-storage-check.json")
                 .writeText(runAlarmHistoryProbe(this).toString())

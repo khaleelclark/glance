@@ -426,12 +426,125 @@ class AppControllerTest {
         assertEquals(start.minusSeconds(660), controller.display.value.history.first().measuredAt)
     }
 
+    @Test fun nicknameIsNormalizedAndChangesDisplayIdentityOnly() = runBlocking {
+        val patient = MemoryPatient()
+        val nicknames = MemoryNicknames()
+        val source = FakeSource { _, connectionId ->
+            assertEquals(patrick.id, connectionId)
+            SourceResult.Success(reading(patrick))
+        }
+        val controller = controller(source, patient, nicknameStore = nicknames)
+        controller.selectPerson(patrick)
+        controller.poll()
+        val readingBefore = controller.display.value.reading
+        val historyBefore = controller.display.value.history
+
+        val result = controller.setNickname("  My\n\u0000   Patrick  ")
+
+        assertTrue(result is SourceResult.Success)
+        assertEquals("My Patrick", controller.nickname)
+        assertEquals("Patrick Example", controller.sourcePersonName)
+        assertEquals(Connection(patrick.id, "My Patrick"), controller.display.value.person)
+        assertEquals(patrick, patient.state.selected)
+        assertEquals(readingBefore, controller.display.value.reading)
+        assertEquals(historyBefore, controller.display.value.history)
+        assertEquals(patrick.id, controller.display.value.reading?.connectionId)
+    }
+
+    @Test fun nicknameSurvivesRelaunchAndPersonSwitchThenBlankRestoresSourceName() {
+        val patient = MemoryPatient()
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val nicknames = MemoryNicknames()
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val first = AppController(source, auth, patient, MemorySettings(), FakeClock(start), nicknameStore = nicknames)
+        first.selectPerson(patrick)
+        first.setNickname("P")
+        first.selectPerson(other)
+        first.setNickname("O")
+        first.selectPerson(patrick)
+
+        val relaunched = AppController(
+            source, auth, patient, MemorySettings(), FakeClock(start), nicknameStore = nicknames,
+        )
+        assertEquals("P", relaunched.nickname)
+        assertEquals("P", relaunched.display.value.person?.displayName)
+        relaunched.selectPerson(other)
+        assertEquals("O", relaunched.nickname)
+        assertEquals("Other Example", relaunched.sourcePersonName)
+        relaunched.setNickname(" \n\t ")
+        assertEquals("", relaunched.nickname)
+        assertEquals(other, relaunched.display.value.person)
+        assertEquals(mapOf(patrick.id to "P"), nicknames.values)
+    }
+
+    @Test fun nicknameScopeSurvivesSameAccountReconnectButClearsForNewAccountAndSignOut() = runBlocking {
+        val patient = MemoryPatient().apply { state = StoredPatientState(patrick, null) }
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val nicknames = MemoryNicknames(session.accountId, mapOf(patrick.id to "P"))
+        val source = FakeSource(
+            onConnections = { SourceResult.Success(listOf(patrick)) },
+            onLatest = { _, _ -> SourceResult.Success(reading(patrick)) },
+        )
+        val controller = AppController(
+            source, auth, patient, MemorySettings(), FakeClock(start), nicknameStore = nicknames,
+        )
+
+        assertTrue(controller.signIn(credentials) is SourceResult.Success)
+        controller.selectPerson(patrick)
+        assertEquals("P", controller.nickname)
+        assertEquals(0, nicknames.clearCalls)
+
+        source.signInResult = SourceResult.Success(session.copy(accountId = "different-account"))
+        assertTrue(controller.signIn(credentials) is SourceResult.Success)
+        controller.selectPerson(patrick)
+        assertEquals("", controller.nickname)
+        assertEquals("Patrick Example", controller.display.value.person?.displayName)
+        assertEquals(1, nicknames.clearCalls)
+
+        controller.setNickname("Again")
+        controller.signOut()
+        assertEquals("", controller.nickname)
+        assertTrue(nicknames.values.isEmpty())
+        assertEquals(2, nicknames.clearCalls)
+    }
+
+    @Test fun nicknameStorageFailureKeepsTheEntirePriorDisplay() {
+        val patient = MemoryPatient().apply { state = StoredPatientState(patrick, null) }
+        val nicknames = MemoryNicknames(session.accountId, mapOf(patrick.id to "Old alias")).apply {
+            failSave = true
+        }
+        val controller = controller(
+            FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }, patient,
+            nicknameStore = nicknames,
+        )
+        val prior = controller.display.value
+
+        val result = controller.setNickname("New alias")
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertEquals("Old alias", controller.nickname)
+        assertEquals(prior, controller.display.value)
+        assertEquals(mapOf(patrick.id to "Old alias"), nicknames.values)
+    }
+
+    @Test fun nicknameBoundUsesUnicodeCodePointsWithoutSplittingSurrogates() {
+        val normalized = normalizeFollowerNickname("😀".repeat(41))
+
+        assertEquals(40, normalized.codePointCount(0, normalized.length))
+        assertEquals(80, normalized.length)
+        assertEquals(0x1F600, normalized.codePointBefore(normalized.length))
+    }
+
     private fun controller(
         source: FakeSource,
         patient: MemoryPatient,
         settings: MemorySettings = MemorySettings(),
         clock: FakeClock = FakeClock(start),
-    ) = AppController(source, MemoryAuth(SavedAuth(credentials, session)), patient, settings, clock)
+        nicknameStore: NicknamePersistence = NoNicknamePersistence,
+    ) = AppController(
+        source, MemoryAuth(SavedAuth(credentials, session)), patient, settings, clock,
+        nicknameStore = nicknameStore,
+    )
 
     private class FakeClock(var instant: Instant) : Clock {
         override fun now() = instant
@@ -457,6 +570,26 @@ class AppControllerTest {
             this.state = state
         }
         override fun clear() { state = StoredPatientState(null, null) }
+    }
+    private class MemoryNicknames(
+        private var accountId: String? = null,
+        initial: Map<String, String> = emptyMap(),
+    ) : NicknamePersistence {
+        var values = initial.toMap()
+        var failSave = false
+        var clearCalls = 0
+        override fun load(accountId: String): Map<String, String> =
+            if (this.accountId == null || this.accountId == accountId) values else emptyMap()
+        override fun save(accountId: String, nicknames: Map<String, String>) {
+            if (failSave) throw IllegalStateException("synthetic nickname storage failure")
+            this.accountId = accountId
+            values = nicknames.toMap()
+        }
+        override fun clear() {
+            clearCalls++
+            accountId = null
+            values = emptyMap()
+        }
     }
     private class MemorySettings : SettingsPersistence {
         override var unit = GlucoseUnit.MG_DL

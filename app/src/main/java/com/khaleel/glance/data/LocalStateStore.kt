@@ -10,6 +10,7 @@ import com.khaleel.glance.core.Trend
 import com.khaleel.glance.notification.LockScreenPrivacy
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.Duration
 
@@ -86,6 +87,109 @@ class LocalStateStore(private val encrypted: SecureFileStore) : PatientPersisten
 
     override fun clear() { encrypted.delete("patient") }
 }
+
+interface NicknamePersistence {
+    fun load(accountId: String): Map<String, String>
+    fun save(accountId: String, nicknames: Map<String, String>)
+    fun clear()
+}
+
+object NoNicknamePersistence : NicknamePersistence {
+    override fun load(accountId: String): Map<String, String> = emptyMap()
+    override fun save(accountId: String, nicknames: Map<String, String>) = Unit
+    override fun clear() = Unit
+}
+
+/** Encrypted, account-scoped aliases kept separately from the selected-person health cache. */
+class LocalNicknameStore(private val encrypted: SecureFileStore) : NicknamePersistence {
+    override fun load(accountId: String): Map<String, String> {
+        val value = encrypted.read(FILE_NAME) ?: return emptyMap()
+        if (value.optString("accountScope") != accountScope(accountId)) {
+            encrypted.delete(FILE_NAME)
+            return emptyMap()
+        }
+        val aliases = value.optJSONArray("aliases") ?: return emptyMap()
+        val result = linkedMapOf<String, String>()
+        for (index in 0 until minOf(aliases.length(), MAX_ENTRIES)) {
+            val item = aliases.optJSONObject(index) ?: continue
+            val connectionId = item.optString("connectionId").takeIf {
+                it.isNotBlank() && it.length <= MAX_CONNECTION_ID_CHARS
+            } ?: continue
+            val nickname = normalizeFollowerNickname(item.optString("nickname"))
+            if (nickname.isNotBlank()) result[connectionId] = nickname
+        }
+        return result
+    }
+
+    override fun save(accountId: String, nicknames: Map<String, String>) {
+        val bounded = nicknames.entries
+            .asSequence()
+            .filter { it.key.isNotBlank() && it.key.length <= MAX_CONNECTION_ID_CHARS }
+            .mapNotNull { (connectionId, nickname) ->
+                normalizeFollowerNickname(nickname).takeIf(String::isNotBlank)?.let { connectionId to it }
+            }
+            .toList()
+            .takeLast(MAX_ENTRIES)
+        if (bounded.isEmpty()) {
+            encrypted.delete(FILE_NAME)
+            return
+        }
+        encrypted.write(FILE_NAME, JSONObject().apply {
+            put("version", 1)
+            put("accountScope", accountScope(accountId))
+            put("aliases", JSONArray().apply {
+                bounded.forEach { (connectionId, nickname) ->
+                    put(JSONObject().apply {
+                        put("connectionId", connectionId)
+                        put("nickname", nickname)
+                    })
+                }
+            })
+        })
+    }
+
+    override fun clear() { encrypted.delete(FILE_NAME) }
+
+    private fun accountScope(accountId: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(accountId.toByteArray(Charsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
+
+    private companion object {
+        const val FILE_NAME = "nicknames"
+        const val MAX_ENTRIES = 32
+        const val MAX_CONNECTION_ID_CHARS = 512
+    }
+}
+
+internal fun normalizeFollowerNickname(input: String): String {
+    val output = StringBuilder()
+    var codePoints = 0
+    var separatorPending = false
+    var offset = 0
+    while (offset < input.length && codePoints < MAX_NICKNAME_CODE_POINTS) {
+        val codePoint = input.codePointAt(offset)
+        offset += Character.charCount(codePoint)
+        val category = Character.getType(codePoint)
+        val separator = Character.isWhitespace(codePoint) || Character.isISOControl(codePoint) ||
+            category == Character.FORMAT.toInt()
+        if (separator) {
+            separatorPending = output.isNotEmpty()
+            continue
+        }
+        if (separatorPending) {
+            // Never use the final available code point for trailing whitespace.
+            if (codePoints + 2 > MAX_NICKNAME_CODE_POINTS) break
+            output.append(' ')
+            codePoints++
+            separatorPending = false
+        }
+        output.appendCodePoint(codePoint)
+        codePoints++
+    }
+    return output.toString()
+}
+
+private const val MAX_NICKNAME_CODE_POINTS = 40
 
 enum class RetryReason { PROVIDER, TRANSIENT }
 

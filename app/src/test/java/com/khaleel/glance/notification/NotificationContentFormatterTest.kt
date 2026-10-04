@@ -36,6 +36,16 @@ class NotificationContentFormatterTest {
     }
 
     @Test
+    fun `projected follower nickname is used in notification text`() {
+        val aliased = state().copy(person = Connection("connection-1", "My Patrick"))
+
+        val content = formatter.format(aliased, GlucoseUnit.MG_DL)
+
+        assertEquals("My Patrick · 10:42 AM", content.title)
+        assertEquals("My Patrick · 10:42 AM", content.compactDetail)
+    }
+
+    @Test
     fun `delayed reading is explicitly labeled and retains value arrow and time`() {
         val content = formatter.format(
             state(freshness = ReadingFreshness.DELAYED),

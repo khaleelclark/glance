@@ -42,6 +42,7 @@ class AppController(
     val settings: SettingsPersistence,
     private val clock: Clock = DeviceClock,
     val diagnostics: DiagnosticsRecorder = NoDiagnostics,
+    private val nicknameStore: NicknamePersistence = NoNicknamePersistence,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val gate = Mutex()
@@ -61,13 +62,22 @@ class AppController(
         patientStore.clear()
         StoredPatientState(null, null)
     }
+    private var nicknames: Map<String, String> = auth?.session?.accountId?.let { accountId ->
+        runCatching { nicknameStore.load(accountId) }.getOrElse {
+            runCatching { nicknameStore.clear() }
+            emptyMap()
+        }
+    } ?: run {
+        runCatching { nicknameStore.clear() }
+        emptyMap()
+    }
 
     private val mutableDisplay = MutableStateFlow(
         DisplayState(
             monitoringEnabled = settings.monitoringEnabled,
             runtime = RuntimeState.STOPPED,
             connection = if (auth == null) ConnectionState.SIGN_IN_REQUIRED else ConnectionState.READY,
-            person = patient.selected,
+            person = displayedPerson(),
             reading = patient.lastReading,
             freshness = ReadingPolicy.freshness(patient.lastReading, clock.now()),
             lastSuccessfulFetch = null,
@@ -78,12 +88,20 @@ class AppController(
     )
     val display: StateFlow<DisplayState> = mutableDisplay
     val hasAccount: Boolean get() = auth != null
+    val nickname: String
+        @Synchronized get() = patient.selected?.id?.let(nicknames::get).orEmpty()
+    val sourcePersonName: String?
+        @Synchronized get() = patient.selected?.displayName
+
+    private fun displayedPerson(): Connection? = patient.selected?.let { selected ->
+        nicknames[selected.id]?.takeIf(String::isNotBlank)?.let { selected.copy(displayName = it) } ?: selected
+    }
 
     private fun snapshot(connection: ConnectionState, runtime: RuntimeState = mutableDisplay.value.runtime) = DisplayState(
         monitoringEnabled = settings.monitoringEnabled,
         runtime = runtime,
         connection = if (auth == null) ConnectionState.SIGN_IN_REQUIRED else connection,
-        person = patient.selected,
+        person = displayedPerson(),
         reading = patient.lastReading,
         freshness = ReadingPolicy.freshness(patient.lastReading, clock.now()),
         lastSuccessfulFetch = mutableDisplay.value.lastSuccessfulFetch,
@@ -113,9 +131,11 @@ class AppController(
     /** Clears old-account data before contacting the new account. */
     suspend fun signIn(credentials: Credentials): SourceResult<List<Connection>> {
         val capturedGeneration: Long
+        val previousAccountId: String?
         synchronized(this) {
             generation++
             capturedGeneration = generation
+            previousAccountId = auth?.session?.accountId
             source.clearTransportSession()
             authAttemptsStopped = false
             settings.monitoringEnabled = false
@@ -139,6 +159,16 @@ class AppController(
         }
         synchronized(this) {
             if (generation != capturedGeneration) return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+            if (previousAccountId != session.accountId) {
+                try {
+                    nicknameStore.clear()
+                } catch (_: Exception) {
+                    val error = SourceError(SourceErrorKind.STORAGE)
+                    updateFailure(error, capturedGeneration)
+                    return SourceResult.Failure(error)
+                }
+                nicknames = emptyMap()
+            }
             val saved = SavedAuth(credentials, session)
             try {
                 authStore.save(saved)
@@ -178,6 +208,30 @@ class AppController(
         patientStore.clear()
         settings.retryWindow = null
         mutableDisplay.value = snapshot(ConnectionState.READY)
+    }
+
+    /** Changes display text only; provider identity and cached readings remain untouched. */
+    @Synchronized
+    fun setNickname(value: String): SourceResult<Unit> {
+        val selected = patient.selected
+            ?: return SourceResult.Failure(SourceError(SourceErrorKind.CONNECTION_REMOVED))
+        val accountId = auth?.session?.accountId
+            ?: return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+        val normalized = normalizeFollowerNickname(value)
+        val next = LinkedHashMap(nicknames).apply {
+            remove(selected.id)
+            if (normalized.isNotBlank()) put(selected.id, normalized)
+            while (size > 32) remove(keys.first())
+        }
+        try {
+            nicknameStore.save(accountId, next)
+        } catch (_: Exception) {
+            diagnostics.sourceFailure(clock.now(), SourceError(SourceErrorKind.STORAGE))
+            return SourceResult.Failure(SourceError(SourceErrorKind.STORAGE))
+        }
+        nicknames = next
+        mutableDisplay.value = snapshot(mutableDisplay.value.connection)
+        return SourceResult.Success(Unit)
     }
 
     suspend fun connections(): SourceResult<List<Connection>> {
@@ -365,6 +419,10 @@ class AppController(
         }
         synchronized(this) {
             if (generation != capturedGeneration || auth?.credentials != credentials) return@withLock null
+            if (auth?.session?.accountId != result.value.accountId) {
+                updateFailure(SourceError(SourceErrorKind.AUTH_EXPIRED), capturedGeneration)
+                return@withLock null
+            }
             val saved = SavedAuth(credentials, result.value)
             try {
                 authStore.save(saved)
@@ -399,8 +457,10 @@ class AppController(
         settings.clear()
         authStore.clear()
         patientStore.clear()
+        runCatching { nicknameStore.clear() }
         auth = null
         patient = StoredPatientState(null, null)
+        nicknames = emptyMap()
         mutableDisplay.value = snapshot(ConnectionState.SIGN_IN_REQUIRED, RuntimeState.STOPPED)
         diagnostics.clear()
     }

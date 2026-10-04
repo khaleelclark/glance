@@ -11,6 +11,7 @@ import com.khaleel.glance.data.AppController
 import com.khaleel.glance.data.DeviceClock
 import com.khaleel.glance.data.DiagnosticsStore
 import com.khaleel.glance.data.LocalStateStore
+import com.khaleel.glance.data.LocalNicknameStore
 import com.khaleel.glance.data.UserSettings
 import com.khaleel.glance.monitoring.MonitoringDependencies
 import com.khaleel.glance.monitoring.MonitoringAlerts
@@ -94,6 +95,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             settings = UserSettings(this),
             clock = DeviceClock,
             diagnostics = diagnosticStore,
+            nicknameStore = LocalNicknameStore(encryptedStore),
         )
     }
 

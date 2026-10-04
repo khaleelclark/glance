@@ -246,8 +246,8 @@ class ChartGestureInstrumentation : Instrumentation() {
         val density = targetContext.resources.displayMetrics.density
         val compact = targetContext.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val large = targetContext.resources.configuration.fontScale >= 1.5f
-        val plotTop = bounds.top + (if (large) 64f else if (compact) 38f else 46f) * density
-        val plotBottom = bounds.bottom - (if (large) 44f else if (compact) 26f else 30f) * density
+        val plotTop = bounds.top + (if (large) 110f else if (compact) 60f else 68f) * density
+        val plotBottom = bounds.bottom - 8f * density
         val bitmap = checkNotNull(uiAutomation.takeScreenshot())
         try {
             fun lineHasColor(value: Double, expected: Int): Boolean {

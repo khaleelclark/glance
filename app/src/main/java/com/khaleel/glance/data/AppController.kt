@@ -450,19 +450,20 @@ class AppController(
     )
 
     @Synchronized
-    fun signOut() {
+    fun signOut(): Boolean {
         generation++
         source.clearTransportSession()
         authAttemptsStopped = true
         settings.clear()
         authStore.clear()
         patientStore.clear()
-        runCatching { nicknameStore.clear() }
+        val nicknamesCleared = runCatching { nicknameStore.clear() }.isSuccess
         auth = null
         patient = StoredPatientState(null, null)
         nicknames = emptyMap()
         mutableDisplay.value = snapshot(ConnectionState.SIGN_IN_REQUIRED, RuntimeState.STOPPED)
         diagnostics.clear()
+        return nicknamesCleared
     }
 
     /** Remove cached health data while retaining account, selected person, and preferences. */

@@ -20,7 +20,18 @@ matching system navigation background, slightly taller plot, smaller hour
 presets, encrypted follower nickname reflected in notification, status dot next
 to Refresh, no trend/delta separator dot, and “Just Now” title case.
 
-Pending: integration, phone unit/lint/build, native synthetic graph/UI checks,
+Chart source integrated as c61c4a7 (worker a3d40f5). It puts both selected-value
+and timestamp lines in one top tooltip, adds plot height, and reduces preset
+visual height to 36dp while retaining at least 48dp touch targets.
+
+Initial bounded non-chart review at 79d1006 found no HIGH/MEDIUM blocker and two
+LOW issues: permanent legacy accent remapping prevented later Ocean selection;
+nickname cleanup failure at sign-out was silent. Root corrected both with a
+one-time accent migration and propagated nickname cleanup outcome to the
+existing sign-out residual-data warning. Focused fault injection and updated
+Android migration assertions accompany the corrections. Review closure pending.
+
+Pending: final phone unit/lint/build, native synthetic graph/UI checks,
 visual checks at 200% font in portrait/landscape, read-only review, clean release
 signing, same-signer checks, APK/manifest publication, and source push.
 

@@ -375,7 +375,8 @@ is removed and the freshest age reads “Just Now”.
 Settings → Reading → Follower nickname changes the displayed name, including
 the ongoing notification. Blank restores the source name; source connection IDs
 and readings are unaffected. Nicknames are stored encrypted per connection and
-cleared at account boundaries.
+cleared at account boundaries. Sign-out reports a failed encrypted nickname
+cleanup while still clearing the visible account; a new account cannot reuse it.
 
 The app draws its own surface behind the transparent system navigation bar and
 disables Android's three-button contrast scrim, following

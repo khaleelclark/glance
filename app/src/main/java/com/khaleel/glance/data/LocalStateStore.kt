@@ -212,6 +212,16 @@ interface SettingsPersistence {
 class UserSettings(context: Context) : SettingsPersistence {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
     private val lockScreenPrivacy = LockScreenPrivacy(context)
+    init {
+        // Convert only the previous default once. Later explicit Ocean choices are retained.
+        if (!prefs.getBoolean("accent_default_025_migrated", false)) {
+            val edit = prefs.edit().putBoolean("accent_default_025_migrated", true)
+            if (prefs.getString("accent_hex", null).equals("#1677D2", ignoreCase = true)) {
+                edit.putString("accent_hex", "#287F7A")
+            }
+            edit.apply()
+        }
+    }
     override var unit: GlucoseUnit
         get() = runCatching { GlucoseUnit.valueOf(prefs.getString("unit", GlucoseUnit.MG_DL.name)!!) }.getOrDefault(GlucoseUnit.MG_DL)
         set(value) = prefs.edit().putString("unit", value.name).apply()
@@ -224,11 +234,7 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getBoolean("enhanced_explicit", true)
         set(value) = prefs.edit().putBoolean("enhanced_explicit", value).apply()
     override var accentHex: String
-        get() {
-            val stored = prefs.getString("accent_hex", "#287F7A") ?: "#287F7A"
-            // Carry the owner's new default through upgrades, retaining other custom colors.
-            return if (stored.equals("#1677D2", ignoreCase = true)) "#287F7A" else stored
-        }
+        get() = prefs.getString("accent_hex", "#287F7A") ?: "#287F7A"
         set(value) = prefs.edit().putString("accent_hex", value).apply()
     override var numericStatusIcon: Boolean
         get() = prefs.getBoolean("numeric_status_icon", true)

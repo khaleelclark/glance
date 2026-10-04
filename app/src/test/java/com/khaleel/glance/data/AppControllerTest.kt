@@ -24,6 +24,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -527,6 +528,21 @@ class AppControllerTest {
         assertEquals(mapOf(patrick.id to "Old alias"), nicknames.values)
     }
 
+    @Test fun signOutReportsResidualEncryptedNicknameFailureAndClearsVisibleAccount() {
+        val nicknames = MemoryNicknames(session.accountId, mapOf(patrick.id to "P"))
+        val patient = MemoryPatient().apply { save(StoredPatientState(patrick, reading(patrick))) }
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val controller = AppController(source, auth, patient, MemorySettings(), FakeClock(start), nicknameStore = nicknames)
+        nicknames.failClear = true
+        assertFalse(controller.signOut())
+        assertFalse(controller.hasAccount)
+        assertNull(controller.display.value.person)
+        assertNull(controller.display.value.reading)
+        assertEquals("", controller.nickname)
+        assertEquals(mapOf(patrick.id to "P"), nicknames.values)
+    }
+
     @Test fun nicknameBoundUsesUnicodeCodePointsWithoutSplittingSurrogates() {
         val normalized = normalizeFollowerNickname("😀".repeat(41))
 
@@ -577,6 +593,7 @@ class AppControllerTest {
     ) : NicknamePersistence {
         var values = initial.toMap()
         var failSave = false
+        var failClear = false
         var clearCalls = 0
         override fun load(accountId: String): Map<String, String> =
             if (this.accountId == null || this.accountId == accountId) values else emptyMap()
@@ -587,6 +604,7 @@ class AppControllerTest {
         }
         override fun clear() {
             clearCalls++
+            if (failClear) throw IllegalStateException("synthetic nickname clear failure")
             accountId = null
             values = emptyMap()
         }

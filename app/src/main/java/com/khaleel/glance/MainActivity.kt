@@ -467,15 +467,18 @@ class MainActivity : ComponentActivity() {
         saveWatchVisibility(false)
         stopMonitoring()
         val logCleared = clearAlarmLog(showError = false)
-        controller.signOut()
+        val nicknamesCleared = controller.signOut()
         app.alertPreferences.clear()
         refreshSettings()
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)
         setupState = setupState.copy(step = SetupStep.SIGN_IN)
-        if (!logCleared) Toast.makeText(this,
-            "Signed out, but the alarm log could not be erased. A new sign-in requires successful log cleanup. Please try again.",
-            Toast.LENGTH_LONG).show()
+        if (!logCleared || !nicknamesCleared) {
+            val remaining = listOfNotNull(if (!logCleared) "alarm log" else null,
+                if (!nicknamesCleared) "encrypted nicknames" else null).joinToString(" and ")
+            Toast.makeText(this, "Signed out, but the $remaining could not be erased. Please try again.",
+                Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun saveWidgetVisibility(visible: Boolean) {

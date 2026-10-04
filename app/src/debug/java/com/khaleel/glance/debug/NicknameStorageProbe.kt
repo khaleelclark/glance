@@ -36,12 +36,16 @@ internal fun runNicknameStorageProbe(context: Context): JSONObject {
         store.save("synthetic-account", emptyMap())
         check(store.load("synthetic-account").isEmpty())
         receipt.put("blankAliasDeletesEncryptedFile", true)
+        isolated.getSharedPreferences("settings", Context.MODE_PRIVATE).edit().clear()
+            .putString("accent_hex", "#1677D2").commit()
         val settings = UserSettings(isolated)
-        settings.accentHex = "#1677D2"
         check(settings.accentHex == "#287F7A")
+        settings.accentHex = "#1677D2"
+        check(settings.accentHex == "#1677D2")
+        check(UserSettings(isolated).accentHex == "#1677D2")
         settings.accentHex = "#7046A3"
         check(settings.accentHex == "#7046A3")
-        receipt.put("legacyBlueMigratesAndCustomAccentSurvives", true)
+        receipt.put("legacyBlueMigratesOnceAndExplicitColorsSurvive", true)
         return receipt
     } finally {
         store.clear()

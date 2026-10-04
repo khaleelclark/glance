@@ -11,8 +11,8 @@ android {
         applicationId = "com.khaleel.glance"
         minSdk = 30
         targetSdk = 37
-        versionCode = 27
-        versionName = "0.22.0"
+        versionCode = 28
+        versionName = "0.23.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

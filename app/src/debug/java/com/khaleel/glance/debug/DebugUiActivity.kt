@@ -23,6 +23,8 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import org.json.JSONObject
+import com.khaleel.glance.alerts.AlertHistoryEntry
+import com.khaleel.glance.alerts.AlertKind
 
 /** Production screens with local synthetic state only; never starts monitoring or contacts a source. */
 class DebugUiActivity : ComponentActivity() {
@@ -36,6 +38,10 @@ class DebugUiActivity : ComponentActivity() {
         )
         val mode = intent.getStringExtra("mode") ?: "fresh"
         val now = Instant.parse("2026-10-01T12:00:00Z")
+        if (mode == "alarmStorage") {
+            java.io.File(filesDir, "alarm-log-storage-check.json")
+                .writeText(runAlarmHistoryProbe(this).toString())
+        }
         if (mode == "sourceDiagnostics") {
             // Exercise actual Android preferences in a namespace separate from app diagnostics.
             val isolated = object : android.content.ContextWrapper(this) {
@@ -78,6 +84,20 @@ class DebugUiActivity : ComponentActivity() {
             if (mode == "stale") ReadingFreshness.STALE else ReadingFreshness.FRESH,
             now, null, history)
         setContent {
+            var alarmHistory by remember { mutableStateOf(
+                if (mode == "emptyLog") emptyList() else AlertKind.entries.mapIndexed { index, kind ->
+                    val value = when (kind) {
+                        AlertKind.LOW -> 65.0
+                        AlertKind.URGENT_LOW -> 50.0
+                        AlertKind.HIGH -> 250.0
+                        AlertKind.URGENT_HIGH -> 310.0
+                    }
+                    AlertHistoryEntry("demo-alert-$index", display.person!!, kind,
+                        reading.copy(valueMgDl = value, sourceValue = value,
+                            measuredAt = now.minusSeconds((index + 1) * 3600L)),
+                        now.minusSeconds((index + 1) * 3600L - 30L))
+                }
+            ) }
             var settings by remember { mutableStateOf(UserSettingsUi(
                 GlucoseUnit.MG_DL, false, 1, false, true,
                 liveUpdateStatus = "DEMO · regular card", watchSyncStatus = "DEMO · watch disconnected")) }
@@ -117,6 +137,7 @@ class DebugUiActivity : ComponentActivity() {
                 onKeepNotificationVisibleChanged = { settings = settings.copy(keepNotificationVisible = it); event("keep") },
                 onWatchValuesChanged = { settings = settings.copy(watchValuesVisible = it); event("watch") },
                 onWatchNotificationsChanged = { settings = settings.copy(watchNotificationsEnabled = it); event("watchNotification") },
+                onClearAlertLog = { alarmHistory = emptyList(); event("clearLog") },
             )
             Box(Modifier.fillMaxSize()) {
             val blockedResponse = SourceResponseInfo(403, SourceResponseFormat.WEB_PAGE)
@@ -134,7 +155,8 @@ class DebugUiActivity : ComponentActivity() {
                 },
                     PermissionStatus.GRANTED, BatteryStatus.UNRESTRICTED),
                 settings, callbacks, modifier = Modifier.padding(bottom = 40.dp),
-                now = now, zoneId = ZoneId.of("UTC"), locale = Locale.US)
+                now = now, zoneId = ZoneId.of("UTC"), locale = Locale.US,
+                alertHistory = alarmHistory)
             Text("DEMO · UI preview", Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
                 .background(Color(0xFFE4E8E8)).padding(horizontal = 12.dp, vertical = 4.dp),
                 color = Color(0xFF172122))

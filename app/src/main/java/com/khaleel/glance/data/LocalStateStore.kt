@@ -120,7 +120,7 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getBoolean("enhanced_explicit", true)
         set(value) = prefs.edit().putBoolean("enhanced_explicit", value).apply()
     override var accentHex: String
-        get() = prefs.getString("accent_hex", "#087E82") ?: "#087E82"
+        get() = prefs.getString("accent_hex", "#1677D2") ?: "#1677D2"
         set(value) = prefs.edit().putString("accent_hex", value).apply()
     override var numericStatusIcon: Boolean
         get() = prefs.getBoolean("numeric_status_icon", true)

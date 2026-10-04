@@ -109,6 +109,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val display by controller.display.collectAsState()
+            val alarmHistory by app.alertHistory.events.collectAsState()
             var now by androidx.compose.runtime.remember { mutableStateOf(Instant.now()) }
             LaunchedEffect(Unit) {
                 while (true) {
@@ -136,6 +137,7 @@ class MainActivity : ComponentActivity() {
                 settings = settingsUi,
                 callbacks = callbacks,
                 now = now,
+                alertHistory = alarmHistory,
             )
             if (showDiagnostics) {
                 val diagnostic = controller.diagnostics.snapshot()
@@ -278,25 +280,28 @@ class MainActivity : ComponentActivity() {
     private val callbacks = GlanceCallbacks(
         onSignIn = { credentials ->
             stopMonitoring()
-            accountState = AccountUiState(AccountStatus.SIGNING_IN)
-            scope.launch {
-                val result = runCatching { controller.signIn(credentials) }.getOrNull()
-                when (result) {
-                    is SourceResult.Success -> {
-                        accountState = AccountUiState(AccountStatus.SIGNED_IN)
-                        connectionState = ConnectionSetupUiState(
-                            connections = result.value,
-                            problem = if (result.value.isEmpty()) ConnectionProblem.NONE_FOUND else null,
-                        )
-                        setupState = setupState.copy(step = SetupStep.CONNECTION)
+            // A new sign-in begins a new account session; no previous account's log follows it.
+            if (clearAlarmLog()) {
+                accountState = AccountUiState(AccountStatus.SIGNING_IN)
+                scope.launch {
+                    val result = runCatching { controller.signIn(credentials) }.getOrNull()
+                    when (result) {
+                        is SourceResult.Success -> {
+                            accountState = AccountUiState(AccountStatus.SIGNED_IN)
+                            connectionState = ConnectionSetupUiState(
+                                connections = result.value,
+                                problem = if (result.value.isEmpty()) ConnectionProblem.NONE_FOUND else null,
+                            )
+                            setupState = setupState.copy(step = SetupStep.CONNECTION)
+                        }
+                        is SourceResult.Failure ->
+                            accountState = AccountUiState(
+                                AccountStatus.SIGNED_OUT, result.error.kind.accountProblem(), result.error.responseInfo,
+                            )
+                        null -> accountState = AccountUiState(AccountStatus.SIGNED_OUT, AccountProblem.PROTOCOL)
                     }
-                    is SourceResult.Failure ->
-                        accountState = AccountUiState(
-                            AccountStatus.SIGNED_OUT, result.error.kind.accountProblem(), result.error.responseInfo,
-                        )
-                    null -> accountState = AccountUiState(AccountStatus.SIGNED_OUT, AccountProblem.PROTOCOL)
                 }
-            }
+            } else accountState = AccountUiState(AccountStatus.SIGNED_OUT, AccountProblem.STORAGE)
         },
         onSelectConnection = { selected ->
             connectionState = connectionState.copy(selectedConnectionId = selected.id)
@@ -410,10 +415,13 @@ class MainActivity : ComponentActivity() {
         },
         onOpenDiagnostics = { showDiagnostics = true },
         onDeleteLocalData = {
-            controller.clearLocalData()
-            app.alertPreferences.clearSnapshot()
-            app.alertEngine.clearNotifications()
-            if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
+            runCatching {
+                controller.clearLocalData()
+                app.alertEngine.clearHistory()
+                app.alertPreferences.clearSnapshot()
+                app.alertEngine.clearNotifications()
+                if (controller.display.value.monitoringEnabled) app.showCurrentNotification()
+            }.onFailure { Toast.makeText(this, "Could not clear all local data. Please try again.", Toast.LENGTH_LONG).show() }
         },
         onSignOut = { signOut() },
         onWidgetValuesChanged = {
@@ -432,13 +440,21 @@ class MainActivity : ComponentActivity() {
             }
             refreshSettings()
         },
+        onClearAlertLog = { clearAlarmLog() },
     )
+
+    /** Clearing the visible log deliberately retains alert deduplication and cooldowns. */
+    private fun clearAlarmLog(): Boolean = runCatching { app.alertEngine.clearHistory() }
+        .onFailure {
+            Toast.makeText(this, "Could not clear the alarm log. Please try again.", Toast.LENGTH_LONG).show()
+        }.isSuccess
 
     private fun signOut() {
         saveLockScreenVisibility(false)
         saveWidgetVisibility(false)
         saveWatchVisibility(false)
         stopMonitoring()
+        clearAlarmLog()
         controller.signOut()
         app.alertPreferences.clear()
         refreshSettings()

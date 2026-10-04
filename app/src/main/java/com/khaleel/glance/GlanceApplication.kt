@@ -6,6 +6,7 @@ import com.khaleel.glance.auth.SecureFileStore
 import com.khaleel.glance.alerts.AlertEngine
 import com.khaleel.glance.alerts.AlertPreferences
 import com.khaleel.glance.alerts.GlucoseAlertNotifier
+import com.khaleel.glance.alerts.EncryptedAlertHistoryStore
 import com.khaleel.glance.data.AppController
 import com.khaleel.glance.data.DeviceClock
 import com.khaleel.glance.data.DiagnosticsStore
@@ -68,6 +69,8 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     }
 
     private val diagnosticStore by lazy { DiagnosticsStore(this) }
+    private val encryptedStore by lazy { SecureFileStore(this) }
+    val alertHistory by lazy { EncryptedAlertHistoryStore(encryptedStore, DeviceClock) }
     val alertPreferences by lazy { AlertPreferences(this) }
     val alertNotifier by lazy { GlucoseAlertNotifier(this) }
     val alertEngine by lazy {
@@ -75,10 +78,10 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             alertPreferences, alertNotifier, DeviceClock,
             currentDisplay = { controller.display.value },
             currentPrivacy = { controller.settings.showOnLockScreen },
+            history = alertHistory,
         )
     }
     val controller: AppController by lazy {
-        val encrypted = SecureFileStore(this)
         val http = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
@@ -86,8 +89,8 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             .build()
         AppController(
             source = SourceFactory.create(this, http, DeviceClock),
-            authStore = AuthStore(encrypted),
-            patientStore = LocalStateStore(encrypted),
+            authStore = AuthStore(encryptedStore),
+            patientStore = LocalStateStore(encryptedStore),
             settings = UserSettings(this),
             clock = DeviceClock,
             diagnostics = diagnosticStore,

@@ -269,6 +269,8 @@ class UserSettings(context: Context) : SettingsPersistence {
         // Privacy failure must not prevent credentials and patient caches from being cleared.
         // The UI attempts revocation explicitly and reports failure before signing out.
         runCatching { lockScreenPrivacy.visible = false }
-        prefs.edit().clear().commit()
+        // This installation has already migrated. Account resets must not reinterpret
+        // a later explicit Ocean choice as the pre-0.25 default on the next launch.
+        prefs.edit().clear().putBoolean("accent_default_025_migrated", true).commit()
     }
 }

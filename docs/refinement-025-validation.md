@@ -56,8 +56,17 @@ localized measurement date/time are visible together, with reachable presets.
 Canvas plot geometry and source rules remained unchanged since review candidate
 30d3f02; only documentation/evidence has followed.
 
-Pending: read-only review closure, clean release signing, same-signer checks,
-APK/manifest publication, and source push.
+The final integrated source review accepted nickname cleanup and chart behavior
+but found one remaining LOW: account reset erased the one-time accent migration
+marker. Correction 24f6500 preserves that installation marker through clear().
+The focused real-Android receipt api36-nickname-0.25.0-account-reset.json passes
+all seven isolated synthetic checks, including clear → teal default → explicit
+Ocean → UserSettings recreation. Fixture SHA-256:
+9e9fc507fca86f884be54e04c7ec0644ed6429eea88771262702748c11f6b9cf.
+At run time only review documentation was dirty; production was clean 24f6500.
+Independent axis source closure of 30d3f02 found no HIGH/MEDIUM regression or new
+LOW and accepted the label separation. Final accent closure, clean release
+signing, signer checks, artifact publication and push remain pending.
 
 Live LibreLinkUp, Samsung One UI, TalkBack, overnight/background, battery,
 physical watch and audible-alert qualification are not claimed by emulator

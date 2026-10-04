@@ -212,3 +212,9 @@ Button-navigation screenshots show the app surface behind the system buttons
 in light/dark modes. They do not establish Samsung One UI rendering. Live
 account, Samsung, TalkBack, physical watch, overnight/background, battery and
 audible-delivery qualification remain outstanding.
+
+0.25 account-reset follow-up: seven real-Android synthetic storage/settings
+checks pass against production 24f6500 (only review-document edit dirty).
+`evidence/api36-nickname-0.25.0-account-reset.json` covers the sign-out-equivalent
+settings reset, explicit Ocean selection, and subsequent settings recreation.
+No full background/device qualification is implied.

@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "encryptedNicknameSurvivesStoreRecreation": true,
+    "nicknameAndConnectionIdAreAbsentFromCiphertext": true,
+    "unicodeAndWhitespaceNormalizeOnDevice": true,
+    "otherAccountClearsStoredAliases": true,
+    "blankAliasDeletesEncryptedFile": true,
+    "legacyBlueMigratesOnceAndExplicitColorsSurvive": true,
+    "explicitOceanSurvivesAccountResetAndRecreation": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "9e9fc507fca86f884be54e04c7ec0644ed6429eea88771262702748c11f6b9cf",
+  "sourceCommitAtRun": "24f650085f062b7db67cc8c4bc174385966b5581",
+  "sourceDirtyAtRun": true,
+  "scope": "Real Android Keystore nickname store and account-reset accent migration, isolated synthetic preferences; only review-document edit was dirty",
+  "liveAccount": "not tested",
+  "GalaxyS25Ultra": "not tested"
+}

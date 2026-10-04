@@ -13,7 +13,7 @@ identity changes. Main UI, notification, widget and watch consume the same
 projected DisplayState. Version, logo, status dot, casing and navigation-bar
 changes showed no source blocker in that bounded review.
 
-Two LOW findings were corrected at 6c54812:
+Two LOW findings received initial corrections at 6c54812:
 
 - Permanent old-blue getter remapping prevented later Ocean selection. A one-time
   preference migration now retains an explicit Ocean selection afterward; the
@@ -30,6 +30,22 @@ The chart was integrated as c61c4a7 from worker a3d40f5. Root visual inspection 
 size, and extends the Y-axis bounds to contain it. Canvas plot geometry and
 source/selection/gesture rules are unchanged.
 
-Pending: independent closure for 6c54812 and the final 30d3f02 axis presentation
-correction. Root build/native/visual evidence and final artifact verification are
-separate from read-only source review.
+Independent integrated review of exact 6c54812 found no HIGH/MEDIUM blocker.
+The encrypted-nickname cleanup finding was closed. Chart source values,
+selection, gestures, 48dp touch targets, and combined value/time tooltip were
+accepted within the source-review boundary. The Ocean correction remained LOW:
+normal sign-out cleared the migration marker, so a subsequent explicit Ocean
+choice could be remigrated after restart.
+
+Independent axis review of exact 30d3f026e615ebbbdac079dae11fdb847b42cedd
+closed the 40/50-label overlap in source, finding no HIGH/MEDIUM regression or
+new concrete LOW. Scaling the dedicated lower axis area leaves the fixed Canvas
+and its source/threshold/selection geometry unchanged. Native/UI evidence is
+separate from this bounded source approval.
+
+At 24f6500, UserSettings.clear preserves the completed installation migration
+marker while resetting account preferences. The debug Android probe exercises
+clear → default teal → explicit Ocean → store recreation. This targets the exact
+remaining lifecycle finding. Independent closure and focused native result are
+pending; root build/native/visual evidence and final artifact verification remain
+separate from source review.

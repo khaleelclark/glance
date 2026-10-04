@@ -1,5 +1,9 @@
 # Graph limits and colors in 0.19.3
 
+**Historical evidence.** Current 0.24 uses 3/6/12/24-hour presets only,
+no pinch or time pan, yellow High, and graph-aligned source value/time readouts.
+See [0.24 validation](refinement-024-validation.md) for current commands and results.
+
 The owner requested a fixed 40–350 mg/dL vertical scale, a Low line at 70,
 and a High line at 240, with the lines following enabled ordinary Low/High
 alert settings. Below Low is red; above High is orange. The existing one-finger

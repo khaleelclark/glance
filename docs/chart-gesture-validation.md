@@ -1,5 +1,9 @@
 # Graph gestures in 0.19.2
 
+**Historical evidence.** Current 0.24 uses 3/6/12/24-hour presets only,
+no pinch or time pan, yellow High, and graph-aligned source value/time readouts.
+See [0.24 validation](refinement-024-validation.md) for current commands and results.
+
 The owner's request changes the main glucose history graph: one finger selects
 real observations, two fingers pan horizontally through the retained day, and
 pinching changes time density. Notification and Live Update behavior is unchanged.

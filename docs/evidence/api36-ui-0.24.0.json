@@ -1,0 +1,25 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "compactHeaderHasActivityDotAndNoPauseOrStatusStrip": true,
+    "refreshArrowDispatchesOnce": true,
+    "lowInRangeHighPresentDistinctSourceRangeLabels": true,
+    "staleReadingDoesNotPresentCurrentRange": true,
+    "threeSixTwelveTwentyFourHourPresetsAreSelectable": true,
+    "graphScrubUsesOnGraphReadoutWithoutBottomCard": true,
+    "settingsAndLogbookBoilerplateRemoved": true,
+    "darkReadingAndOpenGraphRender": true,
+    "darkLowAndHighReadingsRender": true,
+    "twoHundredPercentFontKeepsReadingNavigationAndPresetsReachable": true,
+    "landscapeKeepsReadingAndThreeHourPresetReachable": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "115c41759c04167e254abfc3436c9b4e6dac64b57845254ddf030aae2c086a3a",
+  "sourceCommitAtRun": "52ff7a3b1eefdd07f858a048e63e539c1ca65f4a",
+  "sourceDirtyAtRun": true,
+  "fixtureType": "Debug-only synthetic APK; not a release deliverable",
+  "TalkBack": "not tested",
+  "liveAccount": "not tested",
+  "GalaxyS25Ultra": "not tested"
+}

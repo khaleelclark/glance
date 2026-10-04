@@ -225,14 +225,14 @@ internal fun ReadingHistoryChart(
                     }
                     val bottomRail = if (fontScale >= 1.5f) 44.dp else if (compact) 26.dp else 30.dp
                     val plotHeight = chartHeight - topRail - bottomRail
-                    Box(Modifier.width(48.dp).height(chartHeight)) {
+                    Box(Modifier.width(48.dp * fontScale.coerceAtLeast(1f)).height(chartHeight)) {
                         Text(
                             unit.label,
                             Modifier.offset(y = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        for (value in chartGridLabelValues(compact)) {
+                        for (value in chartGridLabelValues(compact || fontScale >= 1.5f)) {
                             val y = if (value == chartBottomMgDl) topRail + plotHeight + 4.dp
                             else topRail + plotHeight * chartYFraction(value).toFloat() - 8.dp
                             Text(axisValue(value, points[0], unit, locale), Modifier.offset(y = y),
@@ -247,8 +247,8 @@ internal fun ReadingHistoryChart(
                         }
                         val selectedX = selectedFraction?.takeIf { it in viewport.start..viewport.end }
                             ?.let { chartWidth * viewport.xFraction(it) }
-                        val tooltipWidth = minOf(if (compact) 112.dp else 132.dp, chartWidth)
-                        val timeLabelWidth = minOf(if (compact) 112.dp else 152.dp, chartWidth)
+                        val tooltipWidth = minOf((if (compact) 112.dp else 132.dp) * fontScale.coerceAtLeast(1f), chartWidth)
+                        val timeLabelWidth = minOf((if (compact) 112.dp else 152.dp) * fontScale.coerceAtLeast(1f), chartWidth)
                         val tooltipX = selectedX?.let {
                             clampedOverlayStart(it.value, tooltipWidth.value, chartWidth.value).dp
                         }
@@ -456,7 +456,7 @@ internal fun ReadingHistoryChart(
                                     val fraction = timeFraction(tick, now)
                                     if (fraction !in viewport.start..viewport.end) continue
                                     if (viewport.end == 1.0 && viewport.xFraction(fraction) > 0.85f) continue
-                                    val labelWidth = minOf(80.dp, chartWidth)
+                                    val labelWidth = minOf(80.dp * fontScale.coerceAtLeast(1f), chartWidth)
                                     val x = (chartWidth * viewport.xFraction(fraction) - labelWidth / 2)
                                         .coerceIn(0.dp, chartWidth - labelWidth)
                                     if (x < previousLabelEnd || (viewport.end == 1.0 && x + labelWidth > chartWidth - labelWidth)) continue
@@ -471,7 +471,7 @@ internal fun ReadingHistoryChart(
                                 }
                                 if (viewport.end == 1.0) Text(
                                     "Now",
-                                    Modifier.offset(x = (chartWidth - 80.dp).coerceAtLeast(0.dp)).width(minOf(80.dp, chartWidth)),
+                                    Modifier.offset(x = (chartWidth - 80.dp * fontScale.coerceAtLeast(1f)).coerceAtLeast(0.dp)).width(minOf(80.dp * fontScale.coerceAtLeast(1f), chartWidth)),
                                     style = MaterialTheme.typography.labelSmall,
                                     textAlign = TextAlign.End,
                                 )

@@ -27,118 +27,63 @@ class AlertEngineTest {
     private val start = Instant.parse("2026-09-27T12:00:00Z")
     private val person = Connection("patrick", "Patrick")
 
-    @Test fun onlyPublishedNewReadingPostsAndCooldownSurvivesEngineRecreation() {
+    @Test fun onlySuccessfulPostsLogAndCooldownSurvivesEngineRecreation() {
         val store = MemoryStore()
         val delivery = MemoryDelivery()
+        val history = MemoryHistory()
         val clock = MutableClock(start)
         val reading = reading(305.0, start)
         val display = display(reading)
         var live = display
 
-        AlertEngine(store, delivery, clock, { live }, { false }).onPollResult(SourceResult.Success(reading), display, GlucoseUnit.MG_DL, false)
+        AlertEngine(store, delivery, clock, { live }, { false }, history)
+            .onPollResult(SourceResult.Success(reading), display, GlucoseUnit.MG_DL, false)
         assertEquals(listOf(AlertKind.URGENT_HIGH), delivery.posted)
+        history.events.value.single().let { event ->
+            assertEquals(person, event.person)
+            assertEquals(AlertKind.URGENT_HIGH, event.kind)
+            assertEquals(reading, event.reading)
+            assertEquals(start, event.firedAt)
+        }
 
         clock.now = start.plusSeconds(60)
-        AlertEngine(store, delivery, clock, { live }, { false }).onPollResult(SourceResult.Success(reading), display, GlucoseUnit.MG_DL, false)
+        AlertEngine(store, delivery, clock, { live }, { false }, history)
+            .onPollResult(SourceResult.Success(reading), display, GlucoseUnit.MG_DL, false)
         live = display(reading(310.0, start.plusSeconds(60)))
-        AlertEngine(store, delivery, clock, { live }, { false }).onPollResult(
+        AlertEngine(store, delivery, clock, { live }, { false }, history).onPollResult(
             SourceResult.Success(reading(310.0, start.plusSeconds(60))),
             live, GlucoseUnit.MG_DL, false,
         )
         assertEquals(1, delivery.posted.size)
+        assertEquals(1, history.events.value.size)
 
         clock.now = start.plusSeconds(300)
         val next = reading(315.0, start.plusSeconds(300))
         live = display(next)
-        AlertEngine(store, delivery, clock, { live }, { false }).onPollResult(SourceResult.Success(next), live, GlucoseUnit.MG_DL, false)
+        AlertEngine(store, delivery, clock, { live }, { false }, history)
+            .onPollResult(SourceResult.Success(next), live, GlucoseUnit.MG_DL, false)
         assertEquals(listOf(AlertKind.URGENT_HIGH, AlertKind.URGENT_HIGH), delivery.posted)
+        assertEquals(2, history.events.value.size)
     }
 
-    @Test fun blockedChannelAndUnpublishedResponseNeverPost() {
+    @Test fun blockedChannelAndUnpublishedResponseNeverPostOrLog() {
         val store = MemoryStore()
         val delivery = MemoryDelivery().apply { allowed = false }
         val history = MemoryHistory()
-        val clock = MutableClock(start)
         val reading = reading(305.0, start)
         var live = display(reading)
-        val engine = AlertEngine(store, delivery, clock, { live }, { false }, history)
-        engine.onPollResult(SourceResult.Success(reading), display(reading).copy(reading = null), GlucoseUnit.MG_DL, false)
+        val engine = AlertEngine(store, delivery, MutableClock(start), { live }, { false }, history)
+        engine.onPollResult(SourceResult.Success(reading), live.copy(reading = null), GlucoseUnit.MG_DL, false)
         live = live.copy(person = Connection("other", "Other"))
         engine.onPollResult(SourceResult.Success(reading), display(reading), GlucoseUnit.MG_DL, false)
         live = display(reading)
-        engine.onPollResult(SourceResult.Success(reading), display(reading), GlucoseUnit.MG_DL, false)
+        engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
         assertEquals(emptyList<AlertKind>(), delivery.posted)
         assertEquals(emptyMap<AlertKind, Instant>(), store.state.lastFiredAt)
         assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
     }
 
-    @Test fun eachPersonUsesCurrentStateOwnStoreAndOwnNotificationScope() {
-        val other = Connection("alex", "Alex")
-        val patrickReading = reading(305.0, start)
-        val alexReading = Reading(
-            other.id, start.plusSeconds(1), 52.0, 52.0, GlucoseUnit.MG_DL,
-            null, Trend.STEADY, "alex-source", start.plusSeconds(1),
-        )
-        val displays = mutableMapOf(
-            person.id to display(patrickReading),
-            other.id to display(patrickReading).copy(person = other, reading = alexReading),
-        )
-        val stores = mapOf(
-            person.id to MemoryStore(setOf(AlertKind.URGENT_HIGH)),
-            other.id to MemoryStore(setOf(AlertKind.URGENT_LOW)),
-        )
-        val delivery = MemoryDelivery()
-        val history = MemoryHistory()
-        val clock = MutableClock(start.plusSeconds(1))
-        val engine = AlertEngine(
-            stores.getValue(person.id), delivery, clock, { displays.getValue(person.id) }, { false },
-            history = history,
-            personStore = { stores.getValue(it) },
-            currentPersonDisplay = { displays[it] },
-        )
-
-        engine.onPollResult(
-            SourceResult.Success(patrickReading), displays.getValue(person.id), GlucoseUnit.MG_DL, false,
-        )
-        engine.onPollResult(
-            SourceResult.Success(alexReading), displays.getValue(other.id), GlucoseUnit.MG_DL, false,
-        )
-
-        assertEquals(listOf(AlertKind.URGENT_HIGH, AlertKind.URGENT_LOW), delivery.posted)
-        assertEquals(listOf(person.id, other.id), delivery.postedPeople)
-        assertEquals(setOf(person.id, other.id), history.events.value.map { it.person.id }.toSet())
-        history.events.value.associateBy { it.person.id }.let { logged ->
-            assertEquals(AlertKind.URGENT_HIGH, logged.getValue(person.id).kind)
-            assertEquals(patrickReading.measuredAt, logged.getValue(person.id).reading.measuredAt)
-            assertEquals(patrickReading.valueMgDl, logged.getValue(person.id).reading.valueMgDl)
-            assertEquals(clock.now, logged.getValue(person.id).firedAt)
-        }
-        assertTrue(stores.getValue(person.id).state.lastFiredAt.containsKey(AlertKind.URGENT_HIGH))
-        assertTrue(stores.getValue(other.id).state.lastFiredAt.containsKey(AlertKind.URGENT_LOW))
-
-        val normal = reading(110.0, start.plusSeconds(60))
-        displays[person.id] = display(normal)
-        clock.now = start.plusSeconds(60)
-        engine.onPollResult(SourceResult.Success(normal), displays.getValue(person.id), GlucoseUnit.MG_DL, false)
-        assertEquals(listOf(person.id), delivery.clearedPeople)
-    }
-
-    @Test fun staleCallbackForPersonCannotUseAnotherPersonsCurrentDisplay() {
-        val other = Connection("alex", "Alex")
-        val returned = reading(305.0, start)
-        val wrong = display(returned).copy(
-            person = other,
-            reading = returned.copy(connectionId = other.id),
-        )
-        val delivery = MemoryDelivery()
-        AlertEngine(
-            MemoryStore(), delivery, MutableClock(start), { wrong }, { false },
-            currentPersonDisplay = { wrong },
-        ).onPollResult(SourceResult.Success(returned), display(returned), GlucoseUnit.MG_DL, false)
-        assertEquals(emptyList<AlertKind>(), delivery.posted)
-    }
-
-    @Test fun failedNotificationPostDoesNotCreateHistoryOrCooldown() {
+    @Test fun failedNotificationPostDoesNotCreateHistory() {
         val store = MemoryStore()
         val reading = reading(305.0, start)
         val live = display(reading)
@@ -159,7 +104,73 @@ class AlertEngineTest {
                 .onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
         }
         assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
-        assertEquals(emptyMap<AlertKind, Instant>(), store.state.lastFiredAt)
+        assertTrue(store.state.lastFiredAt.containsKey(AlertKind.URGENT_HIGH))
+    }
+
+    @Test fun historyWriteFailurePropagatesAfterDeliveredAlert() {
+        val store = MemoryStore()
+        val delivery = MemoryDelivery()
+        val history = MemoryHistory(failAppend = true)
+        val reading = reading(305.0, start)
+        val live = display(reading)
+        assertThrows(java.io.IOException::class.java) {
+            AlertEngine(store, delivery, MutableClock(start), { live }, { false }, history)
+                .onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
+        }
+        assertEquals(listOf(AlertKind.URGENT_HIGH), delivery.posted)
+        assertTrue(store.state.lastFiredAt.containsKey(AlertKind.URGENT_HIGH))
+        assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
+    }
+
+    @Test fun clearHistoryPreservesDedupAndCooldownState() {
+        val store = MemoryStore()
+        val history = MemoryHistory()
+        val reading = reading(305.0, start)
+        val live = display(reading)
+        val engine = AlertEngine(store, MemoryDelivery(), MutableClock(start), { live }, { false }, history)
+        engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
+        val snapshot = store.state
+
+        engine.clearHistory()
+
+        assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
+        assertEquals(snapshot, store.state)
+    }
+
+    @Test fun clearHistoryWaitsForPendingAppendAndClearsItLast() {
+        val appendEntered = CountDownLatch(1)
+        val resumeAppend = CountDownLatch(1)
+        val mutable = MutableStateFlow<List<AlertHistoryEntry>>(emptyList())
+        val history = object : AlertHistoryPersistence {
+            override val events: StateFlow<List<AlertHistoryEntry>> = mutable
+            override fun append(entry: AlertHistoryEntry) {
+                appendEntered.countDown()
+                check(resumeAppend.await(3, TimeUnit.SECONDS))
+                mutable.value = listOf(entry)
+            }
+            override fun clear() { mutable.value = emptyList() }
+        }
+        val reading = reading(305.0, start)
+        val live = display(reading)
+        val engine = AlertEngine(
+            MemoryStore(), MemoryDelivery(), MutableClock(start), { live }, { false }, history,
+        )
+        val executor = Executors.newFixedThreadPool(2)
+        try {
+            val post = executor.submit {
+                engine.onPollResult(SourceResult.Success(reading), live, GlucoseUnit.MG_DL, false)
+            }
+            assertTrue(appendEntered.await(3, TimeUnit.SECONDS))
+            val clear = executor.submit { engine.clearHistory() }
+            assertFalse(clear.isDone)
+            resumeAppend.countDown()
+            post.get(3, TimeUnit.SECONDS)
+            clear.get(3, TimeUnit.SECONDS)
+            assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
+        } finally {
+            resumeAppend.countDown()
+            executor.shutdownNow()
+        }
     }
 
     @Test fun currentPrivacyChoiceWinsOverStalePollPreference() {
@@ -237,11 +248,11 @@ class AlertEngineTest {
         ReadingFreshness.FRESH, reading.receivedAt, null,
     )
 
-    private class MemoryStore(private val enabled: Set<AlertKind> = setOf(AlertKind.URGENT_HIGH)) : AlertStore {
+    private class MemoryStore : AlertStore {
         private val defaults = AlertConfig.defaults()
         var state = AlertSnapshot()
         override fun config() = AlertConfig(defaults.rules.mapValues { (kind, rule) ->
-            rule.copy(enabled = kind in enabled)
+            rule.copy(enabled = kind == AlertKind.URGENT_HIGH)
         })
         override fun snapshot() = state
         override fun saveSnapshot(snapshot: AlertSnapshot) { state = snapshot }
@@ -252,23 +263,22 @@ class AlertEngineTest {
         var clears = 0
         var lastVisibleOnLockScreen: Boolean? = null
         val posted = mutableListOf<AlertKind>()
-        val postedPeople = mutableListOf<String>()
-        val clearedPeople = mutableListOf<String>()
         override fun ensureChannels() = Unit
         override fun canPost(kind: AlertKind) = allowed
         override fun post(kind: AlertKind, display: DisplayState, unit: GlucoseUnit, showOnLockScreen: Boolean) {
             posted += kind
-            postedPeople += display.person!!.id
             lastVisibleOnLockScreen = showOnLockScreen
         }
         override fun clear() { clears++ }
-        override fun clearPerson(personId: String) { clearedPeople += personId }
     }
 
-    private class MemoryHistory : AlertHistoryPersistence {
+    private class MemoryHistory(private val failAppend: Boolean = false) : AlertHistoryPersistence {
         private val mutable = MutableStateFlow<List<AlertHistoryEntry>>(emptyList())
         override val events: StateFlow<List<AlertHistoryEntry>> = mutable
-        override fun append(entry: AlertHistoryEntry) { mutable.value = listOf(entry) + mutable.value }
+        override fun append(entry: AlertHistoryEntry) {
+            if (failAppend) throw java.io.IOException("synthetic history failure")
+            mutable.value = listOf(entry) + mutable.value
+        }
         override fun clear() { mutable.value = emptyList() }
     }
 

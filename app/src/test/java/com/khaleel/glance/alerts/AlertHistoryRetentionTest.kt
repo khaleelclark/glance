@@ -45,14 +45,14 @@ class AlertHistoryRetentionTest {
         }))
     }
 
-    @Test fun preferenceScopeAndNotificationTagAreStableAndDoNotContainRawIdentity() {
-        val preferenceKey = AlertPreferences.fingerprint(person.id)
-        val notificationTag = GlucoseAlertNotifier.personTag(person.id)
-        assertEquals(preferenceKey, AlertPreferences.fingerprint(person.id))
-        assertEquals(notificationTag, GlucoseAlertNotifier.personTag(person.id))
-        assertEquals(64, preferenceKey.length)
-        assertFalse(preferenceKey.contains(person.id))
-        assertFalse(notificationTag.contains(person.id))
+    @Test fun accountBindingAcceptsOnlyLowercaseSha256ScopeKeys() {
+        val valid = "0123456789abcdef".repeat(4)
+        assertEquals(valid, AlertAccountScope.requireValid(valid))
+        listOf("", "raw-account-id", valid.uppercase(), valid.dropLast(1)).forEach { invalid ->
+            org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                AlertAccountScope.requireValid(invalid)
+            }
+        }
     }
 
     private fun entry(id: String, firedAt: Instant, owner: Connection) = AlertHistoryEntry(

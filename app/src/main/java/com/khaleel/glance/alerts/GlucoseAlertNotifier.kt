@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
-import android.net.Uri
 import android.provider.Settings
 import com.khaleel.glance.R
 import com.khaleel.glance.core.DisplayState
@@ -16,7 +15,6 @@ import com.khaleel.glance.core.GlucoseUnit
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.security.MessageDigest
 import java.util.Locale
 
 /** Separate dismissible alerts; the quiet ongoing monitoring card remains unchanged. */
@@ -69,10 +67,7 @@ class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
         val detail = "${GlucoseFormat.withUnit(reading, unit, Locale.getDefault())} at $time"
         val open = PendingIntent.getActivity(
             context, 5100, Intent().setClassName(context, "com.khaleel.glance.MainActivity")
-                .setAction(ACTION_OPEN_ALERT)
-                .setData(Uri.Builder().scheme(context.packageName).authority("alert")
-                    .appendPath(personTag(person.id).removePrefix(TAG_PREFIX)).build())
-                .putExtra(EXTRA_PERSON_ID, person.id),
+                .setAction("com.khaleel.glance.action.OPEN_ALERT"),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val builder = Notification.Builder(context, channelId(kind))
@@ -96,38 +91,16 @@ class GlucoseAlertNotifier(private val context: Context) : AlertDelivery {
                     .build(),
             )
         }
-        clearPerson(person.id)
-        manager.notify(personTag(person.id), notificationId(kind), builder.build())
+        clear()
+        manager.notify(notificationId(kind), builder.build())
     }
 
     override fun clear() {
-        manager.activeNotifications
-            .filter { it.tag?.startsWith(TAG_PREFIX) == true && isAlertId(it.id) }
-            .forEach { manager.cancel(it.tag, it.id) }
-        // Remove cards created by versions that used unscoped integer IDs.
         AlertKind.entries.forEach { manager.cancel(notificationId(it)) }
     }
 
-    override fun clearPerson(personId: String) {
-        val tag = personTag(personId)
-        AlertKind.entries.forEach { manager.cancel(tag, notificationId(it)) }
-    }
-
     companion object {
-        const val ACTION_OPEN_ALERT = "com.khaleel.glance.action.OPEN_ALERT"
-        const val EXTRA_PERSON_ID = "com.khaleel.glance.extra.ALERT_PERSON_ID"
-        private const val TAG_PREFIX = "glance.alert."
-
         fun channelId(kind: AlertKind): String = "glucose_alert_${kind.name.lowercase()}"
         private fun notificationId(kind: AlertKind): Int = 5200 + kind.ordinal
-        private fun isAlertId(id: Int): Boolean = id in 5200 until 5200 + AlertKind.entries.size
-
-        internal fun personTag(personId: String): String {
-            require(personId.isNotBlank())
-            val digest = MessageDigest.getInstance("SHA-256")
-                .digest(personId.toByteArray(Charsets.UTF_8))
-                .joinToString("") { "%02x".format(it) }
-            return "$TAG_PREFIX$digest"
-        }
     }
 }

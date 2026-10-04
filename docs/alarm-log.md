@@ -1,77 +1,66 @@
-# Alarm log and per-person alerts
+# Alarm log
 
-Glance keeps threshold choices, deduplication state, notifications, and alarm
-history scoped to the LibreLinkUp connection that produced the source reading.
-Every person's four rules start disabled. On upgrade, the lead must call
-`AlertPreferences.migrateLegacyTo(primaryPersonId)` once after loading the
-existing primary connection; this atomically assigns the prior global rules and
-cooldowns to that person. Later people retain disabled defaults.
+Glance keeps a clearable local record of threshold notifications that Android
+accepted for posting. It remains a single-person feature: alert settings,
+deduplication, notification IDs, and runtime behavior retain their existing
+interfaces and semantics.
 
-Use `configForPerson(personId)`, `setRuleForPerson(personId, kind, rule)`, and
-`forPerson(personId)` for settings and engine state. Person preference prefixes
-are stable SHA-256 digests, so raw provider connection IDs are not present in
-ordinary SharedPreferences keys. `clearSnapshot()` clears deduplication and
-cooldowns in every scope without changing rules. `clear()` removes every alert
-rule and scope.
+## Account binding
 
-The alert engine must receive the current display for the same person as the
-successful, published source reading. Its integration points are:
+The backend supplies a stable lowercase SHA-256 `accountScopeKey`; raw provider
+account IDs must not be passed or stored. Before alert settings are read or a
+poll can be evaluated, integration calls both:
 
 ```kotlin
-AlertEngine(
-    preferences = alertPreferences,
-    notifier = alertNotifier,
-    clock = DeviceClock,
-    currentDisplay = { controller.display.value },
-    currentPrivacy = { controller.settings.showOnLockScreen },
-    history = alertHistory,
-    personStore = alertPreferences::forPerson,
-    currentPersonDisplay = controller::displayForPerson,
-)
+alertPreferences.bindAccount(accountScopeKey)
+alertHistory.bindAccount(accountScopeKey)
 ```
 
-The exact controller callback can differ, but it must return the current
-same-person `DisplayState`, including account monitoring/runtime state. The
-five-argument constructor remains compatible with the single-person path.
+Call these during startup when saved authentication exists and immediately
+after successful sign-in, before accepting new poll results. A repeated binding
+to the same key preserves alert rules, deduplication/cooldowns, and log entries.
+Changing the key atomically clears each store before recording the new binding.
+
+For upgrade compatibility, the first `AlertPreferences` binding adopts the
+existing unbound rules and snapshot. The history store does not adopt an
+unbound version-1 log because its account cannot be proven: first binding writes
+an empty bound ledger. No history is published through `events` until binding
+succeeds. Invalid keys, unreadable encrypted state, or failed persistence throw;
+callers must stop alert evaluation rather than continue with another account's
+data. Explicit `clear()` can delete an unreadable ledger so setup can recover.
+
+Signed-out UI should hide the ledger. Signing out alone need not discard
+same-account preferences/history; binding a different account performs the
+privacy clear. Full local-data deletion can still call the explicit clear APIs.
 
 ## Encrypted local history
 
-`EncryptedAlertHistoryStore(SecureFileStore(context))` stores health data in an
-AES-GCM authenticated `AtomicFile` under `noBackupFilesDir`. It records only an
-alert that passed policy/channel checks and whose Android notification post
-returned successfully. Each entry contains the exact alert kind, `Connection`,
-source `Reading` (including measurement timestamp and value), and alert firing
-timestamp. Blocked channels, duplicate polls, stale readings, special-value
-sentinels, and ordinary in-range samples are not logged.
+`EncryptedAlertHistoryStore(SecureFileStore(context), clock)` stores health
+data in an AES-GCM authenticated `AtomicFile` under `noBackupFilesDir`. Each
+entry includes the exact `AlertKind`, `Connection`, source `Reading` (including
+value and source measurement timestamp), and alert firing timestamp.
 
 The observable list is newest first, deduplicated by event ID, limited to 1,000
-events, and pruned after 30 days. Invalid enums, timestamps, numeric fields, or
-cross-person reading identities are rejected while loading. A corrupt,
-undecryptable, or unknown-version file fails closed to an empty in-memory list;
-the data is never copied to diagnostics or backup.
+events, and pruned after 30 days. Loading bounds the parsed input and rejects
+invalid enums, timestamps, numeric fields, special-value alerts, and
+cross-person reading identities. Names, internal connection IDs, readings, and
+the account-scope digest remain only in encrypted no-backup storage; the alarm
+log is not part of diagnostics or exports.
 
-History persistence is deliberately best effort after successful notification
-delivery. If its atomic write fails, the alert remains delivered and its
-cooldown remains committed, but no history row is claimed. The UI should
-explain a storage failure if it adds a surfaced error path later. Explicit
-**Clear alarm log** calls only `AlertHistoryPersistence.clear()` and does not
-remove reading caches or alert settings. Account sign-out must also call that
-method in addition to its existing cache/auth cleanup.
+`AlertEngine` takes `history: AlertHistoryPersistence = NoAlertHistory` as its
+trailing constructor argument. It appends only after `AlertDelivery.post()`
+returns successfully. Blocked channels, duplicate samples, cooldown-suppressed
+samples, stale readings, and ordinary in-range samples never create rows. A
+history write failure propagates after delivery; the already-posted alert and
+committed dedup/cooldown state remain truthful.
 
-## Notification coexistence and routing
+`AlertEngine.clearHistory()` is synchronized with evaluation and append. It
+clears only the ledger, preserving the alert snapshot and rules, so a user log
+clear cannot make the same source sample alert again. The same method is safe
+for explicit local-data deletion. Account binding is performed before polling,
+outside an active evaluation.
 
-The four stable channel IDs and their system-selected sounds are unchanged.
-Cards use a SHA-256-derived notification tag per person plus a fixed ID per
-alert kind. Posting or clearing an in-range sample removes only that person's
-other threshold cards; `clear()` removes all tagged alert cards without
-canceling the ongoing glucose notification.
-
-Alert taps use action `GlucoseAlertNotifier.ACTION_OPEN_ALERT` and the explicit,
-immutable extra `GlucoseAlertNotifier.EXTRA_PERSON_ID`. The extra contains only
-the stable internal connection ID and is carried by an explicit pending intent;
-the lead can route it to that person's detail view and must not log or export
-it. Lock-screen redaction remains independent of routing data.
-
-This log is not proof that sound was audible. Android notification permission,
-channel sound/importance, Do Not Disturb, OEM settings, background execution,
-and device audio state remain user/system controlled.
+The log proves that Android accepted a notification post, not that sound was
+audible. Notification permission, channel importance/sound, Do Not Disturb,
+device audio state, OEM policy, and upstream/background delays remain outside
+the ledger's guarantee.

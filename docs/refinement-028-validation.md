@@ -8,7 +8,12 @@ card/time/unit/trend/supporting labels remain unchanged in color. Freshness and
 source values/limits are unchanged; nonfresh/invalid values stay neutral.
 
 Seven curated pastel accents retain black/graphite surfaces and readable controls.
-Core AccentPresets is shared by theme/UI and native logo presentation. Selection
+Core AccentPresets is shared by theme/UI and native logo presentation.
+Android supports independent launcher icons through activity aliases targeting
+the still-enabled MainActivity. The implementation and OS checks are recorded
+separately when integrated. Primary references:
+[activity aliases](https://developer.android.com/guide/topics/manifest/activity-alias-element)
+and [system splash defaults](https://developer.android.com/develop/ui/views/launch/splash-screen). Selection
 recomposes the root scheme and native in-app droplet immediately. Legacy inactive
 custom values are kept in storage but display as Lilac; new/reset settings use
 Lilac. Only preset selection is exposed.

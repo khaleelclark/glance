@@ -10,22 +10,35 @@ import com.khaleel.glance.core.AccentPresets
 
 /** Keeps the native launcher droplet aligned with the selected in-app accent. */
 object LauncherAccent {
+    enum class ApplyResult {
+        UNCHANGED,
+        APPLIED,
+        FAILED,
+    }
+
     /**
      * Applies the closest curated preset. Unknown or legacy custom colors select Lilac, matching
      * [AccentPresets.selected]. Reapplying the active preset does not touch package-manager state.
+     * Package-manager and OEM failures are recoverable: the caller may ignore [ApplyResult.FAILED]
+     * during startup, record it in redacted diagnostics, and retry on the next settings refresh.
      */
-    fun apply(context: Context, hex: String) {
+    fun apply(context: Context, hex: String): ApplyResult = try {
         val appContext = context.applicationContext
         val packageManager = appContext.packageManager
         val selected = AccentPresets.selected(hex)
 
-        if (isApplied(packageManager, appContext.packageName, selected)) return
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            applyAtomically(packageManager, appContext.packageName, selected)
+        if (isApplied(packageManager, appContext.packageName, selected)) {
+            ApplyResult.UNCHANGED
         } else {
-            applyEnableFirst(packageManager, appContext.packageName, selected)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                applyAtomically(packageManager, appContext.packageName, selected)
+            } else {
+                applyEnableFirst(packageManager, appContext.packageName, selected)
+            }
+            ApplyResult.APPLIED
         }
+    } catch (_: RuntimeException) {
+        ApplyResult.FAILED
     }
 
     private fun isApplied(

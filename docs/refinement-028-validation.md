@@ -50,3 +50,16 @@ stored event category, never today's range limits or latest reading. Labels,
 source timestamps and posting timestamps remain explicit. Settings alert labels
 use the same semantic red/yellow families. This does not alter alarm delivery,
 threshold evaluation, sounds, numeric notification icons or recorded event data.
+
+
+The additional badge profile passes all eight API 36 checks on the 3a25de1
+fixture: actual red/burgundy and yellow/amber pixels on all four recorded
+categories, original source/posting times with no callbacks, a stored Low event
+with an otherwise in-range 113 reading retaining its Low badge, semantic Settings
+labels without changing rules, and all four badge values reachable at 200% text.
+Root visually inspected normal and large-text Logbook screenshots. Receipt
+api36-alert-badges-0.28.0.json retains the fixture hash/commit, observed source
+commit and dirty generated-evidence state. Badge collection follows c47e7fc
+production styling, with only the historical-Low debug fixture added afterward.
+Native launcher integration and final combined review/sign/build/push remain
+pending. These are source/synthetic UI results, not signed-release device tests.

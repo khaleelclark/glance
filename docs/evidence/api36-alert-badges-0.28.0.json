@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "LowLogEntryUsesRecordedCategoryBadge": true,
+    "Urgent LowLogEntryUsesRecordedCategoryBadge": true,
+    "HighLogEntryUsesRecordedCategoryBadge": true,
+    "Urgent HighLogEntryUsesRecordedCategoryBadge": true,
+    "sourceAndPostingTimesRetainedWithoutCallbacks": true,
+    "historicalLowBadgeIsNotReclassifiedByCurrentNumericRange": true,
+    "alertSettingsLabelsMatchLowHighFamilyWithoutChangingRules": true,
+    "allFourBadgeReadingsReachableAtTwoHundredPercent": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "81c3f7035e4edc74effaa478ea9752769dc752a3eba4513c85adf298529dabf1",
+  "sourceCommitAtRun": "9096d6b311322de96d26b06b41c7d03ae03d17f5",
+  "sourceDirtyAtRun": true,
+  "scope": "Production Logbook/Settings with synthetic stored alert categories; screenshot pixel checks; no source/alarm evaluation or live account",
+  "SamsungOneUI": "not tested",
+  "TalkBack": "not tested",
+  "fixtureProductionCommit": "3a25de1815c8f443e55090f5e66846375c9ae70f"
+}

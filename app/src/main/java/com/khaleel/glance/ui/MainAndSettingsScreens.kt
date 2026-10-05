@@ -276,11 +276,15 @@ private fun LogbookScreen(
                             Row { Text(entry.kind.label, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium); Text(time.format(entry.firedAt), color = MaterialTheme.colorScheme.primary) }
                             Text(entry.person.displayName, style = MaterialTheme.typography.bodyMedium)
                             val readingValue = GlucoseFormat.withUnit(entry.reading, settings.unit, locale)
-                            Text(readingValue + trendSymbol(entry.reading.trend).let { if (it.isBlank()) "" else "  $it" },
-                                modifier = Modifier.clearAndSetSemantics {
-                                    contentDescription = "$readingValue, trend ${text.sourceTrendDescription(entry.reading.trend)}"
-                                },
-                                style = MaterialTheme.typography.headlineSmall)
+                            val badge = alertBadgePalette(entry.kind)
+                            Surface(shape = GlanceShapes.small, color = badge.background,
+                                border = BorderStroke(1.dp, badge.border)) {
+                                Text(readingValue + trendSymbol(entry.reading.trend).let { if (it.isBlank()) "" else "  $it" },
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp).clearAndSetSemantics {
+                                        contentDescription = "${entry.kind.label} alert, $readingValue, trend ${text.sourceTrendDescription(entry.reading.trend)}"
+                                    },
+                                    color = badge.foreground, style = MaterialTheme.typography.headlineSmall)
+                            }
                             val sourceTime = if (entry.reading.measuredAt.atZone(zoneId).toLocalDate() == day) {
                                 time.format(entry.reading.measuredAt)
                             } else DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(locale)

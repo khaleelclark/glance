@@ -28,3 +28,13 @@ Native screen/pixel/persistence/200% portrait-landscape checks and launcher
 integration are in progress. Independent UI source review is tracked. Release
 signing/push remain pending. No live-account/Samsung, TalkBack, overnight/battery,
 physical-watch or audible-alert qualification is inferred from synthetic tests.
+
+
+Additional owner steering requests Libre-style alert colors, with a LibreLinkUp
+Logbook screenshot showing a red-bordered burgundy badge around the low glucose
+value/unit/trend. Logbook now applies that badge family to recorded Low/Urgent Low
+and an amber/yellow family to recorded High/Urgent High. Classification uses the
+stored event category, never today's range limits or latest reading. Labels,
+source timestamps and posting timestamps remain explicit. Settings alert labels
+use the same semantic red/yellow families. This does not alter alarm delivery,
+threshold evaluation, sounds, numeric notification icons or recorded event data.

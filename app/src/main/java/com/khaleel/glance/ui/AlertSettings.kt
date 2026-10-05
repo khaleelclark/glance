@@ -81,7 +81,7 @@ internal fun AlertSettings(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(kind.label, style = MaterialTheme.typography.titleMedium)
+                Text(kind.label, style = MaterialTheme.typography.titleMedium, color = alertBadgePalette(kind).border)
                 Text(
                     "${if (kind.isLow) "At or below" else "At or above"} ${thresholdText(rule.thresholdMgDl, unit)} · ${rule.cooldownMinutes} min",
                     style = MaterialTheme.typography.bodySmall,
@@ -150,7 +150,7 @@ private fun AlertRuleSheet(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(kind.label, style = MaterialTheme.typography.headlineSmall)
+        Text(kind.label, style = MaterialTheme.typography.headlineSmall, color = alertBadgePalette(kind).border)
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).semantics {
                 contentDescription = "Enable ${kind.label} alert"

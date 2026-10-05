@@ -52,6 +52,19 @@ class GlanceThemeTest {
         }
     }
 
+    @Test fun alertBadgesUseRecordedLowHighCategoryAndReadableText() {
+        val low = alertBadgePalette(com.khaleel.glance.alerts.AlertKind.LOW)
+        val high = alertBadgePalette(com.khaleel.glance.alerts.AlertKind.HIGH)
+        assertEquals(low, alertBadgePalette(com.khaleel.glance.alerts.AlertKind.URGENT_LOW))
+        assertEquals(high, alertBadgePalette(com.khaleel.glance.alerts.AlertKind.URGENT_HIGH))
+        assertTrue(low.border.red > low.border.green)
+        assertTrue(high.border.red > high.border.blue && high.border.green > high.border.blue)
+        for (badge in listOf(low, high)) {
+            assertTrue(contrast(badge.foreground, badge.background) >= 7f)
+            assertTrue(contrast(badge.border, ThemeAccent.scheme().surface) >= 4.5f)
+        }
+    }
+
     @Test fun acceptsAndNormalizesOnlySixDigitHexColors() {
         assertEquals("#12ABEF", ThemeAccent.normalize("12abef"))
         assertEquals("#12ABEF", ThemeAccent.normalize(" #12AbEf "))

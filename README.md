@@ -12,7 +12,9 @@ cards. Settings → Appearance → Accent color offers seven presets for the con
 and matching droplet. The current glucose number is larger and green in range,
 red below Low, or yellow above High. Only the number is color coded; its timestamp,
 unit, trend and supporting text stay neutral. Old readings retain their warnings
-and a neutral number. No custom wheel or hex entry is exposed. The reading card
+and a neutral number. No custom wheel or hex entry is exposed. Logbook uses Libre-style red badges for
+Low/Urgent Low and yellow badges for High/Urgent High, preserving the original
+alert category and source time. The reading card
 starts with **Reading at <source time> · <actual age>**; delayed/stale/time warnings
 remain explicit. Hold and drag the graph to inspect a real reading; release or
 cancel to dismiss the tooltip and selection. The permanent endpoint dot is gone.

@@ -24,8 +24,20 @@ preset's role contrast, legacy/invalid fallback and accent-independent semantic
 reading colors with contrast. Existing range classification tests cover strict
 limits, special source values, stale/invalid states and source units.
 
-Native screen/pixel/persistence/200% portrait-landscape checks and launcher
-integration are in progress. Independent UI source review is tracked. Release
+The first screen profile passes all 12 API 36 native assertions: green/red/yellow
+only on the fresh top number; neutral old value and truthful warning/source time;
+all seven preset callbacks once with matching in-app droplet pixels and black
+background; saved synthetic accent survives an actual process/activity restart;
+three actual isolated UserSettings persistence/reset checks; both system modes;
+and 200% portrait/landscape value/time/unit/chart/preset reachability. Root visually
+inspected normal low/high/stale, preset sheet/Teal, and large-text portrait/landscape
+screens. The complete reading and unit remain visible; overflowing lower content
+is reachable by scrolling. Fixture production UI is 3d3125f, before the separately
+added badge styling. Receipt retains actual observed commit/dirty state and APK
+hash; additional source edits during collection are explicitly described.
+
+Additional badge source passes 226 JVM tests, zero failures/errors/skips, debug
+assembly and debug lint (zero errors). Launcher integration is in progress. Independent UI source review is tracked. Release
 signing/push remain pending. No live-account/Samsung, TalkBack, overnight/battery,
 physical-watch or audible-alert qualification is inferred from synthetic tests.
 

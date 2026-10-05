@@ -1,0 +1,27 @@
+{
+  "synthetic": true,
+  "device": "API 36 emulator",
+  "checks": {
+    "freshOnlyGlucoseNumberHasRangeColor": true,
+    "lowOnlyGlucoseNumberHasRangeColor": true,
+    "highOnlyGlucoseNumberHasRangeColor": true,
+    "staleValueIsNeutralAndWarningTimeRemain": true,
+    "allSevenPresetsDispatchOnceAndRecolorDropletWithoutChangingGlucoseColor": true,
+    "syntheticSavedAccentSurvivesActualActivityProcessRestart": true,
+    "newSettingsUseLilacDefault": true,
+    "everyExplicitPresetSurvivesSettingsRecreation": true,
+    "resetUsesDefaultAndDoesNotReinterpretLaterExplicitPreset": true,
+    "blackPresentationWorksInBothSystemModes": true,
+    "portraitAtTwoHundredPercentKeepsLargerValueTimeUnitChartAndPresetReachable": true,
+    "landscapeAtTwoHundredPercentKeepsLargerValueTimeUnitChartAndPresetReachable": true
+  },
+  "allPassed": true,
+  "fixtureApkSha256": "2a5b9ff5c0e3224906c459515aefcd95de1fd0c756142a11e614b0a8ddf07869",
+  "sourceCommitAtRun": "c47e7fcd9c5a57f31e079fba725b17ab5eccd5ee",
+  "sourceDirtyAtRun": true,
+  "scope": "Production GlanceRoot; native screenshot pixels, actual touch callbacks and isolated synthetic preferences; screenshots need visual inspection for clipping; first screen profile precedes the additional alert-badge implementation; later source commits during run include alert badges/docs/scripts/formatting not present in this fixture",
+  "liveAccount": "not tested",
+  "SamsungOneUI": "not tested",
+  "TalkBack": "not tested",
+  "fixtureProductionCommit": "3d3125f"
+}

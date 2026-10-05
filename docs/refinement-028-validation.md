@@ -38,8 +38,8 @@ hash; additional source edits during collection are explicitly described.
 
 The integrated production code passes 226 JVM tests, zero failures/errors/skips,
 debug assembly and debug lint (zero errors). The preliminary UI source review
-found no HIGH/MEDIUM blocker or concrete LOW; final combined source review is tracked.
-Release signing/push remain pending. No live-account/Samsung, TalkBack, overnight/battery,
+found no HIGH/MEDIUM blocker or concrete LOW; final combined source review closes with no HIGH/MEDIUM regression or new concrete LOW.
+See review-028.md for the exact independent review pins; generated release manifests record the clean final build/signing source. No live-account/Samsung, TalkBack, overnight/battery,
 physical-watch or audible-alert qualification is inferred from synthetic tests.
 
 
@@ -66,7 +66,7 @@ The integrated badge rerun passes the same eight checks. The updated receipt
 records the installed fixture hash and observed 5fa5b4e source/dirty state;
 the installed fixture was built at 1e56dc7, before a debug-only persistence-flush
 correction. Production code matches the final 307aa28 integration in both fixtures.
-Final combined review/sign/build/push remain pending. These are source/synthetic UI results, not signed-release device tests.
+Final combined source review closes at 1e56dc7 with no HIGH/MEDIUM regression or new concrete LOW. Release build/signing/push are recorded by the generated release manifests. These are source/synthetic UI results, not signed-release device tests.
 
 
 Native launcher integration uses seven aliases targeting the unchanged enabled

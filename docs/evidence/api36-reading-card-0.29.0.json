@@ -25,11 +25,14 @@
     "sourceHigh": 196.0
   },
   "fixtureApkSha256": "06af335f0665717afac84c62ba5ec2f8a747e434cf3bc92c789d2d970274e1d9",
-  "sourceCommitAtRun": "affcb27636d9e222a9933c951b3e541fcbbabb96",
-  "sourceDirtyAtRun": true,
+  "sourceCommitAtRun": "d8adff5358be2fbf933d83d48a37312e3d92e577",
+  "sourceDirtyAtRun": false,
+  "normalChecksReusedFromPriorCompleteRun": true,
   "fixtureProductionCommit": "8ffd2ac",
   "scope": "Production ReadingHero/FlowRow and scrolling; synthetic source states, actual screenshot colors and touch; requires visual clipping inspection",
   "SamsungOneUI": "not tested",
   "liveAccount": "not tested",
-  "TalkBack": "not tested"
+  "TalkBack": "not tested",
+  "normalChecksSourceCommitAtRun": "affcb27636d9e222a9933c951b3e541fcbbabb96",
+  "normalChecksSourceDirtyAtRun": true
 }

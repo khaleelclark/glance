@@ -74,6 +74,9 @@ def main():
    checks[name+'TwoHundredPercentKeepsCardContentChartAndSettingsReachable']=True
   apk=ui.adb('shell','pm','path','com.khaleel.glance').strip().removeprefix('package:')
   report={'synthetic':True,'device':'API36 emulator','checks':checks,'allPassed':True,'freshCardHeightsDp':heights,'fixtureApkSha256':ui.adb('shell','sha256sum',apk).split()[0],'sourceCommitAtRun':source,'sourceDirtyAtRun':dirty,'normalChecksReusedFromPriorCompleteRun':('--large-text' in sys.argv),'fixtureProductionCommit':'8ffd2ac','scope':'Production ReadingHero/FlowRow and scrolling; synthetic source states, actual screenshot colors and touch; requires visual clipping inspection','SamsungOneUI':'not tested','liveAccount':'not tested','TalkBack':'not tested'}
+  if '--large-text' in sys.argv:
+   report['normalChecksSourceCommitAtRun']=previous.get('normalChecksSourceCommitAtRun',previous['sourceCommitAtRun'])
+   report['normalChecksSourceDirtyAtRun']=previous.get('normalChecksSourceDirtyAtRun',previous['sourceDirtyAtRun'])
   (ui.EVIDENCE/'api36-reading-card-0.29.0.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
  finally:
   for key,value in old.items():ui.adb('shell','settings','put','system',key,value)

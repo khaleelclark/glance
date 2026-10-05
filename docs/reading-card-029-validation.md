@@ -48,3 +48,14 @@ did not change during these driver corrections.
 These are debug/synthetic screen results; signed-release/static verification and
 source delivery are recorded separately. No Samsung, live account, TalkBack or
 physical background/battery qualification is claimed.
+
+
+A focused follow-up at d8adff5 uses exact text semantics so the visible arrow's
+trend description cannot stand in for the lower trend label. It also directly
+checks the actual delta text and captures both upper and scrolled lower card at
+200% portrait/landscape. The lower landscape screenshot shows the complete
+source time, value, unit, arrow, trend and change after scrolling. The eleven
+normal-state checks from the preceding complete profile are reused only after
+verifying the installed APK SHA256 is identical; the final receipt preserves
+that original source/dirty state separately from the two rerun large-text checks.
+All thirteen checks remain passed. Later driver edits only preserve provenance.

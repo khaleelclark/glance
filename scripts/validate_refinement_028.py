@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Production Compose screens with synthetic data; pixel, selection and persistence checks."""
-import io,json,re,subprocess
-from PIL import Image
+import json,re,struct,subprocess,zlib
 import validate_ui_overhaul as ui
 from validate_refinement_026 import scroll_to,shown,bounds,text_node
 
@@ -10,8 +9,41 @@ GREEN=(139,220,159); RED=(255,155,155); YELLOW=(255,217,103)
 def capture(name):
     data=subprocess.run(ui.ADB+['exec-out','screencap','-p'],check=True,capture_output=True,timeout=30).stdout
     (ui.EVIDENCE/f'api36-ui-0.28.0-{name}-demo.png').write_bytes(data)
-    return Image.open(io.BytesIO(data)).convert('RGB')
-def pixels(im,box,color):return sum(n for n,c in (im.crop(box).getcolors(im.width*im.height) or []) if c==color)
+    return PngPixels(data)
+
+class PngPixels:
+    """Read the emulator's 8-bit noninterlaced PNG without an optional imaging dependency."""
+    def __init__(self,data):
+        assert data[:8]==b'\x89PNG\r\n\x1a\n'
+        at=8;compressed=[]
+        while at<len(data):
+            size=struct.unpack('>I',data[at:at+4])[0];kind=data[at+4:at+8];chunk=data[at+8:at+8+size];at+=size+12
+            if kind==b'IHDR':
+                self.width,self.height,depth,color,_,_,interlace=struct.unpack('>IIBBBBB',chunk)
+                assert depth==8 and color in [2,6] and interlace==0
+                self.stride=3 if color==2 else 4
+            if kind==b'IDAT':compressed.append(chunk)
+        raw=zlib.decompress(b''.join(compressed));row_size=self.width*self.stride;self.rows=[];previous=bytes(row_size)
+        for y in range(self.height):
+            offset=y*(row_size+1);kind=raw[offset];row=bytearray(raw[offset+1:offset+1+row_size])
+            assert 0<=kind<=4
+            if kind:
+                for x in range(row_size):
+                    a=row[x-self.stride] if x>=self.stride else 0;b=previous[x];c=previous[x-self.stride] if x>=self.stride else 0
+                    if kind==1:predict=a
+                    elif kind==2:predict=b
+                    elif kind==3:predict=(a+b)//2
+                    else:
+                        p=a+b-c;pa=abs(p-a);pb=abs(p-b);pc=abs(p-c)
+                        predict=a if pa<=pb and pa<=pc else b if pb<=pc else c
+                    row[x]=(row[x]+predict)&255
+            previous=bytes(row);self.rows.append(previous)
+    def getpixel(self,xy):
+        x,y=xy;return tuple(self.rows[y][x*self.stride:x*self.stride+3])
+
+def pixels(im,box,color):
+    left,top,right,bottom=box;needle=bytes(color)+(b'\xff' if im.stride==4 else b'')
+    return sum(row[left*im.stride:right*im.stride].count(needle) for row in im.rows[top:bottom])
 def verify_main(im,value,color,accent):
     value_box=bounds(ui.find(value,True)); assert pixels(im,value_box,color)>40
     for name in ['Reading at 11:59 AM · 1 min ago','mg/dL','Trend Holding steady']:

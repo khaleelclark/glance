@@ -92,6 +92,9 @@ class LauncherAccentInstrumentation : Instrumentation() {
             checks.put("explicitMainActivityRemainsAvailable", true)
             val selected = keepAccent?.let { name -> AccentPresets.all.single { it.name == name }.hex } ?: old
             app.controller.settings.accentHex = selected
+            // Instrumentation terminates its process immediately; flush the synthetic selection
+            // before the shell performs a force-stop/cold-start persistence check.
+            check(context.getSharedPreferences("settings", Context.MODE_PRIVATE).edit().commit())
             check(LauncherAccent.apply(context, selected) != LauncherAccent.ApplyResult.FAILED)
             val report = JSONObject().put("allPassed", true).put("checks", checks)
                 .put("synthetic", true).put("api", android.os.Build.VERSION.SDK_INT)

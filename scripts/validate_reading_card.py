@@ -10,8 +10,17 @@ def capture(name):
  data=subprocess.check_output(ui.ADB+['exec-out','screencap','-p'],timeout=30)
  (ui.EVIDENCE/f'api36-reading-card-0.29.0-{name}-demo.png').write_bytes(data)
  return PngPixels(data)
-def normalized_node(text):
- return next(n for n in ui.nodes() if any(norm(n.get(key,''))==norm(text) for key in ['text','content-desc']))
+def normalized_node(text,nodes=None):
+ return next(n for n in (nodes if nodes is not None else ui.nodes()) if any(norm(n.get(key,''))==norm(text) for key in ['text','content-desc']))
+def scroll_reading_to(text):
+ for _ in range(12):
+  nodes=ui.nodes()
+  if any(norm(text) in norm(ui.label(n)) for n in nodes):return
+  columns=[n for n in nodes if n.get('scrollable')=='true']
+  # The reading summary is the left pane in landscape; the chart has its own scroll.
+  column=min(columns,key=lambda n:bounds(n)[0]);left,top,right,bottom=bounds(column)
+  ui.adb('shell','input','swipe',str(left+8),str(top+(bottom-top)*3//4),str(left+8),str(top+(bottom-top)//4),'250');ui.settle()
+ raise AssertionError('Reading content is not reachable: '+text)
 def main():
  assert ui.SERIAL.startswith('emulator-') and ui.adb('shell','getprop','ro.kernel.qemu').strip()=='1'
  old={k:ui.adb('shell','settings','get','system',k).strip() for k in ['font_scale','user_rotation','accelerometer_rotation']}
@@ -23,12 +32,12 @@ def main():
   ui.adb('shell','settings','put','system','font_scale','1.0');ui.adb('shell','settings','put','system','accelerometer_rotation','0');ui.adb('shell','settings','put','system','user_rotation','0')
   ui.adb('shell','cmd','uimode','night','no');ui.adb('shell','input','keyevent','KEYCODE_WAKEUP');ui.adb('shell','wm','dismiss-keyguard');ui.adb('shell','cmd','statusbar','collapse')
   for mode,value,color in [('fresh','113',GREEN),('low','65',RED),('high','250',YELLOW),('sourceLow','LOW',RED),('sourceHigh','HIGH',YELLOW)]:
-   ui.start(mode);im=capture(mode);box=bounds(ui.find(value,True))
+   ui.start(mode);nodes=ui.nodes();im=capture(mode);box=bounds(normalized_node(value,nodes))
    assert im.getpixel((box[0]-16,box[1]+16))==color
    assert pixels(im,box,INK)>50 and pixels(im,box,color)>100
    for label in ['Reading at 11:59 AM · 1 min ago','mg/dL','Trend Holding steady','Holding steady']:
-    assert pixels(im,bounds(normalized_node(label)),INK)>5,label
-   chip_top=bounds(ui.find('Show latest 3 hours'))[1]
+    assert pixels(im,bounds(normalized_node(label,nodes)),INK)>5,label
+   chip_top=bounds(next(n for n in nodes if 'Show latest 3 hours' in ui.label(n)))[1]
    colored=[y for y in range(chip_top) if im.getpixel((im.width//2,y))==color]
    height=colored[-1]-colored[0]+1
    assert height>=round(196*density)-2,(mode,height,density)
@@ -50,7 +59,7 @@ def main():
   for rotation,name in [('0','portrait'),('1','landscape')]:
    ui.adb('shell','settings','put','system','user_rotation',rotation);ui.start('high')
    for label in ['Reading at 11:59 AM · 1 min ago','250','mg/dL','Trend Holding steady','Holding steady']:
-    scroll_to(label);assert shown(label)
+    scroll_reading_to(label);assert shown(label)
    capture('large-text-'+name)
    scroll_to('Show latest 3 hours');ui.tap('Show latest 3 hours',True);assert ui.checked_node('Show latest 3 hours').get('checked')=='true'
    capture('large-text-'+name+'-chart');ui.tap('Settings',True);assert ui.visible('Everyday')

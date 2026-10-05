@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `32`, and versionName
-`0.27.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `33`, and versionName
+`0.28.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -59,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.27.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.28.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -445,3 +445,20 @@ ordinary ongoing cards; Glance cannot promise zero motion/removal before the
 callback restores it. Stop/sign-out still remove the card. The toggle's wording
 now explains both behaviors. See the official [Android behavior](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)
 and [0.27 validation](notification-027-validation.md).
+
+
+## 0.28.0 reading emphasis and accent presets
+
+The current reading increases from 42sp to 50sp. Only the number uses semantic
+range color: green within the chart limits, red below Low and yellow above High.
+The graphite card, source time, unit, source trend and supporting text remain
+neutral. Delayed/stale/invalid readings remain neutral and retain their warnings.
+Range classification still uses the source value and existing enabled Low/High
+limits; it is independent of the chosen accent.
+
+Settings → Appearance → Accent color offers Lilac, Teal, Ocean, Berry, Forest,
+Coral and Sunset. Presets recolor controls and the droplet while keeping black
+and graphite surfaces. Old custom values remain stored, but unsupported values
+fall back to Lilac until a new preset is selected. New/reset settings use Lilac.
+No wheel or arbitrary hex editor is exposed. See refinement-028-validation.md
+for exact validation boundaries and native launcher behavior.

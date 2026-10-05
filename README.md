@@ -7,8 +7,12 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.27.0 retains a smaller droplet logo, a fixed black background, graphite
-cards and lilac controls. The custom color picker is removed. The reading card
+Version 0.28.0 retains a smaller droplet logo, a black background and graphite
+cards. Settings → Appearance → Accent color offers seven presets for the controls
+and matching droplet. The current glucose number is larger and green in range,
+red below Low, or yellow above High. Only the number is color coded; its timestamp,
+unit, trend and supporting text stay neutral. Old readings retain their warnings
+and a neutral number. No custom wheel or hex entry is exposed. The reading card
 starts with **Reading at <source time> · <actual age>**; delayed/stale/time warnings
 remain explicit. Hold and drag the graph to inspect a real reading; release or
 cancel to dismiss the tooltip and selection. The permanent endpoint dot is gone.
@@ -20,7 +24,8 @@ keeps the category and source reading/time that triggered it. Ongoing and enhanc
 notifications also retain eligible number icons. Keep notification visible
 protects the reading card from Clear all and restores it after individual swipes.
 
-See [0.27 verification](docs/notification-027-validation.md).
+See [0.28 verification](docs/refinement-028-validation.md) and
+[0.27 notification verification](docs/notification-027-validation.md).
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
 compatibility candidate and safe HTTP response details for connection errors.
@@ -38,7 +43,7 @@ See [gesture verification](docs/chart-gesture-validation.md) and
 trend arrow, and recent change when available; Refresh remains in the app.
 Refresh retries connection failures even while automatic polling is backing off;
 provider rate limits still apply. Stop monitoring is available in Settings. The
-app uses the fixed black/lilac appearance in either system display mode.
+app keeps black surfaces and the chosen accent in either system display mode.
 
 Optional Low, Urgent Low, High, and Urgent High alerts can be enabled separately
 in Settings. Each has a threshold and a repeat cooldown (five minutes by
@@ -80,8 +85,7 @@ The LibreLinkUp interface is unofficial. Live account behavior and Samsung backg
 On Samsung Android 16, Glance requests a Live Update when permitted. Settings
 shows its observed status and links to Android's promotion controls. Also
 check Samsung's Now bar and Glance Live notifications settings. The fresh
-glucose number can serve as the small icon in regular mode; promoted chips use
-the Glance icon beside the value. **Keep notification** defaults on:
+glucose number can serve as the small icon in both regular and promoted requests. **Keep notification** defaults on:
 while monitoring is running, a delivered dismissal callback restores the same
 silent regular card after Clear or swipe. Turn it off for manual restoration using **Show notification** in Settings.
 Stop and sign-out clear the card. Samsung delivery and Now bar admission still

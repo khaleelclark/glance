@@ -2,7 +2,7 @@
 """Production Compose screens with synthetic data; pixel, selection and persistence checks."""
 import json,re,struct,subprocess,zlib
 import validate_ui_overhaul as ui
-from validate_refinement_026 import scroll_to,shown,bounds,text_node
+from validate_refinement_026 import scroll_to,shown,bounds,text_node,norm
 
 PRESETS={'Lilac':'B9AEF5','Teal':'79D3C5','Ocean':'8AB9F7','Berry':'D4ACF5','Forest':'A5D6A7','Coral':'FFA8B7','Sunset':'FFC28A'}
 GREEN=(139,220,159); RED=(255,155,155); YELLOW=(255,217,103)
@@ -44,10 +44,14 @@ class PngPixels:
 def pixels(im,box,color):
     left,top,right,bottom=box;needle=bytes(color)+(b'\xff' if im.stride==4 else b'')
     return sum(row[left*im.stride:right*im.stride].count(needle) for row in im.rows[top:bottom])
+def find_normalized(text):
+    return next(n for n in ui.nodes() if any(norm(n.get(key,''))==norm(text) for key in ['text','content-desc']))
+
 def verify_main(im,value,color,accent):
     value_box=bounds(ui.find(value,True)); assert pixels(im,value_box,color)>40
+    assert im.getpixel((value_box[0]-12,value_box[1]+12))==(20,20,23),'graphite reading card'
     for name in ['Reading at 11:59 AM · 1 min ago','mg/dL','Trend Holding steady']:
-        assert pixels(im,bounds(ui.find(name,True)),color)==0,name
+        assert pixels(im,bounds(find_normalized(name)),color)==0,name
     label=bounds(ui.find('GLANCE',True));person=bounds(ui.find('DEMO · Alex',True))
     assert pixels(im,(0,label[1],label[0],person[3]),accent)>40,'droplet accent'
     assert im.getpixel((0,im.height//2))==(0,0,0),'black background'
@@ -58,7 +62,7 @@ def main():
     old_night=ui.adb('shell','cmd','uimode','night').strip();checks={}
     try:
         ui.adb('shell','settings','put','system','font_scale','1.0');ui.adb('shell','settings','put','system','accelerometer_rotation','0');ui.adb('shell','settings','put','system','user_rotation','0')
-        ui.adb('shell','cmd','uimode','night','no');ui.adb('shell','input','keyevent','KEYCODE_WAKEUP');ui.adb('shell','wm','dismiss-keyguard')
+        ui.adb('shell','cmd','uimode','night','no');ui.adb('shell','input','keyevent','KEYCODE_WAKEUP');ui.adb('shell','wm','dismiss-keyguard');ui.adb('shell','cmd','statusbar','collapse')
         for mode,value,color in [('fresh','113',GREEN),('low','65',RED),('high','250',YELLOW)]:
             ui.start(mode);im=capture(mode);verify_main(im,value,color,(185,174,245));checks[mode+'OnlyGlucoseNumberHasRangeColor']=True
         ui.start('stale');im=capture('stale');assert ui.visible('No recent reading') and shown('Reading at 11:40 AM · 20 min ago')

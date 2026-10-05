@@ -47,7 +47,7 @@ internal fun runNicknameStorageProbe(context: Context): JSONObject {
         check(settings.accentHex == "#7046A3")
         receipt.put("legacyBlueMigratesOnceAndExplicitColorsSurvive", true)
         settings.clear()
-        check(settings.accentHex == "#287F7A")
+        check(settings.accentHex == com.khaleel.glance.core.AccentPresets.DEFAULT)
         settings.accentHex = "#1677D2"
         check(UserSettings(isolated).accentHex == "#1677D2")
         receipt.put("explicitOceanSurvivesAccountResetAndRecreation", true)

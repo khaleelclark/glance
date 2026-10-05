@@ -10,7 +10,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GlanceThemeTest {
-    @Test fun fixedPresentationUsesBlackAndReadableLilacControls() {
+    @Test fun defaultPresentationUsesBlackAndReadableLilacControls() {
         assertEquals("#B9AEF5", ThemeAccent.DEFAULT)
         val scheme = ThemeAccent.scheme()
         assertEquals(Color.Black, scheme.background)
@@ -19,6 +19,37 @@ class GlanceThemeTest {
         assertTrue(contrast(scheme.primary, scheme.onPrimary) >= 4.5f)
         assertTrue(contrast(scheme.onSurfaceVariant, scheme.surfaceContainerLow) >= 4.5f)
         assertTrue(contrast(scheme.onSurface, scheme.surfaceContainerLow) >= 7f)
+    }
+
+    @Test fun everyPresetKeepsBlackSurfacesAndReadableControls() {
+        for (preset in ThemeAccent.presets) {
+            val scheme = ThemeAccent.scheme(preset.hex)
+            assertEquals(Color.Black, scheme.background)
+            assertEquals(Color.Black, scheme.surface)
+            assertEquals(ThemeAccent.color(preset.hex), scheme.primary)
+            assertTrue(preset.name, contrast(scheme.primary, scheme.surfaceContainer) >= 4.5f)
+            assertTrue(preset.name, contrast(scheme.primary, scheme.onPrimary) >= 4.5f)
+            assertTrue(preset.name, contrast(scheme.onPrimaryContainer, scheme.primaryContainer) >= 4.5f)
+        }
+    }
+
+    @Test fun inactiveLegacyOrInvalidColorsFallBackWithoutRevivingCustomThemes() {
+        for (hex in listOf("#287F7A", "#000000", "#FFFFFF", "invalid")) {
+            assertEquals(ThemeAccent.DEFAULT, ThemeAccent.selected(hex).hex)
+            assertEquals(ThemeAccent.scheme().primary, ThemeAccent.scheme(hex).primary)
+        }
+        assertEquals("Teal", ThemeAccent.selected(" #79d3c5 ").name)
+    }
+
+    @Test fun semanticGlucoseColorsStayIndependentOfAccentAndKeepNeutralFallback() {
+        val neutral = ThemeAccent.scheme().onSurface
+        assertEquals(neutral, readingValueColor(null, neutral))
+        assertEquals(Color(0xFF8BDC9F), readingValueColor(ChartBand.IN_RANGE, neutral))
+        assertEquals(Color(0xFFFF9B9B), readingValueColor(ChartBand.LOW, neutral))
+        assertEquals(Color(0xFFFFD967), readingValueColor(ChartBand.HIGH, neutral))
+        for (band in ChartBand.entries) {
+            assertTrue(contrast(readingValueColor(band, neutral), ThemeAccent.scheme().surfaceContainerLow) >= 4.5f)
+        }
     }
 
     @Test fun acceptsAndNormalizesOnlySixDigitHexColors() {

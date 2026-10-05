@@ -34,6 +34,11 @@ class DebugUiActivity : ComponentActivity() {
         enableEdgeToEdge()
         window.isNavigationBarContrastEnforced = false
         val mode = intent.getStringExtra("mode") ?: "fresh"
+        val accentStore = getSharedPreferences("synthetic-ui-accent", MODE_PRIVATE)
+        val initialAccent = if (mode == "accentStored") accentStore.getString("hex", AccentPresets.DEFAULT)!! else AccentPresets.DEFAULT
+        if (mode == "accentStorage") {
+            java.io.File(filesDir, "accent-storage-check.json").writeText(runAccentStorageProbe(this).toString())
+        }
         val now = Instant.parse("2026-10-01T12:00:00Z")
         if (mode == "nicknameStorage") {
             java.io.File(filesDir, "nickname-storage-check.json").writeText(runNicknameStorageProbe(this).toString())
@@ -104,7 +109,7 @@ class DebugUiActivity : ComponentActivity() {
                 }
             ) }
             var settings by remember { mutableStateOf(UserSettingsUi(
-                GlucoseUnit.MG_DL, false, 1, false, true,
+                GlucoseUnit.MG_DL, false, 1, false, true, accentHex = initialAccent,
                 liveUpdateStatus = "DEMO · regular card", watchSyncStatus = "DEMO · watch disconnected", sourcePersonName = "DEMO · Alex")) }
             val callbacks = GlanceCallbacks(
                 onSignIn = { event("signIn") }, onSelectConnection = { event("selectPerson") },
@@ -120,7 +125,10 @@ class DebugUiActivity : ComponentActivity() {
                 onEnhancedNotificationChanged = { settings = settings.copy(enhancedNotification = it); event("liveUpdate") },
                 onNumericStatusIconChanged = { settings = settings.copy(numericStatusIcon = it); event("numeric") },
                 onOpenLiveUpdateSettings = { event("liveUpdateSettings") },
-                onAccentHexChanged = { settings = settings.copy(accentHex = it); event("accent") },
+                onAccentHexChanged = {
+                    check(accentStore.edit().putString("hex", it).commit())
+                    settings = settings.copy(accentHex = it); event("accent")
+                },
                 onAlertRuleChanged = { kind, rule ->
                     if (mode == "alertSaveFailure") {
                         // Simulate the production host rejecting a save and keeping

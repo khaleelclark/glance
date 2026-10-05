@@ -57,10 +57,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.khaleel.glance.alerts.AlertHistoryEntry
 import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.DisplayState
@@ -85,7 +87,7 @@ internal enum class AppDestination(val label: String, val glyph: GlanceGlyph) {
     NOW("Now", GlanceGlyph.NOW), LOGBOOK("Logbook", GlanceGlyph.LOGBOOK),
     SETTINGS("Settings", GlanceGlyph.SETTINGS),
 }
-private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, NICKNAME }
+private enum class SettingsSheet { UNIT, CADENCE, PRESENTATION, NICKNAME, ACCENT }
 private enum class ConfirmAction { SIGN_OUT, DELETE_DATA }
 
 @Composable
@@ -196,12 +198,13 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
     val reading = text.reading(state, settings.unit, now)
     val delta = readingDeltaText(state.reading, state.history, settings.unit, locale)
     val band = currentReadingBand(state.reading, state.freshness, settings.alerts)
-    val rangePalette = readingRangePalette(band)
+    val scheme = MaterialTheme.colorScheme
+    val valueColor = readingValueColor(band, scheme.onSurface)
     Surface(Modifier.fillMaxWidth().animateContentSize(), GlanceShapes.extraLarge,
-        rangePalette.container, contentColor = rangePalette.onContainer) {
+        scheme.surfaceContainerLow, contentColor = scheme.onSurface) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(reading?.measured ?: "Waiting for first reading",
-                style = MaterialTheme.typography.labelMedium, color = rangePalette.foreground)
+                style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
             if (reading == null) {
                 Text("No reading yet", style = MaterialTheme.typography.headlineLarge)
                 Text("Glance is waiting for LibreLinkUp.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -210,10 +213,13 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
                     Text(reading.freshness, style = MaterialTheme.typography.labelMedium)
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(reading.value, style = MaterialTheme.typography.displayMedium, color = rangePalette.foreground, modifier = Modifier.alignByBaseline())
+                    Text(reading.value, style = MaterialTheme.typography.displayMedium.copy(fontSize = 50.sp, lineHeight = 56.sp),
+                        color = valueColor, modifier = Modifier.alignByBaseline().semantics {
+                            band?.let { stateDescription = readingBandLabel(it) }
+                        })
                     Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.alignByBaseline())
                     if (reading.trendSymbol.isNotBlank()) Text(reading.trendSymbol,
-                        style = MaterialTheme.typography.headlineLarge.copy(color = rangePalette.foreground),
+                        style = MaterialTheme.typography.headlineLarge,
                         modifier = Modifier.alignByBaseline().semantics { contentDescription = "Trend ${reading.trendDescription}" })
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -312,6 +318,9 @@ internal fun SettingsScreen(
             ValueSettingRow("Units", settings.unit.label) { sheet = SettingsSheet.UNIT }; GroupDivider()
             ValueSettingRow("Refresh cadence", if (settings.intervalMinutes == 1) "Every minute" else "Every 5 minutes") { sheet = SettingsSheet.CADENCE }
         }
+        SettingsGroup("Appearance") {
+            ValueSettingRow("Accent color", ThemeAccent.selected(settings.accentHex).name) { sheet = SettingsSheet.ACCENT }
+        }
         SettingsGroup("Notification") {
             SwitchSettingRow("Lock-screen values", "Show name, reading and time while locked.", settings.showOnLockScreen, callbacks.onLockScreenVisibilityChanged); GroupDivider()
             ValueSettingRow("Presentation", if (settings.enhancedNotification) "Live Update" else "Graph") { sheet = SettingsSheet.PRESENTATION }; GroupDivider()
@@ -356,6 +365,23 @@ internal fun SettingsScreen(
         ModalBottomSheet({ sheet = null }, sheetState = rememberModalBottomSheetState(true), containerColor = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (active) {
+                    SettingsSheet.ACCENT -> {
+                        Text("Accent color", Modifier.semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
+                        Text("Choose a color for controls and the Glance droplet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(Modifier.selectableGroup()) {
+                            ThemeAccent.presets.forEach { preset ->
+                                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                                    .selectable(ThemeAccent.selected(settings.accentHex) == preset, role = Role.RadioButton) {
+                                        callbacks.onAccentHexChanged(preset.hex); sheet = null
+                                    }.padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                    Surface(Modifier.size(26.dp), CircleShape, ThemeAccent.color(preset.hex)) {}
+                                    Text(preset.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                                    if (ThemeAccent.selected(settings.accentHex) == preset) Text("Selected", color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
                     SettingsSheet.UNIT -> SheetChoices("Display units", listOf("mg/dL" to (settings.unit == GlucoseUnit.MG_DL), "mmol/L" to (settings.unit == GlucoseUnit.MMOL_L))) {
                         callbacks.onUnitChanged(if (it == "mg/dL") GlucoseUnit.MG_DL else GlucoseUnit.MMOL_L); sheet = null }
                     SettingsSheet.CADENCE -> SheetChoices("Refresh cadence", listOf("Every minute" to (settings.intervalMinutes == 1), "Every 5 minutes" to (settings.intervalMinutes == 5)),

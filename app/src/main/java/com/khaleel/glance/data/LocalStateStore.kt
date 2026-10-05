@@ -234,7 +234,7 @@ class UserSettings(context: Context) : SettingsPersistence {
         get() = prefs.getBoolean("enhanced_explicit", true)
         set(value) = prefs.edit().putBoolean("enhanced_explicit", value).apply()
     override var accentHex: String
-        get() = prefs.getString("accent_hex", "#287F7A") ?: "#287F7A"
+        get() = prefs.getString("accent_hex", com.khaleel.glance.core.AccentPresets.DEFAULT) ?: com.khaleel.glance.core.AccentPresets.DEFAULT
         set(value) = prefs.edit().putString("accent_hex", value).apply()
     override var numericStatusIcon: Boolean
         get() = prefs.getBoolean("numeric_status_icon", true)

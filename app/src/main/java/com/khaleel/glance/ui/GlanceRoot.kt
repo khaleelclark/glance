@@ -37,7 +37,7 @@ fun GlanceRoot(
 ) {
     val text = remember(zoneId, locale) { GlanceUiText(zoneId, locale) }
 
-    val colorScheme = remember { ThemeAccent.scheme() }
+    val colorScheme = remember(settings.accentHex) { ThemeAccent.scheme(settings.accentHex) }
     val view = LocalView.current
     val activity = remember(view.context) {
         var context = view.context

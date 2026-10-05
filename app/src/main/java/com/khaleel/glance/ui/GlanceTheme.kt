@@ -3,25 +3,18 @@ package com.khaleel.glance.ui
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import com.khaleel.glance.core.AccentPresets
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 internal data class PickerColor(val hue: Float, val saturation: Float, val brightness: Float)
 
-internal data class AccentPreset(val name: String, val hex: String)
-
 internal object ThemeAccent {
-    const val DEFAULT = "#B9AEF5"
-    val presets = listOf(
-        AccentPreset("Teal", "#287F7A"),
-        AccentPreset("Ocean", "#1677D2"),
-        AccentPreset("Lagoon", "#087E82"),
-        AccentPreset("Berry", "#7046A3"),
-        AccentPreset("Forest", "#397B50"),
-        AccentPreset("Coral", "#AF405B"),
-        AccentPreset("Sunset", "#B75E2A"),
-    )
+    const val DEFAULT = AccentPresets.DEFAULT
+    val presets = AccentPresets.all
+    fun selected(hex: String) = AccentPresets.selected(hex)
 
     fun normalize(input: String): String? {
         val digits = input.trim().removePrefix("#")
@@ -80,17 +73,20 @@ internal object ThemeAccent {
         return "#%02X%02X%02X".format(channel(r), channel(g), channel(b))
     }
 
-    /** Fixed black/graphite presentation; saved custom accents are currently unused. */
-    fun scheme(): ColorScheme = darkColorScheme(
-        primary = Color(0xFFB9AEF5),
-        onPrimary = Color(0xFF211B38),
-        primaryContainer = Color(0xFF29243B),
-        onPrimaryContainer = Color(0xFFEAE5FF),
-        secondary = Color(0xFFB9AEF5),
-        onSecondary = Color(0xFF211B38),
-        secondaryContainer = Color(0xFF29243B),
-        onSecondaryContainer = Color(0xFFEAE5FF),
-        tertiary = Color(0xFFCCC3EF),
+    /** Presets change controls and the native in-app mark; surfaces remain black/graphite. */
+    fun scheme(hex: String = DEFAULT): ColorScheme {
+        val accent = color(selected(hex).hex)
+        val container = lerp(Color.Black, accent, .18f)
+        return darkColorScheme(
+        primary = accent,
+        onPrimary = Color(0xFF15151A),
+        primaryContainer = container,
+        onPrimaryContainer = accent,
+        secondary = accent,
+        onSecondary = Color(0xFF15151A),
+        secondaryContainer = container,
+        onSecondaryContainer = accent,
+        tertiary = accent,
         background = Color.Black,
         onBackground = Color(0xFFF0EEF4),
         surface = Color.Black,
@@ -108,5 +104,6 @@ internal object ThemeAccent {
         outline = Color(0xFF77737F),
         outlineVariant = Color(0xFF36333E),
         scrim = Color.Black,
-    )
+        )
+    }
 }

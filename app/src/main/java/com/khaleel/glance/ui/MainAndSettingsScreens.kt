@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -199,22 +200,25 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
     val delta = readingDeltaText(state.reading, state.history, settings.unit, locale)
     val band = currentReadingBand(state.reading, state.freshness, settings.alerts)
     val scheme = MaterialTheme.colorScheme
-    val valueColor = readingValueColor(band, scheme.onSurface)
-    Surface(Modifier.fillMaxWidth().animateContentSize(), GlanceShapes.extraLarge,
-        scheme.surfaceContainerLow, contentColor = scheme.onSurface) {
-        Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val background = readingValueColor(band, scheme.surfaceContainerLow)
+    val content = if (band == null) scheme.onSurface else Color(0xFF15151A)
+    val secondary = if (band == null) scheme.onSurfaceVariant else content
+    Surface(Modifier.fillMaxWidth().heightIn(min = 196.dp).animateContentSize(), GlanceShapes.extraLarge,
+        background, contentColor = content) {
+        Column(Modifier.padding(horizontal = 22.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
             Text(reading?.measured ?: "Waiting for first reading",
-                style = MaterialTheme.typography.labelMedium, color = scheme.onSurfaceVariant)
+                style = MaterialTheme.typography.labelMedium, color = secondary)
             if (reading == null) {
                 Text("No reading yet", style = MaterialTheme.typography.headlineLarge)
-                Text("Glance is waiting for LibreLinkUp.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Glance is waiting for LibreLinkUp.", color = secondary)
             } else {
                 if (state.freshness != ReadingFreshness.FRESH) {
                     Text(reading.freshness, style = MaterialTheme.typography.labelMedium)
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(reading.value, style = MaterialTheme.typography.displayMedium.copy(fontSize = 50.sp, lineHeight = 56.sp),
-                        color = valueColor, modifier = Modifier.alignByBaseline().semantics {
+                    Text(reading.value, style = MaterialTheme.typography.displayMedium.copy(fontSize = 56.sp, lineHeight = 64.sp),
+                        color = content, modifier = Modifier.alignByBaseline().semantics {
                             band?.let { stateDescription = readingBandLabel(it) }
                         })
                     Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.alignByBaseline())

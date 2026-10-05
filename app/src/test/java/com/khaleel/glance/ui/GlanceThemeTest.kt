@@ -49,6 +49,7 @@ class GlanceThemeTest {
         assertEquals(Color(0xFFFFD967), readingValueColor(ChartBand.HIGH, neutral))
         for (band in ChartBand.entries) {
             assertTrue(contrast(readingValueColor(band, neutral), ThemeAccent.scheme().surfaceContainerLow) >= 4.5f)
+            assertTrue(contrast(Color(0xFF15151A), readingValueColor(band, neutral)) >= 7f)
         }
     }
 

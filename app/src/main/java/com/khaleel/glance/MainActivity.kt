@@ -198,6 +198,7 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshSettings() {
         val settings = controller.settings
+        LauncherAccent.apply(this, settings.accentHex)
         settingsUi = UserSettingsUi(
             settings.unit,
             settings.showOnLockScreen,

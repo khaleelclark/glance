@@ -47,6 +47,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         super.onCreate()
         // Register all four categories before the user opens Android notification settings.
         alertNotifier.ensureChannels()
+        LauncherAccent.apply(this, controller.settings.accentHex)
         // Observe the existing state, including stop/sign-out/person-switch transitions.
         // Widgets have no network poller and never start monitoring on their own.
         widgetScope.launch {

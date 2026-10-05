@@ -457,7 +457,8 @@ Range classification still uses the source value and existing enabled Low/High
 limits; it is independent of the chosen accent.
 
 Settings → Appearance → Accent color offers Lilac, Teal, Ocean, Berry, Forest,
-Coral and Sunset. Presets recolor controls and the droplet while keeping black
+Coral and Sunset. Presets recolor controls, the in-app droplet, native home-screen icon and
+launch splash while keeping black
 and graphite surfaces. Old custom values remain stored, but unsupported values
 fall back to Lilac until a new preset is selected. New/reset settings use Lilac.
 No wheel or arbitrary hex editor is exposed. See refinement-028-validation.md
@@ -471,3 +472,8 @@ times remain explicit. Colors belong to the saved event category and cannot be
 reinterpreted by later thresholds, accents or the current reading. Settings alert
 labels use the same red/yellow families. Alert engine/notification delivery and
 historical event values are unchanged.
+
+Launcher updates use native aliases and preserve explicit MainActivity notification
+intents. Android themed monochrome icons follow system tint; OEM launcher caches
+may update later. API36 switching/startup/splash is verified with synthetic debug
+fixtures; API30/32 and Samsung cache behavior remain unverified.

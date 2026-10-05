@@ -36,9 +36,10 @@ is reachable by scrolling. Fixture production UI is 3d3125f, before the separate
 added badge styling. Receipt retains actual observed commit/dirty state and APK
 hash; additional source edits during collection are explicitly described.
 
-Additional badge source passes 226 JVM tests, zero failures/errors/skips, debug
-assembly and debug lint (zero errors). Launcher integration is in progress. Independent UI source review is tracked. Release
-signing/push remain pending. No live-account/Samsung, TalkBack, overnight/battery,
+The integrated production code passes 226 JVM tests, zero failures/errors/skips,
+debug assembly and debug lint (zero errors). The preliminary UI source review
+found no HIGH/MEDIUM blocker or concrete LOW; final combined source review is tracked.
+Release signing/push remain pending. No live-account/Samsung, TalkBack, overnight/battery,
 physical-watch or audible-alert qualification is inferred from synthetic tests.
 
 
@@ -61,5 +62,43 @@ Root visually inspected normal and large-text Logbook screenshots. Receipt
 api36-alert-badges-0.28.0.json retains the fixture hash/commit, observed source
 commit and dirty generated-evidence state. Badge collection follows c47e7fc
 production styling, with only the historical-Low debug fixture added afterward.
-Native launcher integration and final combined review/sign/build/push remain
-pending. These are source/synthetic UI results, not signed-release device tests.
+The integrated badge rerun passes the same eight checks. The updated receipt
+records the installed fixture hash and observed 5fa5b4e source/dirty state;
+the installed fixture was built at 1e56dc7, before a debug-only persistence-flush
+correction. Production code matches the final 307aa28 integration in both fixtures.
+Final combined review/sign/build/push remain pending. These are source/synthetic UI results, not signed-release device tests.
+
+
+Native launcher integration uses seven aliases targeting the unchanged enabled
+MainActivity. Fresh installs have only Lilac enabled. Stored accent is synchronized
+in Application startup and MainActivity settings refresh, covering saves/reset/
+sign-out; repeat calls are package-manager no-ops. API33+ switches atomically;
+API30-32 enables the target first. Recoverable RuntimeExceptions return FAILED
+without preventing startup, and later refresh can repair multiple enabled aliases.
+The API31 fixed-lilac splash override is removed, retaining black backgrounds and
+light system-bar icons; the launched alias supplies its own icon. Android themed
+monochrome icons use the system-selected tint. OEM launcher caches may refresh late.
+
+`scripts/validate_launcher_accent.py emulator-5556` passes all fifteen native
+assertions against the final production code on API36: every preset is the sole
+launcher, exact foreground pixels match core colors, reapplication is a no-op,
+the process survives changes, invalid legacy values select Lilac, multiple-alias
+state is repaired, failure returns safely, explicit MainActivity remains available,
+stored Teal repairs an intentionally mismatched alias on actual cold startup, and
+the selected alias launches MainActivity. The enable-first helper is exercised
+against the real API36 framework; this is not an API30 emulator result. API30/32
+and Samsung One UI launcher/cache behavior remain unverified.
+
+A separate early cold-start screenshot captured the actual Teal splash with no
+Lilac pixels in the center; root visually inspected the Teal droplet on black.
+The native receipt includes actual installed APK SHA256 and source/dirty state.
+This fixture was built from the 5fa5b4e source (no production changes after 307aa28).
+The badge fixture predates only the debug flush. The shell's initial mismatch setup
+was rejected under its UID; the committed driver now uses the debug app's own UID.
+The first cold-start attempt also exposed immediate instrumentation process exit
+before asynchronous synthetic settings flush; the debug-only probe now commits
+before exit. Production setting persistence is unchanged.
+
+No release/signed APK device behavior is inferred from these debug fixtures.
+Live-account/Samsung, TalkBack, overnight/battery, physical-watch and audible-alert
+qualification remain device-dependent work.

@@ -1,0 +1,30 @@
+{
+  "allPassed": true,
+  "checks": {
+    "LilacSoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "TealSoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "OceanSoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "BerrySoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "ForestSoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "CoralSoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "SunsetSoleLauncherExactPixelsAndRepeatedNoOp": true,
+    "presetSwitchesKeepSameProcess": true,
+    "legacyUnsupportedColorFallsBackToLilac": true,
+    "refreshRepairsMultipleEnabledAliases": true,
+    "enableFirstHelperWorksOnInstalledFramework": true,
+    "runtimeFailureReturnsFailedWithoutCrashingCaller": true,
+    "explicitMainActivityRemainsAvailable": true,
+    "coldStartupRepairsAliasFromPersistedTeal": true,
+    "selectedAliasColdLaunchesExistingMainActivity": true
+  },
+  "synthetic": true,
+  "api": 36,
+  "selectedAliasSplashPixelsObserved": true,
+  "device": "API 36 emulator",
+  "sourceCommitAtRun": "5fa5b4ecfac29d55852c92c7c26353d0878daa92",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "29cce85e84b80b0904c6f7e966edeaa7fc2a0857e919d5c42a05d79f53446443",
+  "scope": "Actual PackageManager aliases/icons/process and persisted startup repair; legacy helper on API36, no API30 runtime claim",
+  "SamsungOneUI": "not tested",
+  "themedMonochromeIcon": "system controls tint"
+}

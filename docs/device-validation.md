@@ -2,6 +2,21 @@
 
 Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
 
+## 0.28.0 reading colors, accents and Libre-style alerts
+
+The integrated production code passes 226 phone JVM tests, debug assembly and
+debug lint with zero errors. The initial UI profile passes twelve API36 checks,
+including only-number semantic color, seven preset callbacks/logo pixels, actual
+isolated settings persistence, both system modes and 200% portrait/landscape.
+The integrated Logbook/Settings profile passes eight category-badge/large-text checks.
+Native launcher checks pass fifteen assertions for seven exact-color aliases,
+single-entry state, no-op/process preservation, recovery and stored-color cold
+startup. The selected Teal alias's real splash is captured and visually inspected.
+See [refinement-028-validation.md](refinement-028-validation.md) for fixture hashes
+and exact source boundaries. API30-32, Samsung caches/themed icons, live-account,
+TalkBack, overnight/battery, physical-watch and audible qualification are not run.
+Release source review, signing/static verification and push are recorded separately.
+
 ## 0.24.0 graph and reading refinement
 
 Integrated debug verification passes 208 phone JVM tests, zero failures/errors/

@@ -12,11 +12,10 @@
     "allFourBadgeReadingsReachableAtTwoHundredPercent": true
   },
   "allPassed": true,
-  "fixtureApkSha256": "81c3f7035e4edc74effaa478ea9752769dc752a3eba4513c85adf298529dabf1",
-  "sourceCommitAtRun": "9096d6b311322de96d26b06b41c7d03ae03d17f5",
+  "fixtureApkSha256": "37028dde69440cdd821a50f19f151a7ec68f1b485e6c6c6c7e37d863cc504aef",
+  "sourceCommitAtRun": "5fa5b4ecfac29d55852c92c7c26353d0878daa92",
   "sourceDirtyAtRun": true,
   "scope": "Production Logbook/Settings with synthetic stored alert categories; screenshot pixel checks; no source/alarm evaluation or live account",
   "SamsungOneUI": "not tested",
-  "TalkBack": "not tested",
-  "fixtureProductionCommit": "3a25de1815c8f443e55090f5e66846375c9ae70f"
+  "TalkBack": "not tested"
 }

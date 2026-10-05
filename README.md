@@ -9,7 +9,7 @@ Galaxy S25 Ultra behavior remain unverified.
 
 Version 0.28.0 retains a smaller droplet logo, a black background and graphite
 cards. Settings → Appearance → Accent color offers seven presets for the controls
-and matching droplet. The current glucose number is larger and green in range,
+and matching in-app, home-screen and launch-splash droplet. The current glucose number is larger and green in range,
 red below Low, or yellow above High. Only the number is color coded; its timestamp,
 unit, trend and supporting text stay neutral. Old readings retain their warnings
 and a neutral number. No custom wheel or hex entry is exposed. Logbook uses Libre-style red badges for

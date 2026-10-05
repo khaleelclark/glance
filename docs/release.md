@@ -1,6 +1,6 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `33`, and versionName
+Glance uses application ID `com.khaleel.glance`, versionCode `34`, and versionName
 `0.29.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 

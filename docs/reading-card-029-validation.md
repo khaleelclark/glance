@@ -19,7 +19,11 @@ at large fonts in portrait/landscape. Accessible source trend/range descriptions
 remain. Both modules increment to code34/version0.29.0; watch UI is unchanged.
 
 The integrated debug build passes 226 phone JVM tests, zero failures/errors/skips,
-debug assembly and debug lint with zero errors. All thirteen focused API36 native checks pass; independent source review is tracked. Root owns all implementation/runtime/
+debug assembly and debug lint with zero errors. All thirteen focused API36 native checks pass. Independent read-only source review of exact
+8ffd2ac656c8c5f7e58c573c11b8ceb9c9e84284 over released 9c0999a found no HIGH/MEDIUM
+regression and no new concrete LOW. Subsequent changes contain only debug fixtures,
+validation drivers, documentation and evidence; production code remains unchanged.
+Root owns all implementation/runtime/
 release writes. Final clean release manifests record build/signature/source
 evidence separately. No live-account/Samsung, TalkBack, overnight/battery,
 physical-watch or audible-alert qualification is inferred from this UI change.

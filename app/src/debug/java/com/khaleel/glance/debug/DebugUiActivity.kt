@@ -82,15 +82,27 @@ class DebugUiActivity : ComponentActivity() {
                 "high" -> 250.0
                 else -> 113.0
             } else 150 + 105 * kotlin.math.sin(step / 9.0)
-            val ageSeconds = when (mode) { "stale" -> 1200L; "justNow" -> 15L; else -> 60L }
+            val ageSeconds = when (mode) { "stale" -> 1200L; "delayed" -> 420L; "invalidTime" -> -600L; "justNow" -> 15L; else -> 60L }
             Reading("synthetic", now.minusSeconds((288 - step) * 300L + ageSeconds), value, value,
                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
         }
-        val reading = history.last()
+        val reading = history.last().let {
+            when (mode) {
+                "sourceLow" -> it.copy(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.LOW)
+                "sourceHigh" -> it.copy(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.HIGH)
+                else -> it
+            }
+        }
         val initialDisplay = DisplayState(true, RuntimeState.RUNNING,
             if (mode == "offline") ConnectionState.OFFLINE else ConnectionState.READY,
-            Connection("synthetic", "DEMO · Alex"), reading,
-            if (mode == "stale") ReadingFreshness.STALE else ReadingFreshness.FRESH,
+            Connection("synthetic", "DEMO · Alex"), reading.takeUnless { mode == "noReading" },
+            when (mode) {
+                "stale" -> ReadingFreshness.STALE
+                "delayed" -> ReadingFreshness.DELAYED
+                "invalidTime" -> ReadingFreshness.INVALID_TIME
+                "noReading" -> ReadingFreshness.ABSENT
+                else -> ReadingFreshness.FRESH
+            },
             now, null, history)
         setContent {
             var display by remember { mutableStateOf(initialDisplay) }

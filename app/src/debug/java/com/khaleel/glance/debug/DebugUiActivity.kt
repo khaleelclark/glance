@@ -97,7 +97,7 @@ class DebugUiActivity : ComponentActivity() {
             var alarmHistory by remember { mutableStateOf<List<AlertHistoryEntry>>(
                 if (mode == "emptyLog") emptyList() else AlertKind.entries.mapIndexed { index, kind ->
                     val value = when (kind) {
-                        AlertKind.LOW -> 65.0
+                        AlertKind.LOW -> if (mode == "historicalLow") 113.0 else 65.0
                         AlertKind.URGENT_LOW -> 50.0
                         AlertKind.HIGH -> 250.0
                         AlertKind.URGENT_HIGH -> 310.0

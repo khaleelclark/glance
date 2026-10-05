@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Production Compose screens with synthetic data; pixel, selection and persistence checks."""
-import json,re,struct,subprocess,zlib
+import json,re,struct,subprocess,sys,zlib
 import validate_ui_overhaul as ui
 from validate_refinement_026 import scroll_to,shown,bounds,text_node,norm
 
@@ -98,4 +98,41 @@ def main():
     finally:
         for key,val in old.items():ui.adb('shell','settings','put','system',key,val)
         ui.adb('shell','cmd','uimode','night','yes' if 'yes' in old_night else 'no')
-if __name__=='__main__':main()
+def alerts_main():
+    assert ui.SERIAL.startswith('emulator-') and ui.adb('shell','getprop','ro.kernel.qemu').strip()=='1'
+    old={k:ui.adb('shell','settings','get','system',k).strip() for k in ['font_scale','user_rotation','accelerometer_rotation']};checks={}
+    values={'Low':'65','Urgent Low':'50','High':'250','Urgent High':'310'}
+    try:
+        ui.adb('shell','settings','put','system','font_scale','1.0');ui.adb('shell','settings','put','system','accelerometer_rotation','0');ui.adb('shell','settings','put','system','user_rotation','0');ui.adb('shell','cmd','statusbar','collapse')
+        ui.start();ui.tap('Logbook',True)
+        im=capture('alert-logbook')
+        for kind,value in values.items():
+            desc=f'{kind} alert, {value} mg/dL, trend Holding steady'
+            box=bounds(ui.find(desc,True));expanded=(max(0,box[0]-40),max(0,box[1]-25),min(im.width,box[2]+40),min(im.height,box[3]+25))
+            low='Low' in kind;border=(255,80,112) if low else (255,208,92);background=(58,6,21) if low else (57,44,6)
+            assert pixels(im,expanded,border)>25 and pixels(im,expanded,background)>100,kind
+            checks[kind+'LogEntryUsesRecordedCategoryBadge']=True
+        assert shown('Source reading 11:00 AM · Posted 11:00 AM') and ui.events()=={}
+        checks['sourceAndPostingTimesRetainedWithoutCallbacks']=True
+        ui.start('historicalLow');ui.tap('Logbook',True);im=capture('historical-low')
+        box=bounds(ui.find('Low alert, 113 mg/dL, trend Holding steady',True));expanded=(max(0,box[0]-40),max(0,box[1]-25),min(im.width,box[2]+40),min(im.height,box[3]+25))
+        assert pixels(im,expanded,(255,80,112))>25;checks['historicalLowBadgeIsNotReclassifiedByCurrentNumericRange']=True
+        ui.tap('Settings',True);scroll_to('Choose a limit, then turn it on.');im=capture('alert-settings')
+        for kind in values:
+            color=(255,80,112) if 'Low' in kind else (255,208,92)
+            assert pixels(im,bounds(ui.find(kind,True)),color)>25,kind
+        assert not any(ui.events().values());checks['alertSettingsLabelsMatchLowHighFamilyWithoutChangingRules']=True
+        ui.adb('shell','settings','put','system','font_scale','2.0');ui.start();ui.tap('Logbook',True)
+        for kind,value in values.items():
+            desc=f'{kind} alert, {value} mg/dL, trend Holding steady';scroll_to(desc);assert ui.visible(desc)
+        capture('alert-logbook-large-text');checks['allFourBadgeReadingsReachableAtTwoHundredPercent']=True
+        apk=ui.adb('shell','pm','path','com.khaleel.glance').strip().removeprefix('package:')
+        report={'synthetic':True,'device':'API 36 emulator','checks':checks,'allPassed':True,'fixtureApkSha256':ui.adb('shell','sha256sum',apk).split()[0],
+            'sourceCommitAtRun':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'sourceDirtyAtRun':bool(subprocess.check_output(['git','status','--porcelain'],text=True).strip()),
+            'scope':'Production Logbook/Settings with synthetic stored alert categories; screenshot pixel checks; no source/alarm evaluation or live account','SamsungOneUI':'not tested','TalkBack':'not tested'}
+        (ui.EVIDENCE/'api36-alert-badges-0.28.0.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(checks))
+    finally:
+        for key,val in old.items():ui.adb('shell','settings','put','system',key,val)
+
+if __name__=='__main__':
+    alerts_main() if '--alerts' in sys.argv else main()

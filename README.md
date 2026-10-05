@@ -7,11 +7,14 @@ foreground monitoring service, and silent notification are integrated. Synthetic
 tests and API 36 emulator lifecycle checks pass. Live follower-account and
 Galaxy S25 Ultra behavior remain unverified.
 
-Version 0.28.0 retains a smaller droplet logo, a black background and graphite
-cards. Settings → Appearance → Accent color offers seven presets for the controls
-and matching in-app, home-screen and launch-splash droplet. The current glucose number is larger and green in range,
-red below Low, or yellow above High. Only the number is color coded; its timestamp,
-unit, trend and supporting text stay neutral. Old readings retain their warnings
+Version 0.29.0 makes the top reading card taller and fills it with its fresh
+reading's range color: green in range, red below Low or yellow above High. Dark
+text keeps the value, unit, arrow, source time and change readable. The card has
+a 196dp minimum height, more padding, and a 56sp value; it grows and scrolls
+with large text. The smaller droplet logo, black app background and graphite
+supporting cards remain. Settings → Appearance → Accent color offers seven
+presets for controls and matching in-app, home-screen and launch-splash droplets.
+Old readings retain their warnings
 and a neutral number. No custom wheel or hex entry is exposed. Logbook uses Libre-style red badges for
 Low/Urgent Low and yellow badges for High/Urgent High, preserving the original
 alert category and source time. The reading card
@@ -26,7 +29,8 @@ keeps the category and source reading/time that triggered it. Ongoing and enhanc
 notifications also retain eligible number icons. Keep notification visible
 protects the reading card from Clear all and restores it after individual swipes.
 
-See [0.28 verification](docs/refinement-028-validation.md) and
+See [0.29 card verification](docs/reading-card-029-validation.md),
+[0.28 verification](docs/refinement-028-validation.md) and
 [0.27 notification verification](docs/notification-027-validation.md).
 
 The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN

@@ -2,6 +2,19 @@
 
 Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
 
+## 0.29.0 taller range-filled reading card
+
+The current-reading hero now fills green/red/yellow according to the unchanged
+fresh source range gate, with dark text verified at at least 7:1 contrast.
+It has a 196dp minimum height, more padding and a 56sp value, retaining growth,
+wrapping and portrait/landscape scrolling. Delayed/stale/invalid/absent states
+retain neutral presentation and source warnings/time. Integrated debug assembly,
+226 phone tests and debug lint with zero errors pass. Thirteen focused API36 native checks pass, including 200% portrait/landscape
+reachability; source review is tracked; final results/fixture hashes are recorded in
+[reading-card-029-validation.md](reading-card-029-validation.md). No physical or
+live qualification is inferred. Generated release manifests record clean signing
+and source delivery separately.
+
 ## 0.28.0 reading colors, accents and Libre-style alerts
 
 The integrated production code passes 226 phone JVM tests, debug assembly and

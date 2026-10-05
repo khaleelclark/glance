@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
 Glance uses application ID `com.khaleel.glance`, versionCode `33`, and versionName
-`0.28.0`. The Android Studio project is the root of this repository. The private
+`0.29.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -59,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.28.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.29.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -477,3 +477,19 @@ Launcher updates use native aliases and preserve explicit MainActivity notificat
 intents. Android themed monochrome icons follow system tint; OEM launcher caches
 may update later. API36 switching/startup/splash is verified with synthetic debug
 fixtures; API30/32 and Samsung cache behavior remain unverified.
+
+
+## 0.29.0 taller range-colored reading card
+
+The owner requested the whole reading card background match the applicable
+value color and the section be larger/taller. Fresh in-range readings fill the
+card green, Low red and High yellow; dark text preserves contrast for the value,
+unit, arrow, source time, trend description and actual delta. The source-based
+currentReadingBand gate is unchanged. Delayed/stale/invalid/absent observations
+remain neutral graphite with their existing warning/source time.
+
+The card has a 196dp minimum height, 24dp vertical padding and 10dp spacing,
+with a 56sp/64sp value. It grows rather than clipping at large text, and existing
+FlowRow wrapping/portrait and landscape scrolling remain. Accent presets,
+launcher/splash, Logbook badges and notification/source behavior are unchanged.
+See reading-card-029-validation.md for checks and fixture/release boundaries.

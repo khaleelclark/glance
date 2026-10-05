@@ -462,3 +462,12 @@ and graphite surfaces. Old custom values remain stored, but unsupported values
 fall back to Lilac until a new preset is selected. New/reset settings use Lilac.
 No wheel or arbitrary hex editor is exposed. See refinement-028-validation.md
 for exact validation boundaries and native launcher behavior.
+
+
+The additional Logbook request uses Libre-style colored reading badges: red with
+burgundy for Low/Urgent Low, amber/yellow for High/Urgent High. Unit and original
+source trend stay inside the badge; event category, person, source and posting
+times remain explicit. Colors belong to the saved event category and cannot be
+reinterpreted by later thresholds, accents or the current reading. Settings alert
+labels use the same red/yellow families. Alert engine/notification delivery and
+historical event values are unchanged.

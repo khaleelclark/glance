@@ -45,7 +45,10 @@ marker = 'files/studio-upgrade-synthetic-marker.txt'
 run('shell', 'run-as', 'com.khaleel.glance', 'touch', marker)
 try:
     run('shell', 'am', 'force-stop', 'com.khaleel.glance')
-    failed = run('shell', 'am', 'start', '-W', '-n', 'com.khaleel.glance/.LauncherLilac')
+    failed_result = subprocess.run(adb + ['shell', 'am', 'start', '-W', '-n',
+        'com.khaleel.glance/.LauncherLilac'], text=True, capture_output=True, timeout=60)
+    failed = failed_result.stdout + failed_result.stderr
+    assert failed_result.returncode != 0, failed
     assert 'Error type 3' in failed and 'does not exist' in failed, failed
     assert 'Success' in run('install', '-r', str(apk))
     assert settings() == before

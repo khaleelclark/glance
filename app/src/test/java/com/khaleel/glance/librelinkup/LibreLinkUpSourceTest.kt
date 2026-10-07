@@ -75,6 +75,39 @@ class LibreLinkUpSourceTest {
     }
 
     @Test
+    fun `mixed shape graph duplicates preserve provider precision in either order`() = runBlocking {
+        val full = """{"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":69,"GlucoseUnits":0,"Value":3.9,"TrendArrow":3}"""
+        val minimal = """{"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":69}"""
+        for (rows in listOf("$full,$minimal", "$minimal,$full")) {
+            val json = fixture("graph_current_mgdl.json").substringBefore("\"graphData\"") + "\"graphData\":[$rows]}}"
+            bootstrap.enqueue(jsonResponse(json))
+            val snapshot = source().snapshot(session(), "synthetic-patient-1").successValue<SourceSnapshot>()
+            val reading = snapshot.history.single()
+            assertEquals(3.9, reading.sourceValue!!, 0.0)
+            assertEquals(GlucoseUnit.MMOL_L, reading.sourceUnit)
+            assertEquals("3.9", GlucoseFormat.value(reading, GlucoseUnit.MMOL_L, Locale.US))
+            assertEquals(if (rows.startsWith(full)) Trend.UNKNOWN else Trend.STEADY, reading.trend)
+            assertEquals(112.0, snapshot.current.valueMgDl!!, 0.0)
+        }
+    }
+
+    @Test
+    fun `corrected minimal duplicate invalidates earlier provider display value`() = runBlocking {
+        val rows = """[
+          {"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":69,"GlucoseUnits":0,"Value":3.9},
+          {"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":70}
+        ]"""
+        val json = fixture("graph_current_mgdl.json").substringBefore("\"graphData\"") + "\"graphData\":$rows}}"
+        bootstrap.enqueue(jsonResponse(json))
+        val snapshot = source().snapshot(session(), "synthetic-patient-1").successValue<SourceSnapshot>()
+        val reading = snapshot.history.single()
+        assertEquals(70.0, reading.valueMgDl!!, 0.0)
+        assertNull(reading.sourceValue)
+        assertEquals(GlucoseUnit.MG_DL, reading.sourceUnit)
+        assertEquals(Trend.UNKNOWN, reading.trend)
+    }
+
+    @Test
     fun `full day of minute backfill survives adapter and history merge instead of 300 row truncation`() = runBlocking {
         val current = clock.now()
         val format = DateTimeFormatter.ofPattern("M/d/uuuu h:mm:ss a", Locale.US).withZone(ZoneOffset.UTC)

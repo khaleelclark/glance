@@ -297,7 +297,11 @@ class LibreLinkUpSource private constructor(
         val history = data.values["graphData"]?.asArray()?.values.orEmpty()
             .mapNotNull { it.asObject()?.let { item -> parseHistoryMeasurement(item, connectionId) } }
             .filter { it.measuredAt.isBefore(current.measuredAt) }
-            .associateBy { it.measuredAt }
+            .fold(linkedMapOf<Instant, Reading>()) { byTime, reading ->
+                byTime[reading.measuredAt] = com.khaleel.glance.data.ReadingHistory
+                    .preserveReportedValue(byTime[reading.measuredAt], reading)
+                byTime
+            }
             .values
             .sortedBy { it.measuredAt }
             .takeLast(com.khaleel.glance.data.ReadingHistory.MAX_POINTS)

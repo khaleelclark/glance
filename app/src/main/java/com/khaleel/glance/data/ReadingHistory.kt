@@ -25,12 +25,16 @@ object ReadingHistory {
                 reading.valueMgDl?.let { !it.isFinite() || it <= 0.0 } != false
             ) continue
             val previous = byTime[reading.measuredAt]
-            // Minimal backfill must not erase a captured provider display value at the
-            // same timestamp. A corrected canonical value invalidates that old metadata.
-            byTime[reading.measuredAt] = if (reading.sourceValue == null &&
-                previous?.sourceValue != null && previous.valueMgDl == reading.valueMgDl
-            ) reading.copy(sourceValue = previous.sourceValue, sourceUnit = previous.sourceUnit) else reading
+            byTime[reading.measuredAt] = preserveReportedValue(previous, reading)
         }
         return byTime.values.sortedBy { it.measuredAt }.takeLast(MAX_POINTS)
     }
+
+    // Minimal backfill must not erase genuine provider display metadata, including
+    // duplicates within the first response. A canonical correction invalidates it.
+    internal fun preserveReportedValue(previous: Reading?, incoming: Reading): Reading =
+        if (incoming.sourceValue == null && previous?.sourceValue != null &&
+            previous.connectionId == incoming.connectionId &&
+            previous.measuredAt == incoming.measuredAt && previous.valueMgDl == incoming.valueMgDl
+        ) incoming.copy(sourceValue = previous.sourceValue, sourceUnit = previous.sourceUnit) else incoming
 }

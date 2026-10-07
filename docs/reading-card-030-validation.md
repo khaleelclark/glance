@@ -41,9 +41,20 @@ and live payload shape on the owner's phone remain unknown. See protocol.md
 for exact primary-source contracts and limitations; no fixed provider cadence
 or guaranteed recovery of every missing minute is claimed.
 
+Final history source review of 660775f found no HIGH/MEDIUM regression and one
+LOW: a full/minimal duplicate within the first response could discard genuine
+provider display precision before reaching storage. Correction 3aefcbd shares
+the guarded display-metadata rule with adapter deduplication. Two new tests
+verify both duplicate orders retain provider 3.9 mmol/L for canonical 69 mg/dL,
+missing trend stays UNKNOWN, and a corrected canonical value clears old display
+metadata. All 236 phone tests, debug assembly and zero debug lint errors pass.
+The bounded correction review is tracked. Earlier native fixtures retain their
+recorded source/hash boundaries; this correction does not change presentation,
+chart capacity, storage encoding, polling or source field validation.
+
 Two additional controller regression tests exercise repeated equal readings,
 sparse backfill, duplicate source times, controller recreation, and a real hour
-gap without invented samples. The corrected candidate passes 234 phone tests,
+gap without invented samples. The corrected candidate passes 236 phone tests,
 zero failures/errors/skips, debug assembly and zero debug lint errors. Six added
 adapter/merge tests cover minimal and mixed-unit history, a full 1,440-row minute
 backfill plus current reading, invalid times/values and duplicates, strict
@@ -83,8 +94,8 @@ Root visually inspected the fresh card and both large-text orientations; the
 landscape summary scrolls independently and lower content remains legible.
 The receipt records the complete run, clean fixture source and no reused checks.
 The presentation source review of bea5cdf found no HIGH/MEDIUM regression or
-concrete LOW. A final source review covering corrective history commit 660775f
-is tracked; the earlier UI review does not qualify the later source/data change.
+concrete LOW. The history review and remaining bounded correction review are
+recorded above; the earlier UI review does not qualify the history changes.
 Native screens use
 debug synthetic data; final signed APKs are checked separately. Samsung layout,
 live-source cadence, TalkBack, overnight/battery and physical-watch qualification

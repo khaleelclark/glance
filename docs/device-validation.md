@@ -6,7 +6,7 @@ Status: work in progress; no live follower account or Galaxy S25 Ultra has been 
 
 The reading card uses #22C55E green with dark text above 7:1 contrast. The normal
 minimum height is 176dp, with a larger 60sp number and larger supporting fonts.
-234 phone unit tests pass after the history-import correction; debug assembly
+236 phone unit tests pass after the history-import correction; debug assembly
 and lint have zero errors. Thirteen
 focused API36 synthetic checks pass, including exact range/neutral colors,
 176dp observed heights and 200% portrait/landscape content reachability.

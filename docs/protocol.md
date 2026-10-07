@@ -380,7 +380,10 @@ verified offset. History must precede current source time; sorting, correction
 deduplication and future-time checks remain. Adapter/load/merge share the
 1,500-point bound rather than truncating graph imports to 300. A same-timestamp,
 same-canonical minimal row preserves a previously captured reported value/unit;
-a changed canonical correction cannot inherit that old reported value.
+a changed canonical correction cannot inherit that old reported value. The same
+rule applies during adapter deduplication within the first graph response, so
+full/minimal duplicate order cannot discard genuine provider display precision.
+A later full row wins; a later missing trend remains UNKNOWN.
 
 The [nightscout-connect source notes](https://github.com/nightscout/nightscout-connect/blob/4dde1ecdcad1fd923e69d458e5e2faa7bc78e4f1/README.md#L365-L369)
 describe delayed graph backfill with a bounded returned window and no requested

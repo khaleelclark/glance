@@ -30,6 +30,12 @@ keeps the category and source reading/time that triggered it. Ongoing and enhanc
 notifications also retain eligible number icons. Keep notification visible
 protects the reading card from Clear all and restores it after individual swipes.
 
+Version 0.30 also fixes historical imports: minimal LibreLinkUp graph rows no
+longer need fields belonging to the full current reading, and the import bound
+matches the 1,500-point store. Every distinct received source timestamp remains
+saved for up to 24 hours, including repeated values. Backfill cannot recover
+measurements the source does not return; no intermediate readings are invented.
+
 See [0.30 card and history verification](docs/reading-card-030-validation.md),
 [0.29 card verification](docs/reading-card-029-validation.md),
 [0.28 verification](docs/refinement-028-validation.md) and

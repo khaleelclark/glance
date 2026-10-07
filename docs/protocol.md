@@ -351,12 +351,43 @@ Field handling:
 | `isHigh`, `isLow` | Provider booleans whose precise distinction between range flags and special HI/LO display values is not established by the pinned client. Do not invent a precise number or map them to `HIGH`/`LOW` until a live source comparison verifies semantics. |
 | `type`, `TrendMessage`, `MeasurementColor` | Observed but not required for the version-1 reading model. Tolerate and ignore unless later evidence assigns a needed meaning. |
 
-The current measurement and graph samples share the measurement fields, but
-they serve different purposes. `connection.glucoseMeasurement` is the latest
+The current measurement and graph samples serve different purposes and do not
+necessarily contain the same fields. `connection.glucoseMeasurement` is the latest
 snapshot; `graphData` is bounded history and may omit the latest sample, contain
 duplicates, or arrive in an unspecified order. Normalize each independently,
 sort validated history by canonical UTC time, deduplicate deterministically,
 and never let an older graph item replace a newer current reading.
+
+### History field correction, 7 October 2026 (0.30)
+
+Released Glance used the strict current-measurement parser for graph rows,
+requiring `GlucoseUnits` and `Value`; that rejects valid minimal historical
+rows. Current GlucoDataHandler revision
+[`215b2f071f86942a5b9714cbf88808a71708a33f`](https://github.com/pachi81/GlucoDataHandler/blob/215b2f071f86942a5b9714cbf88808a71708a33f/common/src/main/java/de/michelinside/glucodatahandler/common/tasks/LibreLinkSourceTask.kt#L444-L461)
+uses the timestamp and canonical `ValueInMgPerDl` for graph data. A
+[nightscout-connect regression fixture](https://github.com/nightscout/nightscout-connect/blob/4dde1ecdcad1fd923e69d458e5e2faa7bc78e4f1/test/librelinkup.test.js#L138-L157)
+at `4dde1ecdcad1fd923e69d458e5e2faa7bc78e4f1` explicitly contains only those two
+fields in a historical row. This is primary implementation evidence of a
+supported minimal shape, not observation of the owner's live response.
+
+Glance 0.30 keeps current parsing strict. Graph rows require a valid canonical
+factory UTC timestamp and positive, finite integer mg/dL value <=1,000. A full
+valid row retains its reported display value/unit. A minimal row has
+`sourceValue = null`, canonical `sourceUnit = MG_DL`; display conversion uses
+the genuine canonical value. Missing/unsupported trend remains UNKNOWN.
+The source-local `Timestamp` fallback remains rejected because it lacks a
+verified offset. History must precede current source time; sorting, correction
+deduplication and future-time checks remain. Adapter/load/merge share the
+1,500-point bound rather than truncating graph imports to 300. A same-timestamp,
+same-canonical minimal row preserves a previously captured reported value/unit;
+a changed canonical correction cannot inherit that old reported value.
+
+The [nightscout-connect source notes](https://github.com/nightscout/nightscout-connect/blob/4dde1ecdcad1fd923e69d458e5e2faa7bc78e4f1/README.md#L365-L369)
+describe delayed graph backfill with a bounded returned window and no requested
+date range. Neither this nor the examined client code establishes a guaranteed
+one-minute or fifteen-minute history cadence. The owner's recording shows
+coarser older segments and denser recent samples, but source keys/counts/timestamp
+deltas and actual device poll timings are needed to attribute particular gaps.
 
 The adapter must propagate source measurement time separately from HTTP receipt
 time. A successful response containing the same timestamp is a duplicate: it

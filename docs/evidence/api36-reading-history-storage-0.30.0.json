@@ -6,7 +6,11 @@
   "sparseBackfillDoesNotEraseCapturedMinuteSamples": true,
   "duplicateSourceTimesDoNotAddSamples": true,
   "plaintextSyntheticIdentityAbsent": true,
+  "minimalCanonicalHistoryEncryptedRoundTrip": true,
+  "minimalBackfillPreservesCapturedReportedValues": true,
+  "missingHistoryTrendsRemainUnknown": true,
   "device": "API36 emulator",
-  "sourceCommitAtRun": "e297c977e0da12cdb1c4602a8ef096ccbe6d3b66",
-  "fixtureApkSha256": "486a1c7485de40f112be27085082756238e96c71e3af3d4253fb94bd442de776"
+  "sourceCommitAtRun": "6b5fca7d80975bc8b647cc4b8012815eb9097afc",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "c171e6b46213bb714b198d3384fbf67ce3d9cf147910b81f0ea0fbb24eede65d"
 }

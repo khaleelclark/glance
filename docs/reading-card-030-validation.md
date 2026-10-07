@@ -27,15 +27,48 @@ saved numeric points; inspection selects the nearest real source timestamp.
 Duplicate responses cannot create another reading at a new minute, and the app
 cannot reconstruct samples absent from both polling and source graph history.
 
+The protocol specialist's follow-up established a concrete importer defect,
+separate from the successful storage checks: minimal graph rows can omit the
+GlucoseUnits/Value fields required by the strict current parser, and released
+Glance used that parser for history too. The adapter also truncated valid graph
+imports to 300. Corrective production commit 660775f accepts canonical minimal
+history with a valid factory timestamp/value, preserves full valid metadata,
+leaves missing trends UNKNOWN, keeps current parsing strict, and shares the
+1,500-point cap with merge/loading. Same-time minimal backfill preserves an
+already captured reported value/unit only if its canonical value is unchanged;
+canonical corrections invalidate the older reported value. Source/poll timing
+and live payload shape on the owner's phone remain unknown. See protocol.md
+for exact primary-source contracts and limitations; no fixed provider cadence
+or guaranteed recovery of every missing minute is claimed.
+
 Two additional controller regression tests exercise repeated equal readings,
 sparse backfill, duplicate source times, controller recreation, and a real hour
-gap without invented samples. All 228 phone tests pass. The isolated Android
+gap without invented samples. The corrected candidate passes 234 phone tests,
+zero failures/errors/skips, debug assembly and zero debug lint errors. Six added
+adapter/merge tests cover minimal and mixed-unit history, a full 1,440-row minute
+backfill plus current reading, invalid times/values and duplicates, strict
+current-only required fields, reported-value preservation and corrected values.
+The isolated Android
 storage probe at e297c97 round-trips 1,440 same-value readings at distinct minute
 timestamps through the production LocalStateStore and SecureFileStore, reopens
 the store, and merges sparse samples without discarding captured readings.
+The expanded probe at 6b5fca7 also reopens 1,440 canonical rows with null
+reported display values, verifies minimal backfill preserves previously
+captured display values, and leaves missing historical trends UNKNOWN.
 It verifies encrypted storage and clears its isolated synthetic namespace.
 Receipt: evidence/api36-reading-history-storage-0.30.0.json. These checks do not
 prove what happened during a specific missing interval on the owner's phone.
+
+At 8f6fb60, a separate native chart profile passes all three checks: all 1,440
+minute samples reach the production chart, the independent current reading
+remains 113, and the three-hour preset remains actionable. History uses integer
+canonical values, null reported display values and UNKNOWN historical trends.
+Receipt: evidence/api36-minute-history-chart-0.30.0.json; the installed debug APK
+SHA256 is 54c613025199b89d372c229745b49a10699e653937fecbe3c2d0b382b314de86.
+Root inspected the screenshot. The first ad hoc driver encountered the restored
+emulator notification shade; the final repeatable driver explicitly dismisses
+system overlays before launching the fixture. This is synthetic chart capacity
+qualification, not evidence of live provider cadence.
 
 ## Verification boundaries
 
@@ -49,7 +82,9 @@ remain actionable, and Settings remains accessible in portrait and landscape.
 Root visually inspected the fresh card and both large-text orientations; the
 landscape summary scrolls independently and lower content remains legible.
 The receipt records the complete run, clean fixture source and no reused checks.
-Independent read-only source and protocol investigation results are tracked.
+The presentation source review of bea5cdf found no HIGH/MEDIUM regression or
+concrete LOW. A final source review covering corrective history commit 660775f
+is tracked; the earlier UI review does not qualify the later source/data change.
 Native screens use
 debug synthetic data; final signed APKs are checked separately. Samsung layout,
 live-source cadence, TalkBack, overnight/battery and physical-watch qualification

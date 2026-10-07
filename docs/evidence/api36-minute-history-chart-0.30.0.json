@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "device": "API36 emulator",
+  "sourceCommitAtRun": "8f6fb609eb05d01318d4be29149e749c2241d0fb",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "54c613025199b89d372c229745b49a10699e653937fecbe3c2d0b382b314de86",
+  "checks": {
+    "all1440MinuteSamplesReachProductionChart": true,
+    "currentReadingStill113": true,
+    "threeHourPresetStillActionableWithFullDayHistory": true
+  },
+  "scope": "Synthetic integer canonical history with unknown historical trends in production chart; source adapter separately tested with mocked responses; no live cadence claim"
+}

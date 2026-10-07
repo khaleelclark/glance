@@ -507,4 +507,13 @@ Glance retains distinct successfully received measurement timestamps even when
 the glucose values are identical. It merges cloud graph history with captured
 current readings, retaining up to 24 hours/1,500 samples. It cannot create minute
 measurements that were never received or supplied by the source. No monitoring
-cadence, power-management or protocol change is included in this UI refinement.
+cadence or power-management change is included in this refinement.
+
+The history investigation found and corrected two import defects: graph rows
+with only a valid factory timestamp/canonical glucose value no longer fail for
+missing current-only unit/display-value fields; the graph import bound rises
+from 300 to the shared 1,500 samples. Full valid source metadata is retained,
+missing trends remain unknown and current parsing stays strict. Refresh can
+import valid samples still returned by the provider; it cannot recover source
+rows outside the returned window. Their absence does not justify fabricated
+minute readings. Exact device/source cadence remains unverified.

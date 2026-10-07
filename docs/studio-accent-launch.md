@@ -36,4 +36,15 @@ corrected version checks both that status and Error type 3 before continuing.
 This evidence uses a dedicated synthetic emulator and equivalent Android launch
 intents, not an interactive Studio session or the owner's Samsung phone. No app
 runtime, manifest, source/import behavior, versions or signing keys change in
-this project-configuration fix. Independent source review is tracked.
+this project-configuration fix.
+
+Independent read-only review of exact
+`2eb968891b0d598997b75222ce8ae1e7b9553039` over released `12919d6` confirms
+the shared configuration and recovery instructions, with no HIGH/MEDIUM
+regression. Its sole LOW concerns the original driver's expected nonzero
+failed-launch status. Root's already committed correction at exact `61f6e01`
+captures that one failure without checked execution, asserts nonzero plus both
+Error type 3 and `does not exist`, and keeps all other adb commands strict.
+The corrected clean-source native receipt above passes all four checks. Root
+closes the driver finding on that source and runtime evidence; this correction
+is not claimed independently reviewed. Only documentation/evidence follow it.

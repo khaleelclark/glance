@@ -39,6 +39,12 @@ internal fun runReadingHistoryStorageProbe(context: Context): JSONObject {
         check(!disk.toString(Charsets.ISO_8859_1).contains(person.id))
         store.save(restored.copy(history = merged))
         check(LocalStateStore(SecureFileStore(isolated)).load().history == readings)
+        val minimal = readings.map { it.copy(sourceValue = null, trend = Trend.UNKNOWN) }
+        store.save(StoredPatientState(person, minimal.last(), minimal))
+        check(LocalStateStore(SecureFileStore(isolated)).load().history == minimal)
+        val richMerge = ReadingHistory.merge(readings, minimal, person.id, now)
+        check(richMerge.map { it.sourceValue } == readings.map { it.sourceValue })
+        check(richMerge.all { it.trend == Trend.UNKNOWN })
         return JSONObject().apply {
             put("synthetic", true)
             put("minuteSamplesPersisted", readings.size)
@@ -47,6 +53,9 @@ internal fun runReadingHistoryStorageProbe(context: Context): JSONObject {
             put("sparseBackfillDoesNotEraseCapturedMinuteSamples", true)
             put("duplicateSourceTimesDoNotAddSamples", true)
             put("plaintextSyntheticIdentityAbsent", true)
+            put("minimalCanonicalHistoryEncryptedRoundTrip", true)
+            put("minimalBackfillPreservesCapturedReportedValues", true)
+            put("missingHistoryTrendsRemainUnknown", true)
         }
     } finally {
         store.clear()

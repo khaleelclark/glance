@@ -88,14 +88,16 @@ class DebugUiActivity : ComponentActivity() {
                 "high" -> 250.0
                 else -> 113.0
             } else 150 + 105 * kotlin.math.sin(step / 9.0)
+            val canonicalValue = if (mode == "minuteHistory") Math.rint(value) else value
             val ageSeconds = when (mode) { "stale" -> 1200L; "delayed" -> 420L; "invalidTime" -> -600L; "justNow" -> 15L; else -> 60L }
-            Reading("synthetic", now.minusSeconds((lastStep - step) * stepSeconds + ageSeconds), value,
-                value.takeUnless { mode == "minuteHistory" },
-                GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
+            Reading("synthetic", now.minusSeconds((lastStep - step) * stepSeconds + ageSeconds), canonicalValue,
+                canonicalValue.takeUnless { mode == "minuteHistory" },
+                GlucoseUnit.MG_DL, null, if (mode == "minuteHistory") Trend.UNKNOWN else Trend.STEADY,
+                "synthetic-$step", now)
         }
         val reading = history.last().let {
             when (mode) {
-                "minuteHistory" -> it.copy(sourceValue = it.valueMgDl)
+                "minuteHistory" -> it.copy(sourceValue = it.valueMgDl, trend = Trend.STEADY)
                 "sourceLow" -> it.copy(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.LOW)
                 "sourceHigh" -> it.copy(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.HIGH)
                 else -> it

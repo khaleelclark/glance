@@ -203,32 +203,32 @@ private fun ReadingHero(state: DisplayState, settings: UserSettingsUi, text: Gla
     val background = readingValueColor(band, scheme.surfaceContainerLow)
     val content = if (band == null) scheme.onSurface else Color(0xFF15151A)
     val secondary = if (band == null) scheme.onSurfaceVariant else content
-    Surface(Modifier.fillMaxWidth().heightIn(min = 196.dp).animateContentSize(), GlanceShapes.extraLarge,
+    Surface(Modifier.fillMaxWidth().heightIn(min = 176.dp).animateContentSize(), GlanceShapes.extraLarge,
         background, contentColor = content) {
-        Column(Modifier.padding(horizontal = 22.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)) {
             Text(reading?.measured ?: "Waiting for first reading",
-                style = MaterialTheme.typography.labelMedium, color = secondary)
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp, lineHeight = 20.sp), color = secondary)
             if (reading == null) {
                 Text("No reading yet", style = MaterialTheme.typography.headlineLarge)
                 Text("Glance is waiting for LibreLinkUp.", color = secondary)
             } else {
                 if (state.freshness != ReadingFreshness.FRESH) {
-                    Text(reading.freshness, style = MaterialTheme.typography.labelMedium)
+                    Text(reading.freshness, style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp, lineHeight = 20.sp))
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(reading.value, style = MaterialTheme.typography.displayMedium.copy(fontSize = 56.sp, lineHeight = 64.sp),
+                    Text(reading.value, style = MaterialTheme.typography.displayMedium.copy(fontSize = 60.sp, lineHeight = 66.sp),
                         color = content, modifier = Modifier.alignByBaseline().semantics {
                             band?.let { stateDescription = readingBandLabel(it) }
                         })
-                    Text(reading.unit, style = MaterialTheme.typography.titleMedium, modifier = Modifier.alignByBaseline())
+                    Text(reading.unit, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 24.sp), modifier = Modifier.alignByBaseline())
                     if (reading.trendSymbol.isNotBlank()) Text(reading.trendSymbol,
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp, lineHeight = 42.sp),
                         modifier = Modifier.alignByBaseline().semantics { contentDescription = "Trend ${reading.trendDescription}" })
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(reading.trendDescription, style = MaterialTheme.typography.bodyMedium)
-                    delta?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    Text(reading.trendDescription, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 22.sp))
+                    delta?.let { Text(it, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 16.sp, lineHeight = 22.sp)) }
                 }
             }
         }

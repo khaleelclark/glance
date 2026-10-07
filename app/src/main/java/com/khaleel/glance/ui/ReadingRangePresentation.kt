@@ -45,7 +45,7 @@ internal fun readingRangePalette(band: ChartBand?): ReadingRangePalette {
 
 /** Semantic glucose colors are independent of the user-selected control accent. */
 internal fun readingValueColor(band: ChartBand?, neutral: Color): Color = when (band) {
-    ChartBand.IN_RANGE -> Color(0xFF8BDC9F)
+    ChartBand.IN_RANGE -> Color(0xFF22C55E)
     ChartBand.LOW -> Color(0xFFFF9B9B)
     ChartBand.HIGH -> Color(0xFFFFD967)
     null -> neutral

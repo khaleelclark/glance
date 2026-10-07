@@ -44,7 +44,7 @@ class GlanceThemeTest {
     @Test fun semanticGlucoseColorsStayIndependentOfAccentAndKeepNeutralFallback() {
         val neutral = ThemeAccent.scheme().onSurface
         assertEquals(neutral, readingValueColor(null, neutral))
-        assertEquals(Color(0xFF8BDC9F), readingValueColor(ChartBand.IN_RANGE, neutral))
+        assertEquals(Color(0xFF22C55E), readingValueColor(ChartBand.IN_RANGE, neutral))
         assertEquals(Color(0xFFFF9B9B), readingValueColor(ChartBand.LOW, neutral))
         assertEquals(Color(0xFFFFD967), readingValueColor(ChartBand.HIGH, neutral))
         for (band in ChartBand.entries) {

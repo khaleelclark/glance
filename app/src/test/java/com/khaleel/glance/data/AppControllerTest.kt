@@ -427,6 +427,46 @@ class AppControllerTest {
         assertEquals(start.minusSeconds(660), controller.display.value.history.first().measuredAt)
     }
 
+    @Test fun minuteSamplesSurviveEqualValuesSparseBackfillDuplicatePollsAndRecreation() = runBlocking {
+        val clock = FakeClock(start)
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick, clock.now().minusSeconds(60))) }.apply {
+            snapshotHistory = listOf(reading(patrick, start.minusSeconds(1800)), reading(patrick, start.minusSeconds(900)))
+        }
+        val patient = MemoryPatient()
+        val settings = MemorySettings()
+        val first = controller(source, patient, settings, clock)
+        first.selectPerson(patrick)
+        val observedTimes = (0..5).map {
+            first.poll()
+            val time = clock.now().minusSeconds(60)
+            clock.advanceMillis(60_000)
+            time
+        }
+        assertEquals(8, patient.state.history.size)
+        assertTrue(patient.state.history.map { it.measuredAt }.containsAll(observedTimes))
+        val restored = controller(source, patient, settings, clock)
+        assertEquals(patient.state.history, restored.display.value.history)
+        // Repeated HTTP success with one source time must not create artificial minute samples.
+        restored.poll()
+        val stored = patient.state.history
+        restored.poll()
+        assertEquals(stored, patient.state.history)
+        assertEquals(9, patient.state.history.size)
+        assertTrue(patient.state.history.map { it.measuredAt }.containsAll(observedTimes))
+    }
+
+    @Test fun missingPollsKeepRealHistoryWithoutInventingMeasurementsInTheGap() = runBlocking {
+        val clock = FakeClock(start)
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick, clock.now().minusSeconds(60))) }
+        val patient = MemoryPatient()
+        val controller = controller(source, patient, clock = clock)
+        controller.selectPerson(patrick)
+        controller.poll()
+        clock.advanceMillis(60 * 60_000)
+        controller.poll()
+        assertEquals(listOf(start.minusSeconds(60), start.plusSeconds(3540)), patient.state.history.map { it.measuredAt })
+    }
+
     @Test fun nicknameIsNormalizedAndChangesDisplayIdentityOnly() = runBlocking {
         val patient = MemoryPatient()
         val nicknames = MemoryNicknames()

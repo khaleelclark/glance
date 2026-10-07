@@ -1,0 +1,20 @@
+{
+  "status": 0,
+  "data": {
+    "connection": {
+      "glucoseMeasurement": {
+        "FactoryTimestamp": "9/27/2026 4:42:00 AM",
+        "ValueInMgPerDl": 112,
+        "TrendArrow": 3,
+        "GlucoseUnits": 1,
+        "Value": 112
+      }
+    },
+    "graphData": [
+      {"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":108,"TrendArrow":4},
+      {"FactoryTimestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":104},
+      {"FactoryTimestamp":"9/27/2026 4:27:00 AM","ValueInMgPerDl":99,"TrendArrow":9},
+      {"FactoryTimestamp":"9/27/2026 4:22:00 AM","ValueInMgPerDl":95,"GlucoseUnits":0,"Value":5.3,"TrendArrow":3}
+    ]
+  }
+}

@@ -35,7 +35,7 @@ class LocalStateStore(private val encrypted: SecureFileStore) : PatientPersisten
                 Duration.between(it.measuredAt, Instant.now()) < Duration.ofHours(24)
         }
         val storedHistory = value.optJSONArray("history")?.let { items ->
-            (0 until minOf(items.length(), 1500)).mapNotNull { index ->
+            (0 until minOf(items.length(), ReadingHistory.MAX_POINTS)).mapNotNull { index ->
                 items.optJSONObject(index)?.let { runCatching { readingFromJson(it) }.getOrNull() }
             }
         }.orEmpty()

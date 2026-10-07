@@ -3,6 +3,8 @@ package com.khaleel.glance.librelinkup
 import com.khaleel.glance.core.Clock
 import com.khaleel.glance.core.Credentials
 import com.khaleel.glance.core.GlucoseUnit
+import com.khaleel.glance.core.GlucoseFormat
+import com.khaleel.glance.data.ReadingHistory
 import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceErrorKind
 import com.khaleel.glance.core.SourceResult
@@ -11,6 +13,9 @@ import com.khaleel.glance.core.SourceResponseFormat
 import com.khaleel.glance.core.SourceResponseInfo
 import com.khaleel.glance.core.Trend
 import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -50,6 +55,74 @@ class LibreLinkUpSourceTest {
             listOf("2026-09-27T04:32:00Z", "2026-09-27T04:37:00Z"),
             snapshot.history.map { it.measuredAt.toString() },
         )
+    }
+
+    @Test
+    fun `minimal graph rows retain canonical values without inventing display values or trends`() = runBlocking {
+        bootstrap.enqueue(jsonResponse(fixture("graph_minimal_history.json")))
+        val snapshot = source().snapshot(session(), "synthetic-patient-1").successValue<SourceSnapshot>()
+        assertEquals(112.0, snapshot.current.sourceValue!!, 0.0)
+        assertEquals(Trend.STEADY, snapshot.current.trend)
+        assertEquals(listOf(95.0, 99.0, 104.0, 108.0), snapshot.history.map { it.valueMgDl })
+        assertEquals(listOf(Trend.STEADY, Trend.UNKNOWN, Trend.UNKNOWN, Trend.RISING), snapshot.history.map { it.trend })
+        assertEquals(5.3, snapshot.history.first().sourceValue!!, 0.0)
+        assertEquals(GlucoseUnit.MMOL_L, snapshot.history.first().sourceUnit)
+        val minimal = snapshot.history[2]
+        assertNull(minimal.sourceValue)
+        assertEquals(GlucoseUnit.MG_DL, minimal.sourceUnit)
+        assertEquals("104", GlucoseFormat.value(minimal, GlucoseUnit.MG_DL, Locale.US))
+        assertEquals("5.8", GlucoseFormat.value(minimal, GlucoseUnit.MMOL_L, Locale.US))
+    }
+
+    @Test
+    fun `full day of minute backfill survives adapter and history merge instead of 300 row truncation`() = runBlocking {
+        val current = clock.now()
+        val format = DateTimeFormatter.ofPattern("M/d/uuuu h:mm:ss a", Locale.US).withZone(ZoneOffset.UTC)
+        val rows = (1..1440).joinToString(",") { minute ->
+            """{"FactoryTimestamp":"${format.format(current.minusSeconds(minute * 60L))}","ValueInMgPerDl":112}"""
+        }
+        bootstrap.enqueue(jsonResponse("""{"status":0,"data":{"connection":{"glucoseMeasurement":{"FactoryTimestamp":"${format.format(current)}","ValueInMgPerDl":112,"GlucoseUnits":1,"Value":112}},"graphData":[$rows]}}"""))
+        val snapshot = source().snapshot(session(), "synthetic-patient-1").successValue<SourceSnapshot>()
+        assertEquals(1440, snapshot.history.size)
+        val merged = ReadingHistory.merge(emptyList(), snapshot.history + snapshot.current, snapshot.current.connectionId, current)
+        assertEquals(1441, merged.size)
+        assertEquals(current.minusSeconds(86400), merged.first().measuredAt)
+        assertEquals(current, merged.last().measuredAt)
+    }
+
+    @Test
+    fun `minimal history keeps timestamp and numeric validation and cannot replace current`() = runBlocking {
+        val rows = """[
+          {"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":108},
+          {"FactoryTimestamp":"9/27/2026 4:37:00 AM","ValueInMgPerDl":109},
+          {"FactoryTimestamp":"9/27/2026 4:42:00 AM","ValueInMgPerDl":999},
+          {"FactoryTimestamp":"9/27/2026 5:10:00 AM","ValueInMgPerDl":110},
+          {"FactoryTimestamp":"bad","ValueInMgPerDl":105},
+          {"Timestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":105},
+          {"FactoryTimestamp":"9/27/2026 4:32:00 AM"},
+          {"FactoryTimestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":0},
+          {"FactoryTimestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":-1},
+          {"FactoryTimestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":105.5},
+          {"FactoryTimestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":1001},
+          {"FactoryTimestamp":"9/27/2026 4:32:00 AM","ValueInMgPerDl":1e309},
+          null
+        ]"""
+        val json = fixture("graph_current_mgdl.json").substringBefore("\"graphData\"") + "\"graphData\":$rows}}"
+        bootstrap.enqueue(jsonResponse(json))
+        val snapshot = source().snapshot(session(), "synthetic-patient-1").successValue<SourceSnapshot>()
+        assertEquals(112.0, snapshot.current.valueMgDl!!, 0.0)
+        assertEquals(listOf(109.0), snapshot.history.map { it.valueMgDl })
+        assertEquals(Trend.UNKNOWN, snapshot.history.single().trend)
+    }
+
+    @Test
+    fun `history optional fields do not weaken current reading validation`() = runBlocking {
+        for (missing in listOf("GlucoseUnits", "Value")) {
+            val json = fixture("graph_current_mgdl.json").replace(Regex("\\\"$missing\\\"\\s*:\\s*[0-9.]+,?"), "")
+                .replace(Regex(",\\s*}"), "}")
+            bootstrap.enqueue(jsonResponse(json))
+            assertFailure(source().snapshot(session(), "synthetic-patient-1"), SourceErrorKind.PROTOCOL)
+        }
     }
 
     @Test

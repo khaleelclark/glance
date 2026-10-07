@@ -295,24 +295,17 @@ class LibreLinkUpSource private constructor(
         val current = parseMeasurement(measurement, connectionId)
             ?: return failure(SourceErrorKind.PROTOCOL)
         val history = data.values["graphData"]?.asArray()?.values.orEmpty()
-            .mapNotNull { it.asObject()?.let { item -> parseMeasurement(item, connectionId) } }
+            .mapNotNull { it.asObject()?.let { item -> parseHistoryMeasurement(item, connectionId) } }
             .filter { it.measuredAt.isBefore(current.measuredAt) }
             .associateBy { it.measuredAt }
             .values
             .sortedBy { it.measuredAt }
-            .takeLast(300)
+            .takeLast(com.khaleel.glance.data.ReadingHistory.MAX_POINTS)
         return SourceResult.Success(SourceSnapshot(current, history))
     }
 
     private fun parseMeasurement(measurement: JsonValue.Object, connectionId: String): Reading? {
-        val measuredAt = parseFactoryTimestamp(measurement.values["FactoryTimestamp"]?.asString())
-            ?: return null
-        if (measuredAt.isAfter(clock.now().plus(MAX_FUTURE_SKEW))) {
-            return null
-        }
-        val canonical = measurement.values["ValueInMgPerDl"]?.asNumber()?.toFiniteDouble()
-            ?.takeIf { it > 0.0 && it <= MAX_GLUCOSE_MG_DL && it == Math.rint(it) }
-            ?: return null
+        val canonical = parseCanonicalMeasurement(measurement, connectionId) ?: return null
         val unit = when (measurement.values["GlucoseUnits"]?.asNumber()?.toIntExactOrNull()) {
             0 -> GlucoseUnit.MMOL_L
             1 -> GlucoseUnit.MG_DL
@@ -320,6 +313,22 @@ class LibreLinkUpSource private constructor(
         }
         val source = measurement.values["Value"]?.asNumber()?.toFiniteDouble()
             ?.takeIf { it > 0.0 && it <= MAX_SOURCE_VALUE }
+            ?: return null
+        return canonical.copy(sourceUnit = unit, sourceValue = source)
+    }
+
+    /** Graph rows may contain only a factory timestamp and canonical mg/dL value. */
+    private fun parseHistoryMeasurement(measurement: JsonValue.Object, connectionId: String): Reading? =
+        parseMeasurement(measurement, connectionId) ?: parseCanonicalMeasurement(measurement, connectionId)
+
+    private fun parseCanonicalMeasurement(measurement: JsonValue.Object, connectionId: String): Reading? {
+        val measuredAt = parseFactoryTimestamp(measurement.values["FactoryTimestamp"]?.asString())
+            ?: return null
+        if (measuredAt.isAfter(clock.now().plus(MAX_FUTURE_SKEW))) {
+            return null
+        }
+        val canonical = measurement.values["ValueInMgPerDl"]?.asNumber()?.toFiniteDouble()
+            ?.takeIf { it > 0.0 && it <= MAX_GLUCOSE_MG_DL && it == Math.rint(it) }
             ?: return null
         val trend = when (measurement.values["TrendArrow"]?.asNumber()?.toIntExactOrNull()) {
             1 -> Trend.FALLING_QUICKLY
@@ -333,8 +342,8 @@ class LibreLinkUpSource private constructor(
             connectionId = connectionId,
             measuredAt = measuredAt,
             valueMgDl = canonical,
-            sourceValue = source,
-            sourceUnit = unit,
+            sourceValue = null,
+            sourceUnit = GlucoseUnit.MG_DL,
             specialValue = null,
             trend = trend,
             sourceRecordId = null,

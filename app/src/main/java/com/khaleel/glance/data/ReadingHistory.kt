@@ -9,7 +9,7 @@ object ReadingHistory {
     private val retention = Duration.ofHours(24)
     private val futureTolerance = Duration.ofMinutes(2)
     // Covers a full day even when the source supplies a distinct reading every minute.
-    private const val maxPoints = 1500
+    internal const val MAX_POINTS = 1500
 
     fun merge(
         existing: List<Reading>,
@@ -24,8 +24,13 @@ object ReadingHistory {
                 reading.measuredAt.isAfter(now.plus(futureTolerance)) ||
                 reading.valueMgDl?.let { !it.isFinite() || it <= 0.0 } != false
             ) continue
-            byTime[reading.measuredAt] = reading
+            val previous = byTime[reading.measuredAt]
+            // Minimal backfill must not erase a captured provider display value at the
+            // same timestamp. A corrected canonical value invalidates that old metadata.
+            byTime[reading.measuredAt] = if (reading.sourceValue == null &&
+                previous?.sourceValue != null && previous.valueMgDl == reading.valueMgDl
+            ) reading.copy(sourceValue = previous.sourceValue, sourceUnit = previous.sourceUnit) else reading
         }
-        return byTime.values.sortedBy { it.measuredAt }.takeLast(maxPoints)
+        return byTime.values.sortedBy { it.measuredAt }.takeLast(MAX_POINTS)
     }
 }

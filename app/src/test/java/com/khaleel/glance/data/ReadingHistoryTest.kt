@@ -40,6 +40,27 @@ class ReadingHistoryTest {
         assertEquals(now, merged.last().measuredAt)
     }
 
+    @Test fun minimalBackfillPreservesCapturedDisplayValueAtTheSameMeasurementTime() {
+        val captured = reading("patrick", now.minusSeconds(60), 69.0)
+            .copy(sourceUnit = GlucoseUnit.MMOL_L, sourceValue = 3.9)
+        val minimal = captured.copy(sourceUnit = GlucoseUnit.MG_DL, sourceValue = null, trend = Trend.UNKNOWN)
+        val merged = ReadingHistory.merge(listOf(captured), listOf(minimal), "patrick", now).single()
+        assertEquals(69.0, merged.valueMgDl!!, 0.0)
+        assertEquals(GlucoseUnit.MMOL_L, merged.sourceUnit)
+        assertEquals(3.9, merged.sourceValue!!, 0.0)
+        assertEquals(Trend.UNKNOWN, merged.trend)
+    }
+
+    @Test fun correctedCanonicalHistoryDoesNotReuseAnOlderReportedDisplayValue() {
+        val captured = reading("patrick", now.minusSeconds(60), 69.0)
+            .copy(sourceUnit = GlucoseUnit.MMOL_L, sourceValue = 3.9)
+        val corrected = captured.copy(valueMgDl = 80.0, sourceUnit = GlucoseUnit.MG_DL, sourceValue = null)
+        val merged = ReadingHistory.merge(listOf(captured), listOf(corrected), "patrick", now).single()
+        assertEquals(80.0, merged.valueMgDl!!, 0.0)
+        assertEquals(GlucoseUnit.MG_DL, merged.sourceUnit)
+        assertEquals(null, merged.sourceValue)
+    }
+
     private fun reading(person: String, measured: Instant, value: Double) = Reading(
         person, measured, value, value, GlucoseUnit.MG_DL, null,
         Trend.STEADY, null, now,

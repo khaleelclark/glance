@@ -69,7 +69,7 @@ polls; Android's channel settings control each alert's sound and interruption.
 1. Clone the private repository: `git clone git@github.com:khaleelclark/glance.git` (or use the GitHub HTTPS clone URL), then open that directory in Android Studio.
 2. Install JDK 17 and the Android SDK Platform 37, SDK Build-Tools 36.0.0, and Platform-Tools through Android Studio's SDK Manager. Android Studio can download missing SDK components during sync.
 3. Let Gradle sync. The checked-in Gradle wrapper downloads Gradle 9.5.0 and verifies its SHA-256 checksum. The project uses Android Gradle Plugin 9.3.0 and Kotlin Compose compiler plugin 2.2.10.
-4. Select the `app` run configuration and an Android 11 or newer device/emulator. The app targets API 37 and supports API 30+.
+4. Select the shared `Glance phone` run configuration and an Android 11 or newer device/emulator. It launches `com.khaleel.glance.MainActivity` directly, so changing the accent/icon does not break Studio launch. The app targets API 37 and supports API 30+.
 
 From a terminal with `ANDROID_HOME` or `local.properties` pointing to your SDK:
 
@@ -78,10 +78,19 @@ From a terminal with `ANDROID_HOME` or `local.properties` pointing to your SDK:
 ```
 
 If the installed phone app came from Android Studio, pull the current `main` on
-the same computer and Run the `app` debug variant again. Keep that computer's
+the same computer, select `Glance phone` with the `app` debug variant, and Run again. Keep that computer's
 existing debug signing key to update without removing settings. The personal
 release APK uses a separate key and cannot replace a differently signed debug
 installation; cancel any uninstall prompt and inspect the installer error first.
+
+If Studio reports `LauncherLilac does not exist` after selecting another accent,
+open **Run → Edit Configurations**, select your phone configuration, set
+**Launch → Specified Activity**, and enter `com.khaleel.glance.MainActivity`.
+Apply and Run. This also fixes an existing locally saved `app` configuration.
+The shared configuration lives in `.run/Glance_phone.run.xml`; after pulling,
+select `Glance phone` explicitly because Studio may keep the old selection.
+If the imported configuration requests a module, select the phone `app` module.
+This launch error does not require uninstalling or clearing the app's data.
 
 The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`. For a signed
 personal APK, key backup, install and upgrade instructions, see

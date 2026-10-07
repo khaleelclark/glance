@@ -28,9 +28,18 @@ Android Studio can run the debug variant without the personal signing key.
 
 The owner's current phone installation was updated successfully through Android
 Studio on the same computer. Use that same computer and debug key for this update:
-pull `main`, select the `app` debug variant and Run it on the connected phone.
+pull `main`, select the shared `Glance phone` configuration with the `app` debug
+variant and Run it on the connected phone.
 The release-signed APK cannot update a differently signed debug installation.
 Cancel an uninstall prompt to preserve local settings and inspect its error.
+
+Studio's default-activity launch may select the manifest-default Lilac alias even
+when a saved accent has disabled it in favor of Teal or another preset. The
+shared `.run/Glance_phone.run.xml` uses Specified Activity with
+`com.khaleel.glance.MainActivity`, which remains enabled for every accent.
+For a locally saved configuration, use Run → Edit Configurations → Launch →
+Specified Activity, enter that class, Apply and Run. Select the phone `app`
+module if Studio asks for a module. No uninstall or settings reset is needed.
 
 ## Keep the upgrade key
 

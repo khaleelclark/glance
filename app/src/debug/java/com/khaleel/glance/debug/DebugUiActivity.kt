@@ -40,6 +40,10 @@ class DebugUiActivity : ComponentActivity() {
             java.io.File(filesDir, "accent-storage-check.json").writeText(runAccentStorageProbe(this).toString())
         }
         val now = Instant.parse("2026-10-01T12:00:00Z")
+        if (mode == "readingHistoryStorage") {
+            java.io.File(filesDir, "reading-history-storage-check.json")
+                .writeText(runReadingHistoryStorageProbe(this).toString())
+        }
         if (mode == "nicknameStorage") {
             java.io.File(filesDir, "nickname-storage-check.json").writeText(runNicknameStorageProbe(this).toString())
         }

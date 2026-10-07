@@ -1,7 +1,7 @@
 # Personal APK build and installation
 
-Glance uses application ID `com.khaleel.glance`, versionCode `34`, and versionName
-`0.29.0`. The Android Studio project is the root of this repository. The private
+Glance uses application ID `com.khaleel.glance`, versionCode `35`, and versionName
+`0.30.0`. The Android Studio project is the root of this repository. The private
 GitHub repository is `khaleelclark/glance`.
 
 ## Current qualification
@@ -59,7 +59,7 @@ application ID and signer for every upgrade; increment versionCode.
 
 ## Install and verify on the phone
 
-1. Transfer `release/glance-0.29.0-personal.apk` to the phone and verify its
+1. Transfer `release/glance-0.30.0-personal.apk` to the phone and verify its
    SHA-256 against `release/manifest.json`.
 2. Open the APK on the phone. If Android asks, permit installation from that
    trusted file manager. Do not disable broader device protections.
@@ -493,3 +493,18 @@ with a 56sp/64sp value. It grows rather than clipping at large text, and existin
 FlowRow wrapping/portrait and landscape scrolling remain. Accent presets,
 launcher/splash, Logbook badges and notification/source behavior are unchanged.
 See reading-card-029-validation.md for checks and fixture/release boundaries.
+
+## 0.30.0 richer green and a tighter reading card
+
+In-range readings now use a saturated #22C55E green. The card has a slightly
+smaller 176dp minimum height and reduced padding while its number grows to
+60sp. Timestamp, freshness warning, unit, arrow, trend and actual change text
+also grow. Minimum height, wrapping and scrolling continue to accommodate large
+text. Low/High colors, freshness rules, accent presets and source data remain
+unchanged. See reading-card-030-validation.md for native and history evidence.
+
+Glance retains distinct successfully received measurement timestamps even when
+the glucose values are identical. It merges cloud graph history with captured
+current readings, retaining up to 24 hours/1,500 samples. It cannot create minute
+measurements that were never received or supplied by the source. No monitoring
+cadence, power-management or protocol change is included in this UI refinement.

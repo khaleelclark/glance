@@ -1,0 +1,12 @@
+{
+  "synthetic": true,
+  "minuteSamplesPersisted": 1440,
+  "sameValuesAtDifferentTimesRetained": true,
+  "encryptedRoundTripThroughNewStore": true,
+  "sparseBackfillDoesNotEraseCapturedMinuteSamples": true,
+  "duplicateSourceTimesDoNotAddSamples": true,
+  "plaintextSyntheticIdentityAbsent": true,
+  "device": "API36 emulator",
+  "sourceCommitAtRun": "e297c977e0da12cdb1c4602a8ef096ccbe6d3b66",
+  "fixtureApkSha256": "486a1c7485de40f112be27085082756238e96c71e3af3d4253fb94bd442de776"
+}

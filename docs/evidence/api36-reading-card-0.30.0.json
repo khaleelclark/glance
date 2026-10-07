@@ -1,0 +1,36 @@
+{
+  "synthetic": true,
+  "device": "API36 emulator",
+  "checks": {
+    "freshRangeBackgroundDarkContentAndTallerCard": true,
+    "lowRangeBackgroundDarkContentAndTallerCard": true,
+    "highRangeBackgroundDarkContentAndTallerCard": true,
+    "sourceLowRangeBackgroundDarkContentAndTallerCard": true,
+    "sourceHighRangeBackgroundDarkContentAndTallerCard": true,
+    "staleRetainsNeutralCardWarningAndSourceTime": true,
+    "delayedRetainsNeutralCardWarningAndSourceTime": true,
+    "invalidTimeRetainsNeutralCardWarningAndSourceTime": true,
+    "absentReadingRetainsNeutralWaitingCard": true,
+    "bothSystemModesKeepSameRangeBackgroundAndContrast": true,
+    "accentChangesDoNotRecolorTheReadingRangeCard": true,
+    "portraitTwoHundredPercentKeepsCardContentChartAndSettingsReachable": true,
+    "landscapeTwoHundredPercentKeepsCardContentChartAndSettingsReachable": true
+  },
+  "allPassed": true,
+  "freshCardHeightsDp": {
+    "fresh": 176.0,
+    "low": 176.0,
+    "high": 176.0,
+    "sourceLow": 176.0,
+    "sourceHigh": 176.0
+  },
+  "fixtureApkSha256": "486a1c7485de40f112be27085082756238e96c71e3af3d4253fb94bd442de776",
+  "sourceCommitAtRun": "e297c977e0da12cdb1c4602a8ef096ccbe6d3b66",
+  "sourceDirtyAtRun": false,
+  "normalChecksReusedFromPriorCompleteRun": false,
+  "fixtureProductionCommit": "e297c977e0da12cdb1c4602a8ef096ccbe6d3b66",
+  "scope": "Production ReadingHero/FlowRow and scrolling; synthetic source states, actual screenshot colors and touch; requires visual clipping inspection",
+  "SamsungOneUI": "not tested",
+  "liveAccount": "not tested",
+  "TalkBack": "not tested"
+}

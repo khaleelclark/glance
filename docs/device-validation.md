@@ -2,6 +2,20 @@
 
 Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
 
+## 0.30.0 richer green, smaller card and larger text
+
+The reading card uses #22C55E green with dark text above 7:1 contrast. The normal
+minimum height is 176dp, with a larger 60sp number and larger supporting fonts.
+228 phone unit tests pass; debug assembly and lint have zero errors. Thirteen
+focused API36 synthetic checks pass, including exact range/neutral colors,
+176dp observed heights and 200% portrait/landscape content reachability.
+An isolated production encrypted-storage probe retains all 1,440 equal-value
+minute samples through a new-store round trip and sparse backfill.
+See [0.30 card and history verification](reading-card-030-validation.md).
+The owner's actual gap cause still needs source/poll evidence; source/protocol
+reviews are tracked. Live-source/Samsung/background/battery/watch qualification
+is not inferred from these synthetic checks. Final signing records are separate.
+
 ## 0.29.0 taller range-filled reading card
 
 The current-reading hero now fills green/red/yellow according to the unchanged

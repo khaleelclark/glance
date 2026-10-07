@@ -80,18 +80,22 @@ class DebugUiActivity : ComponentActivity() {
             java.io.File(filesDir, "ui-events.json").writeText(events.toString())
         }
         java.io.File(filesDir, "ui-events.json").writeText("{}")
-        val history = (0..288).map { step ->
-            val value = if (step == 288) when (mode) {
+        val lastStep = if (mode == "minuteHistory") 1439 else 288
+        val stepSeconds = if (mode == "minuteHistory") 60L else 300L
+        val history = (0..lastStep).map { step ->
+            val value = if (step == lastStep) when (mode) {
                 "low" -> 65.0
                 "high" -> 250.0
                 else -> 113.0
             } else 150 + 105 * kotlin.math.sin(step / 9.0)
             val ageSeconds = when (mode) { "stale" -> 1200L; "delayed" -> 420L; "invalidTime" -> -600L; "justNow" -> 15L; else -> 60L }
-            Reading("synthetic", now.minusSeconds((288 - step) * 300L + ageSeconds), value, value,
+            Reading("synthetic", now.minusSeconds((lastStep - step) * stepSeconds + ageSeconds), value,
+                value.takeUnless { mode == "minuteHistory" },
                 GlucoseUnit.MG_DL, null, Trend.STEADY, "synthetic-$step", now)
         }
         val reading = history.last().let {
             when (mode) {
+                "minuteHistory" -> it.copy(sourceValue = it.valueMgDl)
                 "sourceLow" -> it.copy(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.LOW)
                 "sourceHigh" -> it.copy(valueMgDl = null, sourceValue = null, specialValue = SpecialValue.HIGH)
                 else -> it

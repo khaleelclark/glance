@@ -2,6 +2,14 @@
 
 Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
 
+## Studio launch after changing accent
+
+Four bounded API36 synthetic checks reproduce the disabled-Lilac launch error,
+retain settings/private data through replacement install, successfully launch
+the shared configuration's MainActivity, and keep persisted Teal as the sole
+launcher. This validates equivalent Android intents, not the Studio UI or a
+Samsung device. See [Studio accent launch](studio-accent-launch.md).
+
 ## 0.30.0 richer green, smaller card and larger text
 
 The reading card uses #22C55E green with dark text above 7:1 contrast. The normal

@@ -20,8 +20,9 @@ See [0.30 card and history verification](reading-card-030-validation.md).
 Source investigation found minimal graph rows rejected by current-only fields
 and a 300-row adapter cap; the corrected importer accepts valid canonical history
 and shares the 1,500-point storage bound. Current parsing remains strict. The
-owner's actual gap cause still needs live source/poll evidence; final history
-source review is tracked. Live-source/Samsung/background/battery/watch qualification
+owner's actual gap cause still needs live source/poll evidence. Final history
+source review closes the duplicate-metadata LOW with no open findings.
+Live-source/Samsung/background/battery/watch qualification
 is not inferred from these synthetic checks. Final signing records are separate.
 
 ## 0.29.0 taller range-filled reading card

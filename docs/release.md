@@ -517,3 +517,10 @@ missing trends remain unknown and current parsing stays strict. Refresh can
 import valid samples still returned by the provider; it cannot recover source
 rows outside the returned window. Their absence does not justify fabricated
 minute readings. Exact device/source cadence remains unverified.
+
+Mixed full/minimal duplicate history rows now preserve genuine reported display
+precision when connection, timestamp and canonical value match. Canonical
+corrections invalidate obsolete display values, and missing trends remain
+unknown. Independent correction review of 3aefcbd closes the single LOW, with
+no open findings. Final clean build, static APK/signature checks and delivery
+source are recorded in the generated release manifests and verification bundle.

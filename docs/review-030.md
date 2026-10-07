@@ -25,8 +25,14 @@ adapter deduplication. New regression checks cover both row orders, exact
 provider mmol/L display precision, missing trends and canonical corrections.
 The correction is pinned at `3aefcbd34167459f4ffa9d7227d94f10d4b29a55`.
 All 236 phone tests, debug assembly and zero debug lint errors pass root-owned
-checks. The bounded correction review remains tracked; the finding is not yet claimed
-independently closed. The UI review above does not cover the history changes.
+checks. The bounded read-only correction review of that exact commit closes the
+LOW with no HIGH/MEDIUM regression and no new concrete LOW. Preservation copies
+only the earlier reported value/unit for identical connection/time/canonical
+value; incoming trend remains owned by the incoming row, full rows win and
+canonical corrections clear obsolete display metadata. Current parsing is
+unchanged; no source record, special value, receipt time or other field is
+synthesized. `git diff --check 660775fc..3aefcbd` passes. No findings remain open.
+The earlier UI review does not independently cover the history changes.
 See protocol.md and reading-card-030-validation.md for the remaining boundaries.
 
 The reviewer performed no edits, build/test/lint, emulator/install, signing,

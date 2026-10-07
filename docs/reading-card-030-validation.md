@@ -48,7 +48,8 @@ the guarded display-metadata rule with adapter deduplication. Two new tests
 verify both duplicate orders retain provider 3.9 mmol/L for canonical 69 mg/dL,
 missing trend stays UNKNOWN, and a corrected canonical value clears old display
 metadata. All 236 phone tests, debug assembly and zero debug lint errors pass.
-The bounded correction review is tracked. Earlier native fixtures retain their
+The bounded correction review of exact 3aefcbd closes the LOW with no new
+findings. Earlier native fixtures retain their
 recorded source/hash boundaries; this correction does not change presentation,
 chart capacity, storage encoding, polling or source field validation.
 
@@ -94,7 +95,7 @@ Root visually inspected the fresh card and both large-text orientations; the
 landscape summary scrolls independently and lower content remains legible.
 The receipt records the complete run, clean fixture source and no reused checks.
 The presentation source review of bea5cdf found no HIGH/MEDIUM regression or
-concrete LOW. The history review and remaining bounded correction review are
+concrete LOW. The history review and completed bounded correction review are
 recorded above; the earlier UI review does not qualify the history changes.
 Native screens use
 debug synthetic data; final signed APKs are checked separately. Samsung layout,

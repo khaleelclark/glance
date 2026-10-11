@@ -10,8 +10,8 @@ the original phone-only baseline.
 The phone remains the only account/session and polling owner. The watch receives
 the current formatted glucose value, selected unit, source arrow/description,
 measurement timestamp and a small status projection. No login credentials,
-tokens, names, account IDs, connection IDs or history are sent. Phone settings
-control **Watch readings** and **Watch notification**, both initially off. Watch
+tokens, names, account IDs, connection IDs or history are sent. Phone Settings → Devices
+controls **Share watch readings** and **Watch notification**, both initially off. Watch
 sharing is separate from lock-screen values and Widget values: enabling it
 permits visible readings on the watch face, including ambient mode.
 
@@ -34,8 +34,12 @@ directs the owner to turn off or remove Glance on the watch before restarting.
 
 ## Install the companion
 
-Upgrade the phone with `glance-0.19.1-personal.apk`. Install
-`glance-0.19.1-watch.apk` on the watch, signed with the same personal key. There
+Current APKs are `glance-0.30.0-personal.apk` and `glance-0.30.0-watch.apk`
+(versionCode 35). See [release and upgrades](release.md) for checksums and source.
+The watch APK must be signed with the same certificate as the installed phone app.
+For an existing Studio/debug phone, build the `wear` debug variant on the same
+computer with the same key; a personal-signed watch cannot share with a differently
+signed Studio phone. Do not uninstall the phone merely to align these signers. There
 is no Play Store listing or automatic store installation in this personal build.
 For sideloading, enable Developer options and Wireless debugging on the watch,
 use the watch's pairing code and pairing address with `adb pair`, then its
@@ -44,7 +48,7 @@ separate debugging address/port with `adb connect`. For example:
 ```sh
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
-adb -s WATCH_IP:DEBUG_PORT install -r release/glance-0.19.1-watch.apk
+adb -s WATCH_IP:DEBUG_PORT install -r release/glance-0.30.0-watch.apk
 ```
 
 Use the addresses and ports actually shown on the watch; they can differ. The
@@ -52,7 +56,7 @@ pairing code is entered locally into adb, not pasted into Chat. Disable wireless
 debugging when finished. Existing phone installation and LibreLinkUp settings
 are preserved by the same-key phone upgrade.
 
-Open Glance on the watch. On the phone, enable **Watch readings** in Settings and
+Open Glance on the watch. On the phone, enable **Share watch readings** in Settings → Devices and
 start monitoring. The watch app shows the value/unit, source arrow, and reading
 time, or an explicit stopped/waiting/hidden/old-data state. A long-expired sync
 shows an instruction to open the phone rather than a cached glucose number.
@@ -87,8 +91,15 @@ disable and no second watch alert engine or fetch worker.
 
 ## Build and limits
 
-`./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest :app:assembleDebug
-:wear:assembleDebug` builds and tests both modules. `python3 scripts/sign_release.py`
+Build and test both modules with:
+
+```sh
+./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest \
+  :app:assembleDebug :wear:assembleDebug
+```
+
+The watch debug output is `wear/build/outputs/apk/debug/wear-debug.apk`.
+Use that path in the `adb install -r` command for a same-key Studio/debug pair. `python3 scripts/sign_release.py`
 does clean unit/lint/release verification and signs both packages using the
 existing key outside the repository. Source and signing metadata are in the
 release manifests. Physical Watch7 pairing, face rendering, wrist/ambient

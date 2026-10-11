@@ -1,5 +1,9 @@
 # Glance 0.24 review record
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Base: d5a91c9f1003f0b738705731f55215ca0cb0214e. Reviews are bounded,
 read-only source inspections by the Glance independent reviewer; they do not
 qualify live accounts, physical devices, TalkBack, background reliability,

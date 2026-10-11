@@ -1,5 +1,10 @@
 # Glance Wear companion
 
+Current module: 0.30.0 / code 35. For installation, matching phone/watch
+certificates and current Settings names, use [watch setup](../docs/watch.md) and
+[release guide](../docs/release.md). These implementation notes describe the
+passive read-only receiver; physical paired-device qualification is separate.
+
 This module is a read-only Wear OS companion. It receives the credential-free
 `WatchSnapshot` DataItem written by the phone, and never contacts LibreLinkUp,
 stores credentials, writes Data Layer items, or controls phone monitoring.

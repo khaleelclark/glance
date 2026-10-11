@@ -1,10 +1,12 @@
-# LibreLinkUp protocol discovery record
+# LibreLinkUp protocol and discovery record
 
 Status: source-backed discovery baseline plus implemented `GlucoseSource`
 adapter and synthetic transport tests. Authenticated owner verification remains
 outstanding.
 
-Inspection date: 2026-09-27 (UTC).
+Initial upstream/public-config inspection: 2026-09-27 (UTC).
+Implemented-contract audit: 2026-10-11 against Glance 0.30.0 source `57a0902`.
+Pinned discovery observations retain their original dates; they are not new live requests.
 
 ## Scope and confidence
 
@@ -33,11 +35,11 @@ not intended for dosing decisions.
 
 The adapter is implemented in
 `app/src/main/java/com/khaleel/glance/librelinkup/LibreLinkUpSource.kt` with a
-private strict JSON reader. It implements the frozen `GlucoseSource` contract
-without changing shared models or build files. Focused JVM tests use
+private strict JSON reader. It implements `GlucoseSource` from `core/Contracts.kt`, including `snapshot`
+for separate current and historical results. Focused JVM tests use
 MockWebServer plus synthetic resources under `app/src/test/resources/librelinkup`.
 
-The frozen API deliberately leaves several orchestration responsibilities
+The API leaves several orchestration responsibilities
 outside the transport adapter:
 
 - `AUTH_EXPIRED` tells the credential/session owner to perform the one
@@ -45,16 +47,16 @@ outside the transport adapter:
   credentials during `connections` or `latest`.
 - `RATE_LIMITED` includes an absolute `retryAfter`; the monitoring layer must
   persist and enforce that deadline across process restarts.
-- A successful empty connection list is the frozen representation of “no
+- A successful empty connection list is the representation of “no
   shared people.” Comparing a persisted selected ID against that list and
   rejecting late or wrong-person responses belongs to the repository/runtime.
-- Duplicate, out-of-order, and same-time-correction decisions require the
-  stored prior reading, so they remain repository tests rather than stateless
-  HTTP adapter tests.
+- Current duplicate/out-of-order/correction decisions use stored state in the
+  controller. History duplicates are also folded within each adapter response
+  using the guarded helper shared with store merge, then sorted/capped.
 
-Two useful distinctions do not fit the current shared enum. A status-920 retry
-that still fails or supplies a malformed minimum version maps to `PROTOCOL`
-rather than a distinct client-upgrade result. Also, the shared `Reading` cannot
+Two useful distinctions do not fit the current shared enum. A malformed status-920 minimum
+version or a repeated 920 on the single replay maps to `PROTOCOL` rather than a
+distinct client-upgrade result. Other replay failures retain their typed outcome. Also, the shared `Reading` cannot
 retain unverified `isHigh`/`isLow` flags separately; the adapter leaves
 `specialValue` null and never invents `HIGH` or `LOW`. Add shared outcomes only
 if the UI needs to distinguish these cases before live verification.
@@ -73,9 +75,9 @@ Primary implementation reference:
 - Multi-person selection: [`MultiPatientSourceTask.kt`](https://github.com/pachi81/GlucoDataHandler/blob/114460bc29973c78580095e2e9b0f212eed9df20/common/src/main/java/de/michelinside/glucodatahandler/common/tasks/MultiPatientSourceTask.kt)
 - Follower setup: [`SOURCES.md`](https://github.com/pachi81/GlucoDataHandler/blob/114460bc29973c78580095e2e9b0f212eed9df20/SOURCES.md)
 
-No upstream code has been copied into Glance yet. If later implementation copies
-or closely adapts a substantial portion, retain the MIT notice in the project
-attribution and in redistributed source.
+These pinned sources document protocol discovery and attribution. If future work
+copies or closely adapts a substantial portion of upstream code, retain its MIT
+notice in the project attribution and redistributed source.
 
 Additional primary product references:
 
@@ -87,8 +89,9 @@ Additional primary product references:
 
 All observed calls use HTTPS and JSON. A successful envelope has top-level
 `status: 0` and `data`. HTTP 200 alone is not success: a nonzero JSON `status`,
-missing mandatory fields, or an invalid measurement must be returned as a typed
-failure.
+missing mandatory operation fields, or an invalid required current measurement
+returns a typed failure. Invalid individual historical graph rows are dropped;
+they do not fail an otherwise valid current snapshot.
 
 ### Hosts and regional routing
 
@@ -130,8 +133,8 @@ map:
 
 Glance routing rules:
 
-1. Start only at the configured bootstrap host (`api.libreview.io`, or the
-   explicitly supported Russian service when that region is selected).
+1. Production starts at `https://api.libreview.io/`. Russian routing was observed
+   upstream but is not selectable or allowed in Glance.
 2. Accept a login redirect only when `data.redirect` is exactly `true` and
    `data.region` maps to an exact host in the compiled allowlist above.
 3. Permit at most one regional redirect per sign-in operation. Repeat login at
@@ -139,10 +142,10 @@ Glance routing rules:
    request has not established a session.
 4. Reject unknown regions, full URLs, non-HTTPS schemes, user-info, ports,
    query fragments, lookalike domains, and redirect chains as
-   `UnsupportedRegion`. Do not concatenate an unchecked server value into a URL.
-5. Persist the validated region key with the encrypted session. Clear it when
-   the account changes. If a previously valid region stops working, retry once
-   from the bootstrap host during serialized reauthentication.
+   `SourceErrorKind.PROTOCOL`. Do not concatenate an unchecked server value into a URL.
+5. Persist the validated canonical `regionHost` with the encrypted session.
+   Controller reauthentication starts at the bootstrap host. The transport
+   does not independently discard/retry sessions on arbitrary region failures.
 6. Use normal platform TLS validation. Do not install a trust-all client or
    disable hostname verification.
 
@@ -165,20 +168,23 @@ Account-Id: <lowercase SHA-256 hex of trimmed data.user.id>
 Authorization: Bearer <authTicket.token>   # authenticated calls only
 ```
 
-Before login there is no user ID or token. Glance should omit `Account-Id` and
-`Authorization` rather than logging or persisting empty secret-like fields,
-unless an account test proves the server requires an empty `Account-Id` header.
-The pinned source sends an empty `Account-Id` on login.
+Before login Glance omits `Account-Id` and `Authorization`. The pinned upstream
+source sends an empty `Account-Id` on login; an owner-account comparison of this
+difference remains outstanding.
 
 `4.17.0` is an observed compatible baseline, not a permanent API version. The
 official app version has advanced since that value. The pinned source handles
 HTTP 403 with envelope `status: 920` and `data.minimumVersion` by adopting the
-minimum version and retrying. Glance should:
+minimum version and retrying. Glance implements:
 
 - validate `minimumVersion` as a bounded dotted numeric version;
-- persist the last accepted version as protocol metadata, not as a secret;
-- retry the failed operation at most once after updating it;
-- return `ClientUpgradeRequired` if the retry fails or the value is malformed;
+- retain the accepted version only in a process-local `AtomicReference`;
+  recreation starts again at baseline `4.17.0`, not a persisted negotiated version;
+- replay the failed operation once for any syntactically valid minimum, even
+  when equal to or below the current version; only an advancing minimum changes
+  the stored version;
+- fail closed with `PROTOCOL` on a malformed minimum without replay or a repeated
+  920 on replay; other typed failures from the single replay remain typed;
 - never loop on changing minimum-version responses.
 
 The public country-config endpoint reported minimum `4.16.0` on the inspection
@@ -228,7 +234,9 @@ the raw ID.
 
 Session rules for Glance:
 
-- Encrypt the token, user ID, region, expiry, and reconnect credentials at rest.
+- Encrypt the token, hashed account ID, canonical region host, expiry and
+  reconnect credentials at rest. `Session.accountId` contains SHA-256 of the
+  trimmed provider user ID; the raw user ID is not persisted.
 - Reuse a session until its explicit expiry; do not log in on each poll.
 - Refresh a little before known expiry to avoid racing the boundary.
 - Serialize replacement behind one mutex/single-flight operation.
@@ -257,11 +265,11 @@ The pinned source treats envelope `status: 4` as a required step. Examples have
 continuation), and may include a short-lived `authTicket`. It also knows an
 `/auth/continue/{type}` endpoint and can auto-accept terms.
 
-Glance must **not** call that continuation endpoint or accept legal documents
-on the user's behalf. Map any status-4 step to `TermsOrPolicyActionRequired`,
-retain only the non-sensitive step category needed for diagnostics, discard the
-ticket, stop automatic authentication, and direct the user to the official
-LibreLinkUp app. **Try again** is an explicit user action after acceptance.
+Glance does **not** call that continuation endpoint or accept legal documents
+on the user's behalf. Any status-4 step maps to `TERMS_REQUIRED`. Glance retains
+no ticket or raw step payload, including no step category; it exposes only the
+typed failure, stops automatic authentication, and directs the user to the
+official LibreLinkUp app. **Try again** is an explicit user action after acceptance.
 
 ### Connections and selected person
 
@@ -285,14 +293,16 @@ The successful `data` is an array. Observed connection fields include:
 ```
 
 `patientId` is the stable selection key used by the pinned client and is the
-only identifier Glance should persist for the selected person. Names are for
-the selection UI, not identity matching. Even if exactly one connection is
+only identity key Glance persists for the selected person. The encrypted
+selected-person store also caches the display name for presentation; names are
+never used for identity matching. Even if exactly one connection is
 returned, Glance must show it for explicit confirmation rather than silently
 selecting it.
 
 An empty list before any successful selection means `NoConnections` (usually
-an invitation has not been accepted). If a persisted `patientId` is absent
-from a later nonempty list, return `SelectedConnectionRemoved`; never switch to
+an invitation has not been accepted); it is a successful empty list, not a
+separate adapter error. If a persisted `patientId` is absent from a refreshed
+list (including an empty list), the controller returns `CONNECTION_REMOVED`; never switch to
 the first remaining person. Changing accounts or people increments the request
 generation, clears the displayed reading immediately, and causes late results
 for the old generation to be discarded.
@@ -342,10 +352,10 @@ Field handling:
 
 | Field | Meaning and validation |
 |---|---|
-| `FactoryTimestamp` | Naive string in `M/d/yyyy h:mm:ss a` form, treated by the pinned client as UTC. Canonical source time only after account verification confirms this assumption. Parse strictly with `Locale.US`; never with the viewer timezone. |
-| `Timestamp` | Source-local wall time with no offset. It is ambiguous and unsafe as a canonical instant. Keep only for redacted diagnostics during verification; do not parse it in the viewer timezone. |
+| `FactoryTimestamp` | Strict `M/d/uuuu h:mm:ss a`, Locale.US, interpreted as UTC by Glance following pinned source. Invalid or >2-minute-future time is rejected; live-account validation of UTC semantics remains outstanding. |
+| `Timestamp` | Ambiguous source-local wall time without offset. Ignored, not a fallback instant and not retained/exported in diagnostics. |
 | `ValueInMgPerDl` | Canonical numeric mg/dL used by the pinned client. Require a finite, plausible integer and preserve the exact source value. A missing value is not zero. |
-| `GlucoseUnits` | Upstream observation: `0` = mmol/L, `1` = mg/dL. Reject/mark unknown for any other code. |
+| `GlucoseUnits` | Upstream observation: `0` = mmol/L, `1` = mg/dL. Current parsing rejects missing/unknown units. Historical rows with valid canonical fields fall back to `sourceUnit=MG_DL`, `sourceValue=null` when the full reported value/unit cannot be parsed. |
 | `Value` | Provider display value in the reported source unit. Preserve for parity checks; do not repeatedly convert it back and forth. |
 | `TrendArrow` | `1` falling quickly/down, `2` falling/down-right, `3` steady/right, `4` rising/up-right, `5` rising quickly/up. Any other or missing value maps to `UNKNOWN`; never calculate a replacement arrow. |
 | `isHigh`, `isLow` | Provider booleans whose precise distinction between range flags and special HI/LO display values is not established by the pinned client. Do not invent a precise number or map them to `HIGH`/`LOW` until a live source comparison verifies semantics. |
@@ -360,9 +370,9 @@ and never let an older graph item replace a newer current reading.
 
 ### History field correction, 7 October 2026 (0.30)
 
-Released Glance used the strict current-measurement parser for graph rows,
+Before 0.30, Glance used the strict current-measurement parser for graph rows,
 requiring `GlucoseUnits` and `Value`; that rejects valid minimal historical
-rows. Current GlucoDataHandler revision
+rows. The GlucoDataHandler revision inspected for that correction
 [`215b2f071f86942a5b9714cbf88808a71708a33f`](https://github.com/pachi81/GlucoDataHandler/blob/215b2f071f86942a5b9714cbf88808a71708a33f/common/src/main/java/de/michelinside/glucodatahandler/common/tasks/LibreLinkSourceTask.kt#L444-L461)
 uses the timestamp and canonical `ValueInMgPerDl` for graph data. A
 [nightscout-connect regression fixture](https://github.com/nightscout/nightscout-connect/blob/4dde1ecdcad1fd923e69d458e5e2faa7bc78e4f1/test/librelinkup.test.js#L138-L157)
@@ -396,33 +406,45 @@ The adapter must propagate source measurement time separately from HTTP receipt
 time. A successful response containing the same timestamp is a duplicate: it
 updates last-successful-contact only, not measurement age. A response older
 than stored current data is out of order. For a same-timestamp correction,
-replace only when the validated source payload differs and record the decision;
-this policy requires a focused fixture and later live observation.
+replace only when the validated source payload differs and the incoming receipt
+is equal or newer. `ReadingPolicyTest` covers this policy; diagnostics does not record
+duplicate/out-of-order/correction decisions. Live observation remains outstanding.
 
 `FactoryTimestamp`'s UTC interpretation, special HI/LO semantics, exact numeric
 ranges, and correction behavior all need live-account verification. Until then,
-failure to establish a trustworthy source instant is `InvalidTimestamp`, never
-fresh data.
+failure to parse the required source instant returns `PROTOCOL`, never fresh
+data. `ReadingFreshness.INVALID_TIME` is a display-policy state, not an adapter
+error named InvalidTimestamp.
 
 ## Errors, retry, and cooldown behavior
 
 ### Typed mapping
 
-| Evidence | Glance outcome | Automatic behavior |
+The following names are actual `SourceErrorKind` values, with controller states
+shown where relevant; discovery shorthand is not an additional public enum.
+
+| Evidence | Implemented outcome | Controller/scheduler behavior |
 |---|---|---|
-| Transport unavailable / DNS failure | `Offline` | Wait for connectivity, then resume subject to existing backoff. |
-| Connect/read timeout | `TransientFailure` | Exponential backoff about 1, 2, 4, 8, then 15 minutes, with jitter. |
-| HTTP 429 | `RateLimited(retryAt)` | Honor a valid `Retry-After`; otherwise 15 minutes. Persist the deadline across restart. |
-| HTTP 401 or verified expired-session response | internal `SessionExpired` | One serialized reauthentication and one replay, then `SignInRequired`. |
-| HTTP 403 + status 920 + valid `minimumVersion` | internal `ClientVersionRejected` | Update once and retry once; otherwise `ClientUpgradeRequired`. |
-| Login envelope status 2 | `InvalidCredentials` | Stop automatic login; require user action. The status-2 meaning is pinned-source evidence and still needs account verification. |
-| Envelope status 4 / step | `TermsOrPolicyActionRequired` | Stop automatic login; user completes the step in official app. |
-| Empty connections | `NoConnections` | Do not poll graph. User accepts invitation and retries. |
-| Selected ID missing | `SelectedConnectionRemoved` | Stop graph requests; never substitute another person. |
-| HTTP 5xx | `TransientFailure` | Bounded exponential backoff with jitter. |
-| Other HTTP 4xx | `ProtocolOrAccountFailure` | Do not blindly reauthenticate; expose redacted category and require reviewed mapping. |
-| HTTP 200 + nonzero unknown status | `UpstreamRejected(status)` | No immediate retry loop; retain last valid reading. |
-| Malformed JSON / missing mandatory field / invalid value | `ProtocolError` | Reject response, retain last valid reading, back off. |
+| DNS/transport/body-read IOException, including network timeout | `NETWORK` → `OFFLINE` | Persist transient backoff; retry when eligible. No connectivity-callback wake guarantee |
+| Poll coordinator's 30-second overall timeout | `SERVER` → `BACKING_OFF` | Record one timeout/failure and transient delay |
+| HTTP 429 | `RATE_LIMITED(retryAfter)` | Delta-seconds/date Retry-After bounded to 7 days; otherwise 15 minutes; persist provider deadline across restart |
+| HTTP 401 / invalid or expired session | `AUTH_EXPIRED` | Controller serializes one reauthentication/replay; repeated failure requires explicit sign-in |
+| HTTP 403 + status 920 + syntactically valid minimumVersion | One bounded version replay, including equal/lower minimum | Malformed minimum/repeated 920 → `PROTOCOL`; only an advancing minimum updates the process-local version |
+| Login status 2 | `INVALID_CREDENTIALS` | Stop automatic authentication; user action required |
+| Authenticated status 2 | `PROTOCOL` | Retain saved reading; explicit recovery, no automatic reauthentication |
+| Status 4 | `TERMS_REQUIRED` | Stop automatic auth; complete action in official app; no legal continuation request |
+| Empty connections | `Success(emptyList())` | Setup shows no shared people; selected ID missing on refresh → `CONNECTION_REMOVED` |
+| Graph HTTP 404 / missing connection object | `CONNECTION_REMOVED` | Stop graph requests; never substitute a person |
+| Non-graph 404 | `PROTOCOL` | Require explicit recovery; no retry/authentication loop |
+| HTTP 5xx after bounded body read | `SERVER` | Transient exponential backoff; oversized body may instead fail `PROTOCOL` |
+| Other HTTP/schema/status errors | `PROTOCOL` → `PROTOCOL_ERROR` | Retain saved reading. A retry deadline is stored, but scheduler blocks automatic polling in this state; use explicit recovery |
+| Graph missing/null current measurement | `NO_READING` → `BACKING_OFF` | No fabricated zero/new timestamp; does not itself create an exponential retry window |
+
+Transient backoff is approximately 1, 2, 4, 8 and 15 minutes plus 0–15 seconds
+jitter. A provider deadline cannot be replaced by a transient failure. Transport
+metadata is only numeric HTTP status and JSON/WEB_PAGE/OTHER format; exceptions
+before/while reading a response may have no metadata. Unknown raw statuses or
+provider text are not exported.
 
 The pinned GlucoDataHandler implementation is useful evidence but not the retry
 policy to copy: it resets the session for every HTTP error, retries once, and
@@ -430,78 +452,80 @@ uses a five-minute interval after 429 without reading `Retry-After`. Glance uses
 the stricter policy above to avoid authentication storms and provider abuse.
 
 All automatic and manual fetches share one single-flight gate, local refresh
-debounce, backoff state, and persisted `nextAllowedAttempt`. Manual Refresh may
+debounce, backoff state, and persisted `RetryWindow` (`nextAllowedFetch` plus reason). Manual Refresh may
 coalesce with an active request but cannot bypass a provider cooldown. A
 successful response resets transient backoff but not source measurement age.
 
-HTTP timeouts must be bounded; the product-level overall budget is 30 seconds.
+The adapter bounds each HTTP call to at most 30 seconds; login with region/version
+replay may involve more than one call. Automatic polling wraps the controller
+operation in a 30-second overall `PollingPolicy` timeout. This is not an overall
+30-second guarantee for every interactive sign-in/connections sequence.
 Do not automatically retry non-idempotent login more than the single controlled
 sequence described above. Never retry the legal continuation endpoint because
 Glance does not call it.
 
 ## Parsing and schema policy
 
-- Parse into DTOs that tolerate unknown fields.
+- Parse through the private strict JSON reader while tolerating unknown fields.
 - Validate mandatory envelope and operation-specific fields before producing a
   domain result.
 - Treat `null`, missing, wrong-type, overflow, NaN/infinity, impossible unit,
   and invalid timestamp distinctly in tests even if they share the public
-  `ProtocolError` category.
+  `PROTOCOL` category.
 - Never persist complete provider payloads in production.
 - Percent-encode the selected `patientId` as one URL path segment; never allow
   it to alter the host or path structure.
-- Bound response sizes and collection lengths before allocation/persistence.
-- Redact error bodies. Diagnostics may include HTTP class, envelope status,
-  operation, region key, and retry time, but not provider messages when they
-  might contain account or patient data.
+- Bound the response body before JSON parsing. Reject connections above the
+  count limit. Graph rows are mapped/deduplicated/sorted after bounded-body
+  parsing and capped before return/persistence, not before collection allocation.
+- Never retain/export error bodies, raw headers, cookie values, envelope status,
+  region or connection identifiers. Diagnostics retains fixed error categories,
+  numeric HTTP status, coarse response format and source-free timing.
+- Bounds: 1 MiB response body, 100 connections, display names limited to 200 UTF-16 code units (longer names rejected),
+  512 UTF-8-byte connection IDs, 1,500 retained history points. Canonical mg/dL
+  is finite/positive/integral <=1,000; full reported Value is finite/positive
+  <=1,000 in valid unit code 0/1.
 
 ## Synthetic fixture catalog
 
-Adapter and later orchestration tests use only synthetic identifiers and
-values. The fixture names below remain the minimum end-to-end contract; cases
-that need stored prior state, persisted cooldowns, or concurrent credential
-refresh belong to the repository/monitoring integration rather than the
-stateless HTTP adapter:
+Checked-in files under `app/src/test/resources/librelinkup`:
 
-| Fixture | Required assertion |
-|---|---|
-| `login_success.json` | Captures token, Unix-second expiry, user ID hash input; no secret reaches logs. |
-| `login_redirect_us.json` | Routes once to exact allowlisted US host. |
-| `login_redirect_unknown.json` | Unknown/full-URL region is rejected without a second request. |
-| `login_invalid_credentials.json` | Status 2 becomes `InvalidCredentials`; no loop. |
-| `login_terms_required.json` | Status 4 `tou` becomes required user action; no continuation call. |
-| `login_policy_required.json` | Status 4 `pp` becomes required user action; no continuation call. |
-| `login_minimum_version.json` | 403/status 920 updates a valid version once; malformed versions fail closed. |
-| `connections_one.json` | One connection is returned for explicit confirmation, not auto-selection. |
-| `connections_multiple.json` | Every synthetic person is listed and selection persists by `patientId`. |
-| `connections_empty.json` | Becomes `NoConnections`. |
-| `connections_selected_removed.json` | Missing persisted ID never selects a replacement. |
-| `graph_current_mgdl.json` | Numeric value, units, trend, and factory timestamp normalize exactly. |
-| `graph_current_mmol.json` | Source display value is preserved and canonical mg/dL stays stable. |
-| `graph_duplicate.json` | Same measurement time does not become fresh on receipt. |
-| `graph_out_of_order.json` | Older response cannot replace current data. |
-| `graph_same_time_correction.json` | Deterministic correction policy is exercised. |
-| `graph_high_low_flags.json` | Flags are preserved without inventing a precise special value. |
-| `graph_unknown_trend.json` | Unknown trend maps to `UNKNOWN`. |
-| `graph_future_timestamp.json` | More than two minutes in the future is not fresh. |
-| `graph_dst_local_ambiguous.json` | Local `Timestamp` is never interpreted in viewer timezone. |
-| `graph_missing_factory_timestamp.json` | Fails as `InvalidTimestamp` until fallback semantics are verified. |
-| `graph_extra_fields.json` | Unknown fields are tolerated. |
-| `graph_malformed.json` | Invalid/missing mandatory data is rejected and prior reading retained. |
-| `http_429_seconds.txt` | Delta-seconds `Retry-After` creates a persisted cooldown. |
-| `http_429_date.txt` | HTTP-date `Retry-After` is parsed against injected clock. |
-| `http_429_missing.txt` | Missing/invalid header uses the 15-minute default. |
-| `http_500.txt` | Transient backoff advances and is bounded. |
-| `session_expired.json` | Exactly one serialized reauthentication/replay across concurrent callers. |
+- [`connections_empty.json`](../app/src/test/resources/librelinkup/connections_empty.json)
+- [`connections_multiple.json`](../app/src/test/resources/librelinkup/connections_multiple.json)
+- [`graph_current_mgdl.json`](../app/src/test/resources/librelinkup/graph_current_mgdl.json)
+- [`graph_current_mmol.json`](../app/src/test/resources/librelinkup/graph_current_mmol.json)
+- [`graph_future_timestamp.json`](../app/src/test/resources/librelinkup/graph_future_timestamp.json)
+- [`graph_high_low_flags.json`](../app/src/test/resources/librelinkup/graph_high_low_flags.json)
+- [`graph_malformed.json`](../app/src/test/resources/librelinkup/graph_malformed.json)
+- [`graph_minimal_history.json`](../app/src/test/resources/librelinkup/graph_minimal_history.json)
+- [`graph_missing_factory_timestamp.json`](../app/src/test/resources/librelinkup/graph_missing_factory_timestamp.json)
+- [`graph_unknown_trend.json`](../app/src/test/resources/librelinkup/graph_unknown_trend.json)
+- [`graph_with_history.json`](../app/src/test/resources/librelinkup/graph_with_history.json)
+- [`login_invalid_credentials.json`](../app/src/test/resources/librelinkup/login_invalid_credentials.json)
+- [`login_minimum_version.json`](../app/src/test/resources/librelinkup/login_minimum_version.json)
+- [`login_policy_required.json`](../app/src/test/resources/librelinkup/login_policy_required.json)
+- [`login_redirect_unknown.json`](../app/src/test/resources/librelinkup/login_redirect_unknown.json)
+- [`login_redirect_us.json`](../app/src/test/resources/librelinkup/login_redirect_us.json)
+- [`login_success.json`](../app/src/test/resources/librelinkup/login_success.json)
+- [`login_terms_required.json`](../app/src/test/resources/librelinkup/login_terms_required.json)
 
-Test transport history must assert host, method, path, safe headers, request
-count, and timing. Fixture payloads must never contain copied real IDs, names,
-tokens, glucose readings, or timestamps.
+Additional inline synthetic MockWebServer cases in
+[`LibreLinkUpSourceTest.kt`](../app/src/test/java/com/khaleel/glance/librelinkup/LibreLinkUpSourceTest.kt)
+cover both mixed-shape duplicate orders, full-day backfill, strict current-only
+fields, safe path segments, status/type diagnostics, malformed/oversized bodies,
+401/404/status-2 mappings and Retry-After seconds/date/fallback. Cookie transport
+and grant/merge/recovery/concurrency tests live in their respective test packages.
+Duplicate/out-of-order/correction behavior using prior current state belongs to
+`ReadingPolicyTest`; the adapter also tests duplicates within returned graph history.
+The original proposed fixture names are not a claim that missing files exist.
+All payloads use synthetic credentials/identities/values; no copied account data.
 
 ## Verification still required with the owner's account
 
-The owner should enter credentials only in a debug/release candidate installed
-on the emulator or phone. Record results without raw bodies or identifiers:
+The owner should enter real credentials only in an owner-controlled, personally
+signed, non-debuggable release on the owner's device. Emulator/debug validation
+uses synthetic accounts and fixtures. Record results without raw bodies or
+identifiers:
 
 1. Confirm bootstrap-to-region routing and that the returned key is in the
    allowlist.
@@ -523,6 +547,6 @@ on the emulator or phone. Record results without raw bodies or identifiers:
 10. Exercise an expired session, removed connection if safely reproducible, and
     provider cooldown behavior without intentionally creating a request storm.
 
-Until those checks pass, this document is a source-backed implementation plan,
+Until those checks pass, this document is an implemented source-backed contract,
 not a claim that the owner's account, region, or current service behavior has
 been authenticated end to end.

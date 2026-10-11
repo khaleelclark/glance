@@ -1,5 +1,9 @@
 # Glance 0.15.0 notification checks
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Changes based on clean main `fe5d41e`: numeric small icon, API 36.0 promotion
 request compatibility, promotion status/settings guidance, and explicit
 NO_CLEAR on the ongoing monitoring card. The app remains min API 30, target

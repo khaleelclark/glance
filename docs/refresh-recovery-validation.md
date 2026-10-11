@@ -1,5 +1,9 @@
 # 0.19.1 manual refresh after connection failure
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 The October 1 report showed a historical reading and “Waiting before trying
 again” after a phone DNS failure had been resolved. Both the controller and
 service treated Glance's own exponential retry delay as a provider cooldown,

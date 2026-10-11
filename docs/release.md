@@ -1,535 +1,136 @@
-# Personal APK build and installation
+# Build, signing, installation and upgrades
 
-Glance uses application ID `com.khaleel.glance`, versionCode `35`, and versionName
-`0.30.0`. The Android Studio project is the root of this repository. The private
-GitHub repository is `khaleelclark/glance`.
+Current phone/watch version: **0.30.0 / code 35**. Both use application ID
+`com.khaleel.glance` on their respective devices and require matching certificates
+for Wear Data Layer sharing. Source repository: `khaleelclark/glance`.
+Last documentation audit: 11 October 2026. Version changes must update both modules.
 
-## Current qualification
+## Delivered artifacts and qualification
 
-The APK is an **early personal test build**. Synthetic protocol tests, local
-state tests, lint, and the API 36 emulator checks in
-[device-validation.md](device-validation.md) pass. A real LibreLinkUp follower
-account, Patrick's same-timestamp values, the Galaxy S25 Ultra, Samsung One UI,
-screen-off cadence, and battery impact have **not** been tested. Do not use this
-build as a medical alert or replace LibreLink's own warnings.
+The signed 0.30 APKs were built from clean source
+`12919d633cc6ebc63277f796eff81b8350513bd2`. The subsequent Studio configuration
+fix (`57a0902`) and this documentation update require no new APK or signer.
 
-## Build from a clean checkout
+| Artifact | SHA-256 |
+|---|---|
+| `glance-0.30.0-personal.apk` | `ac7c1f3edafeb9181b358fadc80c7282828f1c84c23b61a1a6792a8609d6c724` |
+| `glance-0.30.0-watch.apk` | `f1bfd01fc1a1849d980506a49d586729155acc54fd54382977cf3aa736f85ee2` |
 
-Clone the repository and open its root in Android Studio. Use JDK 17, Android
-SDK Platform 37, SDK Build-Tools 36.0.0, and an SDK path in `ANDROID_HOME`
-or `local.properties`. Run:
+Personal certificate SHA-256:
+`837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`.
+This is a public certificate fingerprint, not the private key.
+
+On the build host, artifacts and manifests are under ignored `release/`:
+`glance-0.30.0-manifest.json`, `glance-0.30.0-watch-manifest.json`,
+`glance-0.30.0-delivery-manifest.json`, `glance-0.30.0-static-verification.json`,
+and `glance-0.30.0-verification-and-install.zip`. They are delivery files,
+not files downloaded by cloning Git. Keep immutable copies with the APKs;
+`manifest.json` and `clean-build.log` are overwritten by later signing runs.
+A rebuild from newer source must publish its own checksum/source manifest.
+
+The recorded clean release checks passed 236 phone and 15 watch unit tests,
+zero failures/errors/skips, and zero lint errors. Phone lint retained 90 debug
+and 57 release warnings; watch lint retained zero warnings. Both signatures,
+package/version, non-debuggable status and debug-component exclusion passed
+static verification. Signed APK runtime checks are separate from the bounded
+debug-emulator receipts. See [device status](device-validation.md),
+[0.30 source review](review-030.md), and [watch evidence](watch-validation.md).
+Owner reports of phone use do not complete controlled live-account parity,
+Samsung/Watch7, overnight/24-hour cadence or battery qualification.
+
+## Clean-checkout build
+
+Open the repository root in Android Studio. Use JDK 17, SDK Platform 37,
+Build-Tools 36.0.0 and Platform-Tools. The checked-in wrapper pins Gradle 9.5.0
+and its distribution checksum; `gradle/libs.versions.toml` pins AGP 9.3.0 and
+Compose compiler plugin 2.2.10. Both modules have minSdk 30 and targetSdk 37.
+Point `ANDROID_HOME` or `local.properties` at the installed SDK.
 
 ```sh
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:lintRelease :app:assembleRelease
+./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest \
+  :app:lintDebug :app:lintRelease :wear:lintDebug :wear:lintRelease \
+  :app:assembleRelease :wear:assembleRelease
 ```
 
-This produces `app/build/outputs/apk/release/app-release-unsigned.apk`.
-Android Studio can run the debug variant without the personal signing key.
+Unsigned outputs are `app/build/outputs/apk/release/app-release-unsigned.apk`
+and `wear/build/outputs/apk/release/wear-release-unsigned.apk`. They cannot be
+installed until signed. Studio's debug variant needs no personal release key.
+Use an Android Studio version compatible with the pinned AGP; do not change
+catalog/toolchain versions merely to work around a local sync failure.
 
-The owner's current phone installation was updated successfully through Android
-Studio on the same computer. Use that same computer and debug key for this update:
-pull `main`, select the shared `Glance phone` configuration with the `app` debug
-variant and Run it on the connected phone.
-The release-signed APK cannot update a differently signed debug installation.
-Cancel an uninstall prompt to preserve local settings and inspect its error.
+## Existing Studio installation
 
-Studio's default-activity launch may select the manifest-default Lilac alias even
-when a saved accent has disabled it in favor of Teal or another preset. The
-shared `.run/Glance_phone.run.xml` uses Specified Activity with
-`com.khaleel.glance.MainActivity`, which remains enabled for every accent.
-For a locally saved configuration, use Run → Edit Configurations → Launch →
-Specified Activity, enter that class, Apply and Run. Select the phone `app`
-module if Studio asks for a module. No uninstall or settings reset is needed.
+Use the same computer and retain its debug signing key. In the existing checkout,
+run `git pull --ff-only`, sync, select **Glance phone**, the phone `app` debug
+variant and connected phone, then Run. Resolve an imported module to `app` if
+needed. The configuration launches `com.khaleel.glance.MainActivity` directly.
+For the old `LauncherLilac does not exist` failure, repair the existing
+configuration through **Run → Edit Configurations → Launch → Specified Activity**
+and enter that class. See [Studio launch fix](studio-accent-launch.md).
 
-## Keep the upgrade key
+A different computer's default debug key may differ. A personal release APK
+cannot replace a differently signed debug install. Cancel any uninstall prompt;
+inspect the signer/version error before changing the installation. Normal
+same-package, same-signer updates preserve data; verify settings and monitoring
+after deployment. This uses Android's supported
+[run configurations](https://developer.android.com/studio/run/rundebugconfig).
 
-The personal release keystore and its password file live outside the repository
-at `~/.local/share/glance/personal-release.jks` and
-`~/.local/share/glance/signing-password.txt` on the build host. They are mode
-0600. **Back up both files to a secure location you control before installing
-the release APK.** The key was created on 2026-09-27 and expires in 2054.
-Losing the key or password prevents normal in-place upgrades. Neither file
-belongs in Git, an APK, a screenshot, or a support log.
+## Protect the release key
 
-On another build machine, copy both files securely to the same directory and
-keep them mode 0600. Alternatively, point `GLANCE_SIGNING_DIR` at the directory
-containing the two files. From a clean checkout, run:
+The existing personal key and password file are outside Git at
+`~/.local/share/glance/personal-release.jks` and
+`~/.local/share/glance/signing-password.txt`, mode 0600. Alias:
+`glance-personal`. The key was created 27 September 2026 and expires in 2054.
+Back up both files securely under the owner's control. Loss prevents future
+normal in-place upgrades; generating a replacement key does not repair that.
+Neither file belongs in an APK, artifact bundle, screenshot or support log.
+
+On another authorized build machine, securely restore both files to that
+location with mode 0600, or set `GLANCE_SIGNING_DIR` to their directory. Set
+`ANDROID_HOME` for the signing script; it defaults to `~/Android/Sdk` and does
+not discover a custom SDK solely from `local.properties`. Commit all source
+and documentation before running:
 
 ```sh
 python3 scripts/sign_release.py
 ```
 
-The script refuses dirty source, cleans and rebuilds the APK, runs unit tests
-and both lint variants, signs with the existing private key, verifies the APK
-signature, and writes the signed APK and metadata under the ignored
-`release/` directory. The exact APK SHA-256, certificate SHA-256, source commit,
-and verification status are in `release/manifest.json`. Keep the same
-application ID and signer for every upgrade; increment versionCode.
-
-## Install and verify on the phone
-
-1. Transfer `release/glance-0.30.0-personal.apk` to the phone and verify its
-   SHA-256 against `release/manifest.json`.
-2. Open the APK on the phone. If Android asks, permit installation from that
-   trusted file manager. Do not disable broader device protections.
-3. Sign in **on the phone** with the LibreLinkUp follower account, select
-   Patrick explicitly, and compare the reading and timestamp with LibreLinkUp.
-4. Allow notifications, choose whether the lock screen may reveal the value,
-   review battery settings, then tap **Start monitoring**.
-5. Confirm one silent card appears with the measurement time, glucose value,
-   trend arrow, and recent change when an earlier reading is available. Glance
-   requests the status chip Live Update by default where Android supports it;
-   promoted cards stay expanded. Turn that switch off in Settings for the large,
-   collapsible card. The main screen has a 24-hour timeline of validated source
-   samples: use one finger to inspect exact readings on the graph.
-   **3 hr**, **6 hr**, **12 hr** and **24 hr** select the latest window;
-   6 hours is the default. Pinch and two-finger dragging do not change the window
-   or selected reading. Its vertical scale
-   stays at 40–350 mg/dL, converted to the selected unit. Low/High lines follow
-   enabled ordinary alert settings, falling back independently to 70/240 when
-   off. Below Low is red; above High is yellow. Edge arrows mark readings outside
-   the scale; the value readout on the graph retains the actual value, with
-   its measurement time directly below the value in the same top tooltip. The current reading places the
-   value, unit, and trend arrow together, with a plain-language trend below;
-   landscape places the graph beside it. Phone screens use black backgrounds,
-   graphite cards and lilac controls. Hold/drag inspects a reading; releasing
-   or cancelling hides the tooltip. Use Refresh in the app, and Stop
-   monitoring in Settings to end the session. Test screen-off
-   behavior before relying on the chosen polling interval.
-
-Optional threshold alerts start **off**. In Settings, tap a level to open its
-edit sheet, scroll the value wheel to choose its threshold, and use the repeat
-slider to set a cooldown from one to 60 minutes (five minutes initially).
-Urgent Low and Urgent High take precedence
-over their ordinary level. A new, fresh numeric reading can sound at most once
-per category per cooldown; repeated source responses never sound again. Each
-category's sound and priority are chosen in its own Android notification-channel settings.
-Glance registers all four categories when opened and links to each category
-from the alert list. Samsung may require enabling **Manage notification
-categories for each app** under Advanced notification settings to show them.
-On Android 16, expand **Show unused categories** to see alert categories before
-their first notification.
-Urgent channels request high importance and an alarm sound; Android and the
-phone owner still control notification permission, Do Not Disturb, sound,
-heads-up display, and delivery. Alerts share the existing polling schedule and
-are not a substitute for LibreLink's own alerts.
-
-To upgrade, build a higher versionCode APK signed with the same keystore and
-install it over the existing app. Verify account/settings retention. An APK
-signed with another key cannot replace the installed app without uninstalling,
-which removes local Glance data.
-
-## Recovery
-
-Use Refresh and the in-app Diagnostics view first. If a reading is old,
-check its measurement time, connection state, notification permission, battery
-limits, and next retry time. If terms or policy acceptance is required, complete
-that in the official LibreLinkUp app, then reconnect in Glance. After a
-force-stop or Android Task Manager Stop, open Glance and explicitly resume.
-Reinstall only after checking the state and preserving the signing key.
-
-## 0.23.0 focused redesign and alarm log
-
-The default accent is ocean blue (`#1677D2`), with a rounded native G logo on
-the phone and watch. Existing custom accents remain supported. Now places the
-reading above a larger source graph; signed-in navigation is Now / Logbook /
-Settings. Common settings use compact rows and quick-edit sheets. Multiple-person
-monitoring, dashboards and per-person thresholds remain deferred.
-
-Logbook distinguishes Low, Urgent Low, High and Urgent High notifications posted
-by Glance. Each row retains the source reading and measurement time separately
-from the posting time. It records Android accepting a post, which does not prove
-sound was heard. History is encrypted, excluded from backups and diagnostics,
-and limited to 1,000 records with 30-day pruning on load and append. Clear asks
-for confirmation and preserves alert settings, sample deduplication and cooldowns.
-Explicit new sign-in requires successful history cleanup. Sign-out and local
-health-data deletion attempt cleanup and report partial storage failures. If
-sign-out cannot erase the ledger, it remains encrypted and hidden; another
-explicit sign-in cannot proceed until log cleanup succeeds.
-
-See [redesign-023-validation.md](redesign-023-validation.md) for the exact
-automated/emulator evidence and remaining physical-device checks. For the owner's
-existing Android Studio installation, update using the same computer's `app`
-debug variant; a release APK with a different signer cannot update that install.
-
-## Samsung Live Update and glucose icon (0.15.0)
-
-The owner reports Android 16 / One UI 8.5 on the Galaxy S25 Ultra. Version
-0.15 requests promoted ongoing notifications on Android 16.0 using the
-platform promotion extra, avoiding the builder method introduced in 36.1.
-It still checks whether promotion is allowed and uses the regular custom card
-when unavailable. Settings displays the observed promotion state and provides
-a Live Update settings shortcut, with the app notification page as fallback
-when the device has no dedicated screen.
-
-On Samsung, check Settings → Notifications → App notifications → Glance for
-Allow notifications, lock-screen display, and Live notifications if offered.
-Then check Settings → Lock screen and AOD → Now bar → Live notifications
-(or See all) and enable Glance if listed. Samsung controls app eligibility;
-Android 16 and a promotion request alone do not guarantee a Now bar card.
-
-Glucose number icon starts enabled and draws the selected unit's fresh number
-as a monochrome small icon. Paused, starting, absent, delayed, stale, special
-LOW/HIGH, invalid and excessively long values retain the Glance icon.
-When lock-screen values are hidden, the original notification also uses the
-Glance icon and no critical text, including while unlocked: publicVersion alone
-cannot reliably hide the original icon/chip on every Samsung surface.
-Since 0.27, both promoted Live Update requests and regular cards use the eligible
-glucose number icon. Promotion remains controlled by Android and the device. The bitmap has
-padding for OEM icon scaling, but Samsung decimal/three-digit readability still
-needs the owner's check. Android's lock-screen privacy settings still apply.
-
-The monitoring notification requests ongoing and NO_CLEAR on both its original
-and redacted public versions. Stock Android excludes it from Clear all, but the
-owner reports Samsung removing it even through Clear. Android 14 and newer can
-also permit an individual swipe while unlocked. See the 0.18 retention choice
-below; an app cannot make every OEM surface impossible to dismiss.
-
-Primary references (checked 2026-09-30):
-
-- https://developer.android.com/develop/ui/views/notifications/live-update
-- https://developer.android.com/reference/android/app/Notification.Builder#setRequestPromotedOngoing(boolean)
-- https://developer.android.com/reference/android/provider/Settings#ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS
-- https://developer.android.com/about/versions/14/behavior-changes-all
-- https://www.samsung.com/uk/support/mobile-devices/how-to-use-the-now-bar-on-the-lock-screen-of-your-samsung-galaxy-device/
-
-## Reference card layout (0.16.0)
-
-Turn off **Status chip Live Update** to use the custom card matching the owner's
-reference: trend arrow, lighter large reading, then unit. Fresh compact cards
-have one clean row; expand for the source reading time, person, trend, recent
-change and connection notes. Old/error cards retain their explicit status and
-last-reading details. Android owns the shell, background, icon placement and
-expand control; Samsung's exact appearance needs a device check.
-
-A small purple graph thumbnail uses only genuine, same-person numeric samples
-from the three hours ending at the current source measurement. It requires at
-least two samples, leaves gaps over fifteen minutes unconnected, and never
-manufactures history. Nonfresh/stopped/special states omit it. Hidden lock-screen
-values suppress the original numeric icon, thumbnail and chip text even while
-unlocked. The numeric status icon uses a lighter condensed face, retaining
-mg/dL, mmol/L and stale fallbacks. Live Update remains available with Android's
-standard layout; existing display-mode preferences are preserved.
-
-## Phone and car widget (0.17.0)
-
-Enable **Widget values** in Glance Settings; readings on widgets are visible to
-anyone who can see the phone/car screen, including while the phone is locked.
-This choice is separate from lock-screen notification privacy and defaults off.
-Sign-out turns it off. Add **Glance glucose** using the phone widget picker.
-For Android Auto, add it in the car-widget picker if that feature is offered;
-Google's rollout controls availability. This is a mobile AppWidget prepared for
-car hosts, not a separately qualified Android Auto app or an overlay over Maps.
-
-The card uses the existing monitoring session and encrypted selected-person
-data. It has no second network scheduler. Its measurement time always remains
-visible; fresh values have a source arrow, actual change interval when available,
-and a four-hour graph in larger sizes. Compact/large-font sizes omit the graph
-before hiding essential reading information, and retain available delta on
-a separate line at narrow widths. Delayed, stale, missing, stopped,
-wrong-person and action-required states do not appear as a fresh numeric card.
-Source gaps over 15 minutes are not joined; missing history is not fabricated.
-Android may retain a widget's last rendered view if the app cannot execute, so
-check the absolute measurement time. Host refreshes are best effort.
-
-See [car-widget.md](car-widget.md) for official references, setup and verification
-limits. Actual Android Auto dashboard hosting, Samsung appearance, live source
-parity and screen-off/battery qualification require the owner's device tests.
-
-## Notification retention (0.18.1)
-
-The owner reported on 0.17.0 that both Clear and a sideways swipe removed the
-card, although Android reported it promoted. **Keep monitoring card visible**
-now starts enabled in this personal build, reflecting the owner's explicit
-request to retain the card. While the current session is running, a valid
-delete intent restores the same silent regular glucose card with the latest
-controller state. It does not restart monitoring, fetch data, or repeatedly
-request promotion. After dismissal the regular layout remains in use across
-process recreation; an explicit Start/Resume, Show notification again, or
-switching Live Update off/on can request promotion again.
-
-Turn retention off to retain the previous behavior: dismissal suppresses the
-card until an explicit restore. Stop monitoring, sign-out, system Stop and
-force-stop remain stop controls. Android/Samsung can still remove a card briefly,
-block notifications, or prevent delivery of its delete intent; this is recovery,
-not an unremovable notification guarantee.
-
-Diagnostics now shows the posted ongoing, Clear-all protection, foreground and
-promoted flags, whether chip text/custom layout was supplied, channel importance,
-and retention state. It exports no chip contents or patient details. If Glance's
-lock-screen values are hidden, it deliberately supplies no numeric chip text.
-Android promotion alone does not establish Samsung Now bar admission. The Now
-bar still requires an owner check and can be enabled for Glance if Samsung lists
-it under Settings → Lock screen and AOD → Now bar → View more.
-
-See [notification-0.18-validation.md](notification-0.18-validation.md) for bounded
-verification. This choice supersedes the baseline's manual-only dismissal
-restoration for this personal build; dismissed Live Updates return as regular
-cards rather than being re-promoted automatically.
-
-In 0.18.1, notification cancellation and publication share a generation gate.
-Stop, sign-out and person change cancel last when a publication is already in
-flight, and reject callbacks prepared before cancellation. Dismissal also
-invalidates a pending promoted card. The settings switch retains its previous
-accepted choice and reports an error when persistence fails.
-Lock-screen value changes share that gate, invalidate pending public cards,
-and clear the current monitoring and alert cards before a private replacement.
-
-This upgrade starts **Show readings on lock screen** off, including when the old
-version had it on. Re-enable it in Settings only if you want public readings.
-The separate checked privacy store then preserves successful choices on later
-upgrades. A failed save leaves current rendering hidden and can delete just that
-grant to revoke it durably. If both saving and deletion fail, Glance reports the
-failure and directs you to Android's lock-screen notification controls before
-restarting; it does not claim to have saved the hidden choice.
-
-## Wear OS companion (0.19.1)
-
-Glance now includes a companion watch app, a source-glucose/trend complication
-and an optional native silent card. Install the separate same-key watch APK;
-[watch.md](watch.md) covers Wireless debugging sideloading, sharing privacy,
-complication selection and notification permission. Phone monitoring owns all
-LibreLinkUp requests. Watch7 / Wear OS6 / One UI Watch8.0 was reported by the
-owner; physical watch qualification remains pending. Existing successfully
-saved lock-screen grants persist through this upgrade.
-
-## 0.20.0 presentation refresh
-
-The phone UI uses neutral surfaces, custom type/shape defaults and compact
-controls. The current reading and history are flat sections rather than nested
-cards. Settings groups expand on tap; Display opens initially. App color still
-contains every preset, the wheel/brightness controls and the hex field. Short
-setting summaries remain visible when their group is open, with original longer
-explanations behind About/Setup buttons. Lock-screen/widget/watch privacy
-consequences remain beside their controls. Alerts, cadence, restart, permissions,
-battery links, account controls and destructive confirmations are retained.
-Android Back closes Settings. No persisted settings migration was added.
-
-The LibreLinkUp adapter, poller, alerts, notification layouts, widget/watch
-runtime and chart math/gestures are unchanged. Existing Live Update preferences
-are respected; turn Status chip Live Update off for the regular graph card.
-See [UI refresh validation](ui-refresh-validation.md) for synthetic checks and
-physical-device boundaries. The watch needs no reinstall for this UI change.
-
-## 0.21.0 UI overhaul
-
-A defined reading hero, layered surfaces, consistent toolbar and three Settings
-pages replace the flat layout and accordion maze. Everyday shows the common
-preferences directly; Alerts contains glucose limits and sounds; More contains
-appearance, widgets, watch, system links and account controls. Individual
-About expanders are replaced with concise summaries. Privacy consequences remain
-visible at the relevant controls, and destructive actions retain confirmation.
-
-Show notification is located with notification settings; it invokes the same
-restoration action formerly labeled Restore card. The chart defaults to the latest
-6 hours and has 6/12/24-hour choices below it. Touch inspects real observations;
-pinching zooms without two-finger timeline scrolling. Axis limits and alert-driven
-colors are retained. Accessibility viewport actions now report actual changes and
-announce the visible time range. Special source values are excluded from numeric
-graph geometry and coincident limit lines honor red priority. Alert wheels persist
-each value change immediately so switching pages cannot cancel a pending save.
-
-No notification renderer, polling, credential storage, alert policy, widgets or
-watch runtime change. Existing watch installs remain compatible. Synthetic native
-checks and live-device boundaries are recorded in docs/ui-overhaul-validation.md.
-
-## 0.22.0 VPN compatibility candidate
-
-LibreView-issued Secure cookies now remain in memory across bootstrap and
-regional requests. The jar is restricted to reviewed HTTPS origins and clears
-on sign-in/sign-out. No VPN routing, User-Agent, TLS validation or request-cadence
-change was made. This is a candidate for the owner's Proton Free setup failure,
-not a verified live correction. Setup errors and Diagnostics now include the
-HTTP status and a coarse response type, without bodies, headers or cookie values.
-
-Install the phone APK over the current version with Proton enabled, then retry
-the shared-person screen. If it fails, report the displayed HTTP status/type.
-If an existing session still fails, reconnect in Glance to test a fresh login
-sequence; process restarts intentionally drop temporary cookie state. There is
-no watch runtime change and an existing compatible watch install needs no update.
-See [VPN investigation and verification](vpn-compatibility.md).
-
-## 0.24.0 graph and reading refinement
-
-Now gives the graph more space without a nested rounded card. The horizontal
-value grid and green range band follow the existing ordinary Low/High settings
-(or 70/240 mg/dL defaults when those alerts are disabled). Fresh current readings
-use green/yellow/red range presentation; delayed, stale and unavailable states
-retain truthful labels and neutral presentation. This is display classification,
-not a change to alert policy or a new target-range setting.
-
-Selected source value/unit/time appears on the graph crosshair. Touch scrubs real
-observations. The only time-window controls are 3/6/12/24-hour presets; pinch zoom
-is removed. A small accessible activity dot replaces the running-status strip,
-Refresh uses a clear arrow, and Pause is removed from Now. Stopped/error states
-still offer recovery; system Stop, Settings stop and sign-out retain their
-existing effects. The native logo is now an eye mark. Redundant Settings,
-Logbook and graph explanatory text is removed.
-
-See [refinement validation](refinement-024-validation.md) for exact build,
-synthetic fixture and physical-device boundaries. Update the owner's existing
-Studio build through the same computer/debug key rather than installing a
-differently signed personal APK over it.
-
-
-## 0.25.0 personal polish
-
-Sugar-cube marks replace the eye throughout phone and watch resources. Muted teal
-replaces the prior default Ocean blue; other custom colors remain available.
-The selected source time is directly below the value in the top graph tooltip.
-The graph is taller, hour controls are visually smaller with accessible touch
-targets, and the status indicator sits beside Refresh. The trend/delta separator
-is removed and the freshest age reads “Just Now”.
-
-Settings → Reading → Follower nickname changes the displayed name, including
-the ongoing notification. Blank restores the source name; source connection IDs
-and readings are unaffected. Nicknames are stored encrypted per connection and
-cleared at account boundaries. Sign-out reports a failed encrypted nickname
-cleanup while still clearing the visible account; a new account cannot reuse it.
-
-The app draws its own surface behind the transparent system navigation bar and
-disables Android's three-button contrast scrim, following
-[Android's edge-to-edge guidance](https://developer.android.com/develop/ui/views/layout/edge-to-edge).
-Buttons remain light in dark mode and dark in light mode for readability.
-Samsung-specific rendering remains an on-phone check.
-
-See [0.25 validation](refinement-025-validation.md) for exact candidate and results.
-Update with Android Studio using the same computer's existing signing key and
-`git pull --ff-only` on main. This preserves the installed app's settings. A
-personal signed APK cannot replace a build signed with another key.
-
-## 0.26.0 black presentation and temporary graph inspection
-
-The owner-requested smaller droplet replaces the sugar cube in native phone,
-launcher, notification and watch marks. Phone screens use true black, graphite
-surfaces, readable off-white text and restrained lilac controls in both system
-modes. The App color row and custom-picker sheet are removed. Legacy stored
-colors remain stored but do not affect the fixed presentation; account/settings
-persistence and nickname behavior are unchanged.
-
-The hero starts with its source measurement time and computed age, once above
-the glucose value. The former Current reading / In range title is removed.
-Delayed, stale, invalid-time and absent labels remain truthful. Fresh low/high
-values retain red/yellow emphasis in a graphite card.
-
-The graph no longer draws the permanent in-range endpoint circle. Hold/drag
-selects a real visible sample; releasing all fingers or cancelling hides tooltip,
-crosshair and selected marker and clears the touch selection. Once a second
-finger joins, the gesture remains inert until every finger lifts. Scale, gaps,
-real readings, limits and 3/6/12/24-hour presets are unchanged. Accessible
-Latest/Earlier/Later reading actions provide explicit inspection, and Dismiss
-reading hides it without a touch. Out-of-scale arrows remain source-faithful.
-
-See [0.26 validation](refinement-026-validation.md). Update an existing Studio
-installation from the same computer/debug signer. The personal APK can only
-update an installation with its existing personal signer. Live-account/Samsung,
-TalkBack, overnight/battery and physical-watch qualification remain outstanding.
-
-## 0.27.0 numeric alert icons and reading-card retention
-
-Glucose alerts use the same eligible source-number status icon as the ongoing
-card. The visible alert icon follows the latest reading/unit quietly, without
-re-evaluating thresholds, resetting cooldowns or logging another event. Alert
-text retains its category and the triggering reading/time. Enhanced notification
-requests also retain eligible number icons. Number preference, hidden lock-screen
-values, source identity and freshness remain enforced; stale/absent/special or
-unrenderable values are not advertised as a current status-bar number.
-
-Numeric alarm cards additionally carry Android's system-owned timeout, based on
-the source measurement's five-minute freshness deadline. New samples renew it
-even if their value is unchanged; duplicates cannot extend it. If the app process
-dies or no fresh sample arrives, expiry removes that alarm card and its number;
-the event remains in encrypted Alarm Log. This timeout does not remove the ongoing
-reading card and requires no new application scheduler or exact-alarm permission.
-
-An opaque per-post delete token prevents dismissed alerts returning during an
-icon update and prevents an older callback clearing a newer alarm. On process
-recreation, prior visible numeric alarms with no in-memory identity scope are
-removed on the first render; encrypted alarm history remains available.
-
-The ongoing reading card already uses ONGOING/NO_CLEAR for Clear all protection.
-Keep notification visible defaults on and restores its regular card after a
-valid current-session swipe callback. Android 14+ allows individual swipes on
-ordinary ongoing cards; Glance cannot promise zero motion/removal before the
-callback restores it. Stop/sign-out still remove the card. The toggle's wording
-now explains both behaviors. See the official [Android behavior](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)
-and [0.27 validation](notification-027-validation.md).
-
-
-## 0.28.0 reading emphasis and accent presets
-
-The current reading increases from 42sp to 50sp. Only the number uses semantic
-range color: green within the chart limits, red below Low and yellow above High.
-The graphite card, source time, unit, source trend and supporting text remain
-neutral. Delayed/stale/invalid readings remain neutral and retain their warnings.
-Range classification still uses the source value and existing enabled Low/High
-limits; it is independent of the chosen accent.
-
-Settings → Appearance → Accent color offers Lilac, Teal, Ocean, Berry, Forest,
-Coral and Sunset. Presets recolor controls, the in-app droplet, native home-screen icon and
-launch splash while keeping black
-and graphite surfaces. Old custom values remain stored, but unsupported values
-fall back to Lilac until a new preset is selected. New/reset settings use Lilac.
-No wheel or arbitrary hex editor is exposed. See refinement-028-validation.md
-for exact validation boundaries and native launcher behavior.
-
-
-The additional Logbook request uses Libre-style colored reading badges: red with
-burgundy for Low/Urgent Low, amber/yellow for High/Urgent High. Unit and original
-source trend stay inside the badge; event category, person, source and posting
-times remain explicit. Colors belong to the saved event category and cannot be
-reinterpreted by later thresholds, accents or the current reading. Settings alert
-labels use the same red/yellow families. Alert engine/notification delivery and
-historical event values are unchanged.
-
-Launcher updates use native aliases and preserve explicit MainActivity notification
-intents. Android themed monochrome icons follow system tint; OEM launcher caches
-may update later. API36 switching/startup/splash is verified with synthetic debug
-fixtures; API30/32 and Samsung cache behavior remain unverified.
-
-
-## 0.29.0 taller range-colored reading card
-
-The owner requested the whole reading card background match the applicable
-value color and the section be larger/taller. Fresh in-range readings fill the
-card green, Low red and High yellow; dark text preserves contrast for the value,
-unit, arrow, source time, trend description and actual delta. The source-based
-currentReadingBand gate is unchanged. Delayed/stale/invalid/absent observations
-remain neutral graphite with their existing warning/source time.
-
-The card has a 196dp minimum height, 24dp vertical padding and 10dp spacing,
-with a 56sp/64sp value. It grows rather than clipping at large text, and existing
-FlowRow wrapping/portrait and landscape scrolling remain. Accent presets,
-launcher/splash, Logbook badges and notification/source behavior are unchanged.
-See reading-card-029-validation.md for checks and fixture/release boundaries.
-
-## 0.30.0 richer green and a tighter reading card
-
-In-range readings now use a saturated #22C55E green. The card has a slightly
-smaller 176dp minimum height and reduced padding while its number grows to
-60sp. Timestamp, freshness warning, unit, arrow, trend and actual change text
-also grow. Minimum height, wrapping and scrolling continue to accommodate large
-text. Low/High colors, freshness rules, accent presets and source data remain
-unchanged. See reading-card-030-validation.md for native and history evidence.
-
-Glance retains distinct successfully received measurement timestamps even when
-the glucose values are identical. It merges cloud graph history with captured
-current readings, retaining up to 24 hours/1,500 samples. It cannot create minute
-measurements that were never received or supplied by the source. No monitoring
-cadence or power-management change is included in this refinement.
-
-The history investigation found and corrected two import defects: graph rows
-with only a valid factory timestamp/canonical glucose value no longer fail for
-missing current-only unit/display-value fields; the graph import bound rises
-from 300 to the shared 1,500 samples. Full valid source metadata is retained,
-missing trends remain unknown and current parsing stays strict. Refresh can
-import valid samples still returned by the provider; it cannot recover source
-rows outside the returned window. Their absence does not justify fabricated
-minute readings. Exact device/source cadence remains unverified.
-
-Mixed full/minimal duplicate history rows now preserve genuine reported display
-precision when connection, timestamp and canonical value match. Canonical
-corrections invalidate obsolete display values, and missing trends remain
-unknown. Independent correction review of 3aefcbd closes the single LOW, with
-no open findings. Final clean build, static APK/signature checks and delivery
-source are recorded in the generated release manifests and verification bundle.
+The script requires clean Git state, rebuilds/tests/lints both modules, signs
+with the existing key, verifies matching package/version and certificates, and
+writes versioned APKs/manifests under `release/`. Its manifests conservatively
+leave emulator/live/physical qualification untested for the exact new source;
+attach any separately pinned runtime evidence rather than changing that claim
+by inference. Static debug/demo exclusion and device qualification require the
+release verification step in addition to signature verification.
+
+## Install a personal release
+
+1. Obtain the intended APK and its matching immutable manifest. On Linux/macOS,
+   use `sha256sum`/`shasum -a 256` to compare the file to the checksum above or
+   that release's manifest. Use `apksigner verify --verbose --print-certs` from
+   the SDK Build-Tools to check the certificate when building/verifying locally.
+2. For an update, confirm the same package/signer and a non-downgraded version;
+   future app releases increment versionCode. Transfer the phone APK and open
+   it using a trusted installer. Allow installation from that installer only if
+   Android asks. Keep the existing app installed.
+3. Follow [phone setup](setup.md), then compare value, trend, unit and source
+   time with LibreLinkUp at the same measurement timestamp. Existing account
+   and settings normally remain after a same-signer update; confirm them.
+4. Install the separate matching watch APK only if wanted, following
+   [watch setup](watch.md). A personal-signed watch APK cannot share with a
+   phone signed by a different Studio/debug key.
+
+No uninstall, data clearing or forced downgrade is part of the normal update.
+Backups exclude account/health state; uninstalling is not a reversible migration.
+Keep the original installer and signer available if diagnosing an update.
+
+## Recovery and release history
+
+Use [troubleshooting](troubleshooting.md) for old readings, missing notification,
+provider cooldowns, VPN failures and Studio/signing errors. Reopen explicitly
+after system Stop/force-stop and start monitoring; Android cannot be promised
+to restart a force-stopped app. Use Diagnostics before deleting data.
+
+Historical appearance, defaults, privacy migrations and validation notes are
+preserved in [release history](changelog.md). Current controls and setup are in
+[setup](setup.md); historical notes are not an installation checklist.

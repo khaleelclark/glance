@@ -1,5 +1,9 @@
 # Glance 0.18.1 notification retention
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Retention base: `3fc28032b180516b711cf1778b4283d701f61026`.
 Race-fix base: clean main `a3a8281` (0.18.0).
 Privacy-transition fix base: clean main `a27fca0`.

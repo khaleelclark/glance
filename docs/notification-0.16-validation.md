@@ -1,5 +1,9 @@
 # Glance 0.16.0 reference layout
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Base: clean main6608205. Compile/target37, min30. Reference supplied by the
 owner shows an arrow before a light-weight reading and unit, graph thumbnail
 and numeric status-bar glyph. No other app's image/logo was copied.

@@ -1,5 +1,9 @@
 # Glance 0.27 independent source review
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 The independent read-only reviewer reviewed original candidate
 `227b9436cb61cb86d425059a5bc0817c2cdda410` against released `c84ef6d`.
 There were no HIGH/MEDIUM blockers and one LOW: an ordinary numeric alert

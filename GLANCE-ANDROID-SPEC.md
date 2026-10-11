@@ -6,6 +6,33 @@ Working name: **Glance**. User: Khaleel. Followed person: Patrick. Distribution:
 
 This document specifies the app to build. It is not a claim that the app, Abbott integration, or device behavior has already been tested. Numerical defaults and performance targets below are product decisions, not promises made by Abbott or Android.
 
+## Current implementation addendum — 11 October 2026
+
+The sections below preserve the 27 September baseline and its acceptance targets.
+They are historical requirements, not the current installation guide. Use
+[README](README.md), [setup](docs/setup.md), [release](docs/release.md) and the
+[documentation index](docs/README.md) for the shipped 0.30.0 behavior and evidence.
+Subsequent owner-directed changes supersede these baseline UI/scope defaults:
+
+| Baseline | Current behavior |
+|---|---|
+| Phone-only; alerts/watch deferred | Optional four-category phone alerts, encrypted Logbook, passive widget and Wear OS companion added; all alert/device grants initially off |
+| System light/dark presentation | Phone stays black/graphite in both modes; seven accent presets and matching native droplets; fresh reading card green/red/yellow |
+| Main/notification Pause and Refresh | Refresh on Now; Stop monitoring in Settings; no new notification action buttons |
+| Manual-only dismissal restore | Keep notification visible defaults on at owner request; a delivered callback restores the regular card, without automatic re-promotion |
+| Suggested graph interaction | 3/6/12/24-hour presets, 6 default; hold/drag real samples, dismiss on release; no pinch/pan |
+| Manual refresh/backoff sketch | Three-second monotonic debounce; transient retry delay may be bypassed manually; provider cooldowns remain mandatory |
+| Proposed storage libraries | Android Keystore AES-GCM/AtomicFile for account/health stores; preferences for ordinary settings and checked privacy grants |
+| History | Up to 24 hours/1,500 validated numeric timestamps; minimal historical rows accepted; guarded reported-value precision preserved; no fabricated missing samples |
+| Launch from default icon | Studio Glance phone configuration explicitly launches always-enabled MainActivity, independent of selected accent alias |
+
+Current app identity: `com.khaleel.glance`, 0.30.0 / code 35 on phone and watch;
+minSdk 30, compile/target SDK 37. Toolchain and signer instructions are in release.md.
+Current verification remains narrower than the definition of done below:
+controlled live-account parity, physical Samsung/watch/car, real TalkBack,
+overnight/24-hour cadence and matched battery measurements are outstanding.
+Historical test receipts retain their own pinned source/APK boundaries.
+
 ## 1. Outcome and scope
 
 Khaleel signs in with the LibreLinkUp account that already follows Patrick, selects Patrick, and starts monitoring. Glance fetches the readings already available through LibreLinkUp and keeps the latest value, trend, and reading time visible in an ongoing Android notification. The app should remain useful with the screen locked and without regularly opening it.

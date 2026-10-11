@@ -1,5 +1,9 @@
 # Phone UI overhaul in 0.21.0
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 The owner requested a complete visual overhaul with definition/depth, fewer
 settings clicks, 6/12-hour chart choices, removal of two-finger scrolling and
 a comprehensible replacement for Restore card.

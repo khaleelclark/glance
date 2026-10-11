@@ -1,5 +1,9 @@
 # Glance 0.23.0: focused redesign and alarm log
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 ## Accepted scope
 
 The owner approved ocean blue, charcoal dark surfaces and soft-white light

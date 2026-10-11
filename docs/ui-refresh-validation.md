@@ -1,5 +1,9 @@
 # Phone UI refresh in 0.20.0
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 The owner approved a calmer custom presentation with the same functionality:
 reading/graph first, neutral backgrounds, restrained accents, compact controls,
 shorter descriptions and expandable help. No new runtime architecture or source

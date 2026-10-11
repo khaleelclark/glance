@@ -1,5 +1,9 @@
 # Glance 0.26 validation
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Production candidate 8cadd4d on released 0.25 base 26b1244. The owner requested
 endpoint-circle removal, dismissal of graph inspection on release, and moving
 source time/actual age above the glucose value. Subsequent steering requested a

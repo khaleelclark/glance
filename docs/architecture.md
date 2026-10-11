@@ -1,28 +1,85 @@
-# Architecture decisions — 2026-09-27
+# Current architecture
 
-- The stable Android application ID is `com.khaleel.glance`; the minimum SDK is API 30. The app runs directly on the phone, without a project server.
-- `app/src/main/java/com/khaleel/glance/core/Contracts.kt` is the shared boundary for the protocol, monitoring and UI owners. The lead owns changes to it.
-- The normalized reading carries the stable connection ID and source measurement timestamp. Successful HTTP contact never changes measurement age.
-- Source failures have typed categories. `RATE_LIMITED` carries an absolute next-attempt time, which monitoring must persist.
-- All real account entry happens on-device. No fixture or build configuration contains owner credentials.
-- Initial development branches are local Git worktrees. Package owners avoid root build files and shared contracts.
+Applies to 0.30.0 and the shared Studio launch fix; checked 11 October 2026.
+The phone connects directly to LibreLinkUp. Pine/Ponderosa build the app and
+are outside its runtime data path. The optional watch receives a credential-free
+projection from the phone, not its own account or polling worker.
 
-The source adapter's `Session` is an in-memory model; the lead's auth store will encrypt persisted credentials and session material with an Android Keystore key. Release signing remains outside Git.
+## Source, state and persistence
 
-## Local state and concurrency, 2026-09-27
+`app/src/main/java/com/khaleel/glance/core/Contracts.kt` defines `GlucoseSource`,
+`SourceResult`, `SourceErrorKind`, `SourceSnapshot`, `Reading` and `DisplayState`.
+`LibreLinkUpSource` validates the unofficial protocol, routes only to allowed
+HTTPS origins, bounds responses and separates strict current parsing from
+historical minimal rows. See [protocol](protocol.md) for pinned references.
 
-- `SecureFileStore` writes authenticated AES-GCM ciphertext to Android's no-backup directory with `AtomicFile`. An Android Keystore key is usable without biometric prompts after first unlock. Both cloud backup and device transfer are excluded by manifest policy; corrupt/restored ciphertext sends the app back to sign-in.
-- `AuthStore` encrypts reconnect credentials and the reusable session. `LocalStateStore` encrypts the selected stable connection ID, display name, and last normalized reading. Ordinary display and cadence preferences use app-private preferences.
-- `AppController` is the source-of-truth for selected person and `DisplayState`. It increments a generation before account/person changes and rejects late results from previous generations. A single deferred network operation coalesces timer and manual refresh; a persisted provider cooldown cannot be bypassed by restart or Refresh. Automatic transient backoff remains persisted, while explicit manual retries can bypass it with a three-second monotonic debounce.
-- Freshness is computed from `Reading.measuredAt`, not response receipt. Out-of-order readings never replace current data; a duplicate preserves the first receipt; a changed same-timestamp sample may replace it as a source correction.
-- The Android background and notification specialists own their packages in isolated branches. Integration into `AppController` and root manifest/build files remains lead-owned.
+`AppController` owns selected connection, session recovery, observable state and
+history. A generation changes at person/account transitions so old responses
+cannot populate another person's display. One deferred operation coalesces
+manual/automatic work. Provider cooldowns persist and cannot be bypassed;
+manual Refresh may bypass transient backoff with a three-second monotonic debounce.
 
-## Graph and monitoring controls, 2026-09-27
+Freshness uses `Reading.measuredAt`, not response receipt: fresh <5 minutes,
+delayed <15, otherwise stale; excessively future timestamps are invalid.
+Out-of-order readings cannot replace current. Identical samples retain the
+original receipt; validated same-time corrections may replace them.
 
-- The user asked to remove Pause and then Refresh from the notification. Refresh stays in the app; Settings provides Stop monitoring so an explicit foreground session can still be ended. Old generation-checked notification intents remain recognized for cards posted before an upgrade.
-- The LibreLinkUp graph response supplies both the current measurement and historical samples. Glance validates, sorts, and deduplicates historical samples without letting them replace the current reading. The selected person's bounded history is encrypted in no-backup storage and erased on person change, local-data deletion, and sign-out.
-- The main screen draws up to 24 hours of actual observations in a horizontally scrollable timeline. A selected dot shows its exact reading and local timestamp; adjacent-point controls reach closely spaced samples. Gaps longer than 20 minutes remain disconnected. Portrait stacks the chart below the current reading; landscape places the reading and chart in independently scrollable columns. The graph uses no inferred or demo values in release builds. Existing installations seed the graph with their last saved reading until source history arrives. Local history keeps at most 1,500 validated points to cover a full day at one-minute cadence.
+`SecureFileStore` uses Android Keystore AES-GCM and `AtomicFile` under
+`noBackupFilesDir`. `AuthStore`, `LocalStateStore`, encrypted nicknames and
+`EncryptedAlertHistoryStore` keep sensitive state encrypted. Manifest/backup
+rules exclude account/health state from cloud backup/device transfer. Ordinary
+preferences retain display/cadence/retry intent; dedicated checked grants govern
+notification/widget/watch exposure. Storage failures are reported explicitly.
 
-## Notification presentation, 2026-09-27
+`ReadingHistory` filters by selected connection and age, sorts by source time
+and keeps at most 1,500 numeric points within 24 hours. Equal values at distinct
+times remain distinct. Adapter deduplication and store merge share reported-value
+preservation only for equal connection/time/canonical mg/dL; corrections clear
+obsolete metadata and incoming unknown trends remain unknown. History never
+replaces strict current parsing or fills absent source samples.
 
-- Live Update is requested by default when Android supports promotion and the user has not turned it off. A stored off choice remains respected. Android's promoted card cannot collapse or use a custom content view, so the standard fallback uses the larger collapsible glucose layout. The Settings switch exposes that tradeoff.
+## Monitoring and outputs
+
+`MonitoringService` is the user-visible foreground session; `PollCoordinator`
+owns automatic scheduling. The bounded wake strategy, recovery paths and
+unverified physical cadence/power are in [background strategy](background-strategy.md).
+Stop/sign-out invalidate work and remove the monitoring notification.
+
+The regular notification uses a silent channel and custom compact/expanded
+views. Live Update uses a standard Android template with promotion checks.
+A shared publication gate orders final state/privacy checks and notify/cancel.
+The default-on retention choice restores the regular card on a delivered
+current-session dismissal callback; there is no automatic re-promotion loop.
+Explicit content intents target always-enabled `MainActivity`. See
+[notification notes](../app/src/main/java/com/khaleel/glance/notification/README.md).
+
+`AlertEngine` evaluates only eligible fresh selected-person samples from existing
+polls. Per-category cooldowns/fingerprints persist. Logbook is encrypted, bounded
+to 1,000 events/30 days, and records accepted posts rather than audible delivery.
+Numeric alarm icons can track the latest eligible reading without changing their
+original trigger; system timeouts bound numeric-card freshness. See
+[alerts](alerts.md) and [alarm log](alarm-log.md).
+
+Widgets observe existing state and use a publication gate to order redaction
+against rendered host views. Watch publishing is serialized and sends only
+formatted value/unit/trend/time/status with a five-minute lease and ordered
+content-free revocations. Disconnected receivers cannot be cleared instantly;
+see [widgets](car-widget.md) and [watch](watch.md).
+
+## UI and launch
+
+Now / Logbook / Settings uses black/graphite surfaces, seven accent presets and
+matching native droplet aliases. Fresh reading-card bands are independent of
+accent. Graph windows are 3/6/12/24 hours, with hold/drag inspection and dismissal
+on release; no pinch or pan. The fixed 40–350 mg/dL scale uses ordinary enabled
+Low/High boundaries or 70/240 defaults, keeps actual off-scale values and breaks
+gaps >20 minutes. Notification/widget thumbnails use their own >15-minute gap rule.
+
+The shared `.run/Glance_phone.run.xml` targets MainActivity directly; selecting a
+nondefault launcher accent cannot disable that Studio target. Runtime and signer
+are unchanged by this configuration. See [Studio launch evidence](studio-accent-launch.md).
+
+Debug synthetic fixtures live only under debug source sets. Historical checks
+retain exact source/APK boundaries; they do not qualify a signed APK, live account
+or physical Samsung/watch/car behavior by inference. See the
+[documentation index](README.md) and [device validation](device-validation.md).

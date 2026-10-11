@@ -1,5 +1,9 @@
 # Glance 0.27 glucose status icons and retention
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Production candidate 227b9436cb61cb86d425059a5bc0817c2cdda410 on released
 0.26 base c84ef6d. Root owns implementation, native/build/sign/push work.
 The owner reported that an alarm replaces the status-bar glucose number with

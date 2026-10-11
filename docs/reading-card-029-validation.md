@@ -1,5 +1,9 @@
 # Glance 0.29 taller range-filled reading card
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Released base: 9c0999a (0.28). Production change: 8ffd2ac.
 The owner supplied a screenshot of the top current-reading card and requested
 a green/applicable-value-color background plus a larger/taller section.

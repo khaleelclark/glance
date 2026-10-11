@@ -1,5 +1,9 @@
 # Glance 0.28 independent source review
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Preliminary UI source review pinned
 `ef53ce48f8b8d58acecec66277e2081870e26e39` over released
 `a49a939f79c0079a4e2b9e16288e69d482849ac2`: no HIGH/MEDIUM regression

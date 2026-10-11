@@ -39,8 +39,8 @@ Turning retention off restores the earlier persistent-suppression behavior.
 Stop/force-stop still stop the session; Samsung Now bar admission is unverified.
 See docs/notification-0.18-validation.md for actual verification limits.
 
-The standard custom view uses a heavy condensed glucose face and heavy arrow in
-both compact and expanded layouts. Its system-template fallback also bolds the
+The standard custom view uses `sans-serif-light` for its large glucose value
+and a normal `sans-serif` arrow in compact and expanded layouts. Its system-template fallback also bolds the
 fresh reading. Promoted cards use
 Android's own template, which removes app-supplied text-size spans; Glance
 bolds the fresh reading with a `StyleSpan`, but Android controls its rendered
@@ -56,9 +56,11 @@ version explicitly supplies empty chip text when values are hidden. Android
 can still shorten or omit chip text depending on available space and device
 policy, so this presentation requires emulator and phone checks.
 
-The renderer does not claim device or Samsung One UI behavior. The manifest permission and
-settings flow are integration-owned and must be coordinated before enabling enhanced mode in
-the UI.
+The integrated manifest declares promotion permission and Settings exposes
+Presentation → Live Update / Graph with the platform status/settings link.
+The renderer does not qualify Samsung One UI appearance or Now bar admission.
+See the [current setup guide](../../../../../../../../docs/setup.md) and
+[documentation index](../../../../../../../../docs/README.md).
 
 Primary references:
 

@@ -1,4 +1,21 @@
-# Glance 0.19.0 watch verification
+# Watch verification status and 0.19 evidence
+
+## Current status — 0.30.0
+
+The signed 0.30 watch was built at `12919d6`, with 15 watch unit tests passing,
+zero failures/errors/skips, zero debug/release lint errors or warnings, the same
+personal signer as the phone, and static non-debuggable/debug-component checks.
+See [release identity](release.md). This is build/static evidence; the 0.19 native
+receipts below are retained at their original boundaries, not rerun on 0.30.
+Physical Watch7 pairing/Data Layer delivery, complication host/face expiry,
+ambient/off-wrist behavior, disconnected timing and battery remain unverified.
+Current install instructions are in [watch setup](watch.md).
+
+## Historical 0.19 integration record
+
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
 
 Owner target: Galaxy Watch7 / One UI Watch 8.0 / Wear OS 6.
 Synthetic emulator results do not establish paired transport or Samsung behavior.

@@ -1,5 +1,9 @@
 # Glance 0.30 richer green, smaller card and larger text
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Released base: 465d9cd (0.29). Production change: bea5cdf.
 The owner requested a less pastel green, a slightly smaller reading section and
 slightly larger fonts inside it. The in-range card uses #22C55E, with dark

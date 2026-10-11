@@ -1,8 +1,11 @@
 # Graph limits and colors in 0.19.3
 
-**Historical evidence.** Current 0.24 uses 3/6/12/24-hour presets only,
-no pinch or time pan, yellow High, and graph-aligned source value/time readouts.
-See [0.24 validation](refinement-024-validation.md) for current commands and results.
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
+Current graph behavior is documented in [setup](setup.md): 3/6/12/24-hour
+presets, hold/drag inspection with dismissal on release, no pinch/pan, and yellow High.
 
 The owner requested a fixed 40–350 mg/dL vertical scale, a Low line at 70,
 and a High line at 240, with the lines following enabled ordinary Low/High

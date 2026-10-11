@@ -4,7 +4,8 @@ Glance offers four optional categories: Low, Urgent Low, High, and Urgent High.
 They all start disabled. The initial threshold values (70, 55, 240, and 300
 mg/dL respectively) are editable examples, not a recommendation for the owner.
 Each rule has a one-to-60-minute repeat cooldown, initially five minutes.
-The UI has scrolling wheels for each threshold and repeat cooldown. The
+Settings → Alerts opens an edit sheet with a scrolling threshold wheel and
+a repeat-cooldown slider. The
 threshold wheel shows whole mg/dL values or 0.1 mmol/L steps next to the unit;
 preferences store the underlying mg/dL boundary so changing display units does
 not move an alert. The wheel is constrained by adjacent urgent/ordinary levels.
@@ -28,7 +29,12 @@ fields; preferences do not store the patient's name or the glucose value in
 plain text. The four alert cards use a different ID and channel from the
 ongoing silent monitoring card. Only one threshold card remains at a time;
 it includes the value, unit, and actual measurement time. If lock-screen
-values are hidden, the public version says only that Glance has an alert.
+values are hidden, the public version says only that Glance has an alert;
+numeric status icons are suppressed too. While visible, an eligible numeric
+alert icon may follow a newer source reading without changing its triggering
+body/time or logging another event. System-owned expiry bounds those numeric
+cards to the latest eligible source freshness deadline; the log remains.
+See [notification implementation notes](../app/src/main/java/com/khaleel/glance/notification/README.md).
 
 Each category has its own Android notification channel, registered at app
 startup so all four appear in Android's app notification settings before an
@@ -51,18 +57,21 @@ Glance does not request Do Not Disturb policy access or a full-screen intent.
 There is no independent time-sensitive delivery guarantee: Glance depends on
 LibreLinkUp publishing a new sample, the phone's polling opportunity,
 notification permission, channel settings, and device background policy.
-The API 36 emulator and Galaxy S25 Ultra need explicit tests for each
-threshold, category sound, cooldown, lock-screen privacy, Do Not Disturb,
-process recreation, and delayed/offline source data. A live follower account
+Recorded unit/debug-emulator coverage is described in
+[device validation](device-validation.md) and
+[0.27 icon/expiry validation](notification-027-validation.md).
+Galaxy S25 Ultra checks remain necessary for category sound, Do Not Disturb,
+lock-screen presentation, process recovery and delayed/offline live source data;
+synthetic notification posting does not qualify audible delivery. A live follower account
 must confirm that the source values and timestamps match. This feature is a
 convenience display and does not replace the CGM manufacturer's own alerts.
 
 For a visual and sound check on a **debug** emulator build, after granting
-notification permission, run:
+notification permission, target that emulator explicitly (example serial below):
 
 ```sh
-adb shell am start -n com.khaleel.glance/.debug.DebugNotificationActivity --es mode alert-demo --es kind URGENT_HIGH --ei value 305
-adb shell am start -n com.khaleel.glance/.debug.DebugNotificationActivity --es mode alert-clear
+adb -s emulator-5556 shell am start -n com.khaleel.glance/.debug.DebugNotificationActivity --es mode alert-demo --es kind URGENT_HIGH --ei value 305
+adb -s emulator-5556 shell am start -n com.khaleel.glance/.debug.DebugNotificationActivity --es mode alert-clear
 ```
 
 The debug fixture is labeled `DEMO` and does not test LibreLinkUp, the

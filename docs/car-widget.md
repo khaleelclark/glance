@@ -20,7 +20,7 @@ messaging or media category. It does not modify Maps, use overlays, write glucos
 readings to a calendar, add a backend or request calendar access. On older
 dashboards, the weather/media/navigation tiles are system-controlled; Glance
 cannot replace them with this AppWidget. Actual car widget discovery and any
-sideloading restrictions remain device-only checks. Google has not documented
+sideloading restrictions remain device-only checks. At the 1 October 2026 investigation, the checked Google references did not document
 a widget-specific Android Auto minimum version, manifest category, picker
 setup, sideload admission rule or DHU test flow. The existing dashboard tiles
 and Car App Library categories do not provide a health-widget route. See
@@ -30,9 +30,10 @@ and Car App Library categories do not provide a health-widget route. See
 
 ## Setup
 
-1. Install the personal-signed APK over the prior build. Existing account and
-   notification choices are preserved.
-2. In Glance Settings, enable **Widget values**, which explicitly permits
+1. Update with the existing installation's signer (Studio/debug or personal
+   release); follow [release and upgrades](release.md). A personal APK cannot
+   replace a differently signed Studio build. Keep the app installed.
+2. In Glance Settings → Devices, enable **Show widget values**, which explicitly permits
    glucose/history display on phone/car widget surfaces even while locked.
 3. Start monitoring, then add **Glance glucose** from the phone's widget picker.
    Resize it for the graph. Smaller sizes keep the value, unit, available delta

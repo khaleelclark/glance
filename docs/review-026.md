@@ -1,5 +1,9 @@
 # Glance 0.26 independent source review
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 The reviewer inspected exact 8cadd4da40e7279f6ecfbb064e76b64f5b38f068
 against released 0.25 base 26b1244. All source reads were pinned with git show;
 git diff --check passed. The reviewer made no writes and ran no build, test,

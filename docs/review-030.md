@@ -1,5 +1,9 @@
 # Glance 0.30 independent source review
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Presentation review pinned
 `bea5cdfade06fca212ab1860cdb6b455490a56fd` over released
 `465d9cd23f50209f7da44e34a2693da6ba7bf221`. All production reads used git show;

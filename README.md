@@ -1,138 +1,110 @@
 # Glance
 
-Glance is a native Android app for a LibreLinkUp follower to view one selected person's latest shared glucose reading in an ongoing notification. The app communicates directly from the phone to LibreLinkUp. It has no backend.
+Glance is a personal Android app that reads one selected person's shared CGM
+readings from LibreLinkUp and displays them in an ongoing notification. The phone
+connects directly to LibreLinkUp; there is no Glance backend or analytics.
+An optional Wear OS companion receives readings from the phone.
 
-**Current status:** The LibreLinkUp adapter, encrypted local state, Compose setup,
-foreground monitoring service, and silent notification are integrated. Synthetic
-tests and API 36 emulator lifecycle checks pass. Live follower-account and
-Galaxy S25 Ultra behavior remain unverified.
+Current app version: **0.30.0**, versionCode **35**, package
+`com.khaleel.glance`. The Studio launch configuration fix is included on `main`.
+The signed 0.30 APKs were built from `12919d6`; later Studio and documentation
+changes do not change the app version or replace those artifacts.
 
-Version 0.30.0 refines the top reading card with a richer green in range,
-red below Low or yellow above High. Dark
-text keeps the value, unit, arrow, source time and change readable. The card has
-a slightly smaller 176dp minimum height and a larger 60sp value, timestamp,
-unit, arrow, trend and change text; it grows and scrolls
-with large text. The smaller droplet logo, black app background and graphite
-supporting cards remain. Settings → Appearance → Accent color offers seven
-presets for controls and matching in-app, home-screen and launch-splash droplets.
-Old readings retain their warnings
-and a neutral number. No custom wheel or hex entry is exposed. Logbook uses Libre-style red badges for
-Low/Urgent Low and yellow badges for High/Urgent High, preserving the original
-alert category and source time. The reading card
-starts with **Reading at <source time> · <actual age>**; delayed/stale/time warnings
-remain explicit. Hold and drag the graph to inspect a real reading; release or
-cancel to dismiss the tooltip and selection. The permanent endpoint dot is gone.
-Screen-reader reading actions also offer **Latest reading** and **Dismiss reading**.
-Follower nicknames remain under Settings → Reading and carry into notifications.
-Glucose alerts now use the glucose number as their status icon. While an alert
-remains visible, its icon follows the latest eligible reading quietly; its text
-keeps the category and source reading/time that triggered it. Ongoing and enhanced
-notifications also retain eligible number icons. Keep notification visible
-protects the reading card from Clear all and restores it after individual swipes.
+The owner has reported using the app and updating through Studio. Recorded
+qualification consists of synthetic tests, bounded emulator checks and static
+signed-APK verification. Controlled live-account parity, Samsung/Watch7 behavior,
+paired watch transport, overnight cadence and physical battery measurements
+remain unverified. See [verification status](docs/device-validation.md).
 
-Version 0.30 also fixes historical imports: minimal LibreLinkUp graph rows no
-longer need fields belonging to the full current reading, and the import bound
-matches the 1,500-point store. Every distinct received source timestamp remains
-saved for up to 24 hours, including repeated values. Backfill cannot recover
-measurements the source does not return; no intermediate readings are invented.
+## Install or update
 
-See [0.30 card and history verification](docs/reading-card-030-validation.md),
-[0.29 card verification](docs/reading-card-029-validation.md),
-[0.28 verification](docs/refinement-028-validation.md) and
-[0.27 notification verification](docs/notification-027-validation.md).
-
-The 0.22.0 temporary, LibreView-only HTTPS cookie handling remains a VPN
-compatibility candidate and safe HTTP response details for connection errors.
-Its effect on the owner's Proton VPN connection remains unverified. See
-[VPN investigation](docs/vpn-compatibility.md).
-
-The main screen includes a 24-hour graph of validated source samples. Touch
-to inspect readings. **3 hr**, **6 hr**, **12 hr** and **24 hr** select the latest
-time window; 6 hours is the default. Multi-finger gestures do not change it.
-The graph has a fixed 40–350 mg/dL scale, red below Low and yellow above High.
-Enabled ordinary Low/High alert settings supply the limits; disabled alerts use
-70/240 mg/dL. Labels follow the selected unit.
-See [gesture verification](docs/chart-gesture-validation.md) and
-[limit verification](docs/chart-limits-validation.md). The notification shows the current glucose,
-trend arrow, and recent change when available; Refresh remains in the app.
-Refresh retries connection failures even while automatic polling is backing off;
-provider rate limits still apply. Stop monitoring is available in Settings. The
-app keeps black surfaces and the chosen accent in either system display mode.
-
-Optional Low, Urgent Low, High, and Urgent High alerts can be enabled separately
-in Settings. Each has a threshold and a repeat cooldown (five minutes by
-default). Glance checks newly received readings during its existing monitoring
-polls; Android's channel settings control each alert's sound and interruption.
-
-## Open in Android Studio on another machine
-
-1. Clone the private repository: `git clone git@github.com:khaleelclark/glance.git` (or use the GitHub HTTPS clone URL), then open that directory in Android Studio.
-2. Install JDK 17 and the Android SDK Platform 37, SDK Build-Tools 36.0.0, and Platform-Tools through Android Studio's SDK Manager. Android Studio can download missing SDK components during sync.
-3. Let Gradle sync. The checked-in Gradle wrapper downloads Gradle 9.5.0 and verifies its SHA-256 checksum. The project uses Android Gradle Plugin 9.3.0 and Kotlin Compose compiler plugin 2.2.10.
-4. Select the shared `Glance phone` run configuration and an Android 11 or newer device/emulator. It launches `com.khaleel.glance.MainActivity` directly, so changing the accent/icon does not break Studio launch. The app targets API 37 and supports API 30+.
-
-From a terminal with `ANDROID_HOME` or `local.properties` pointing to your SDK:
+For an existing **Android Studio installation**, use the same computer and its
+existing debug signing key:
 
 ```sh
-./gradlew :app:assembleDebug :app:testDebugUnitTest
+git pull --ff-only
 ```
 
-If the installed phone app came from Android Studio, pull the current `main` on
-the same computer, select `Glance phone` with the `app` debug variant, and Run again. Keep that computer's
-existing debug signing key to update without removing settings. The personal
-release APK uses a separate key and cannot replace a differently signed debug
-installation; cancel any uninstall prompt and inspect the installer error first.
+Select **Glance phone** beside Run, choose the phone `app` debug variant and
+connected device, then Run. If Studio asks for a module, select the phone `app`
+module. This configuration opens `com.khaleel.glance.MainActivity` directly,
+so a saved Teal or other accent cannot disable the launch target. If the old
+`app` configuration still reports `LauncherLilac does not exist`, use
+**Run → Edit Configurations → Launch → Specified Activity** and enter that class.
+See [Studio recovery and evidence](docs/studio-accent-launch.md).
 
-If Studio reports `LauncherLilac does not exist` after selecting another accent,
-open **Run → Edit Configurations**, select your phone configuration, set
-**Launch → Specified Activity**, and enter `com.khaleel.glance.MainActivity`.
-Apply and Run. This also fixes an existing locally saved `app` configuration.
-The shared configuration lives in `.run/Glance_phone.run.xml`; after pulling,
-select `Glance phone` explicitly because Studio may keep the old selection.
-If the imported configuration requests a module, select the phone `app` module.
-This launch error does not require uninstalling or clearing the app's data.
+For a new installation or an existing **personal release installation**, follow
+[build, signing and upgrades](docs/release.md), then [phone setup](docs/setup.md).
+A personal release APK cannot update a differently signed Studio build. Cancel
+an uninstall prompt and check the signer before proceeding; uninstalling removes
+local data.
 
-The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`. For a signed
-personal APK, key backup, install and upgrade instructions, see
-[docs/release.md](docs/release.md). The signing key stays outside this repository.
+## Use the app
 
-## Development boundaries
+- **Now** shows the source value/unit, source trend, measurement time and actual
+  age. Fresh readings use a green, red or yellow card according to the effective
+  Low/High limits; old or invalid readings retain warnings and neutral styling.
+- The graph retains up to **24 hours / 1,500 validated numeric samples** for the
+  selected person. Choose **3 hr**, **6 hr**, **12 hr** or **24 hr**; 6 hours is
+  the default. Hold and drag to inspect real samples; release or cancel to hide
+  the tooltip. Multi-finger gestures do not change the window. Accessible
+  Latest/Earlier/Later/Dismiss reading actions remain available.
+- **Logbook** records threshold notifications accepted by Android, preserving
+  the triggering category, reading and source/posting times. It does not prove
+  a sound was heard. Clearing the log preserves alert rules and cooldowns.
+- **Settings** offers units, nickname, one/five-minute cadence, seven accent
+  presets, notification privacy/presentation, optional alerts, device sharing,
+  diagnostics and account controls. Stop monitoring is under Monitoring;
+  Refresh remains on Now.
 
-- `GLANCE-ANDROID-SPEC.md` is the product baseline; `PONDEROSA-START-HERE.md` records delivery and verification requirements.
-- `docs/architecture.md` records shared types and decisions; `docs/protocol.md` and `docs/background-strategy.md` pin source/platform research.
-- `app/src/main/java/com/khaleel/glance/core/Contracts.kt` is the shared model boundary.
-- Account credentials are entered only on the phone, encrypted with Android Keystore, and excluded from backup. Never put real account data, signing keys, or patient screenshots in Git.
+Routine updates are silent. Optional threshold alerts start off and use the
+existing polling schedule; see [alerts](docs/alerts.md). Notification
+**Presentation → Live Update** requests promotion where permitted;
+**Graph** uses the regular collapsible card. Android/Samsung control promotion
+and Now bar admission. **Keep notification visible** defaults on and restores
+the regular card after a delivered dismissal callback while monitoring runs.
 
-The LibreLinkUp interface is unofficial. Live account behavior and Samsung background operation require on-device verification before this is considered a qualified release.
+Lock-screen values, widget values and watch sharing are separate opt-ins.
+Hidden lock-screen values also suppress the numeric status icon, thumbnail and
+chip value. Existing successfully saved privacy choices survive normal upgrades;
+the first migration from the pre-0.18 privacy store requires a new opt-in.
+See [setup and privacy](docs/setup.md), [widget](docs/car-widget.md), and
+[watch setup](docs/watch.md).
 
-On Samsung Android 16, Glance requests a Live Update when permitted. Settings
-shows its observed status and links to Android's promotion controls. Also
-check Samsung's Now bar and Glance Live notifications settings. The fresh
-glucose number can serve as the small icon in both regular and promoted requests. **Keep notification** defaults on:
-while monitoring is running, a delivered dismissal callback restores the same
-silent regular card after Clear or swipe. Turn it off for manual restoration using **Show notification** in Settings.
-Stop and sign-out clear the card. Samsung delivery and Now bar admission still
-need a phone check; see [notification validation](docs/notification-0.18-validation.md).
-This upgrade starts lock-screen values hidden because its checked privacy store
-requires a new explicit opt-in. Re-enable them in Settings if wanted; successful
-choices in the new store are retained on later upgrades.
+0.30 accepts minimal historical graph rows, imports up to the shared 1,500-point
+bound and preserves genuine provider display precision across full/minimal
+same-sample duplicates. Equal values at different timestamps remain distinct.
+Glance cannot recover samples LibreLinkUp no longer returns or invent missing
+minute readings. See [0.30 verification](docs/reading-card-030-validation.md).
 
-The regular notification follows the owner's reference: trend arrow, lighter
-large reading, unit, and a genuine three-hour history thumbnail when available.
-Expand for source time, person, trend and connection information. Turn off
-**Status chip Live Update** for this layout; Android owns promoted layouts and
-Samsung controls the notification shell and icon placement.
+## Build from source
 
-The Glance glucose widget adds a large source reading, trend, measurement time,
-actual change interval and four-hour history. Enable **Widget values** in Settings,
-then add it from the phone's widget picker. It adapts to smaller sizes and both
-themes without scrolling. Android Auto use requires Google's car-widget feature
-to be available on the phone/car; availability on the target car is unverified.
-See [docs/car-widget.md](docs/car-widget.md) for setup and limits.
-# Galaxy Watch companion
+Clone `git@github.com:khaleelclark/glance.git` (or its HTTPS equivalent) and open
+the repository root in Android Studio. Repository access is required. Use JDK
+17, Android SDK Platform 37, Build-Tools 36.0.0 and Platform-Tools. Set
+`ANDROID_HOME` or `local.properties` to your SDK. The wrapper pins Gradle 9.5.0
+with SHA-256 verification; the catalog pins AGP 9.3.0 and Compose compiler
+plugin 2.2.10. Phone and watch support API 30+ and compile/target API 37.
 
-Glance 0.19.0 adds a Wear OS companion app, a glucose/source-trend text
-complication and optional silent watch notification. It uses readings from the
-phone; it does not sign in or fetch separately. Watch sharing starts off.
-See [watch setup and sideloading](docs/watch.md) and
-[watch verification](docs/watch-validation.md).
+```sh
+./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest \
+  :app:lintDebug :wear:lintDebug :app:assembleDebug :wear:assembleDebug
+```
+
+Debug outputs are `app/build/outputs/apk/debug/app-debug.apk` and
+`wear/build/outputs/apk/debug/wear-debug.apk`. Release signing requires the
+existing private key outside Git; see [release guide](docs/release.md).
+
+## Documentation and development
+
+Start with the [documentation index](docs/README.md) for current guides,
+architecture, evidence boundaries and historical records. The original
+[specification](GLANCE-ANDROID-SPEC.md) retains the baseline and lists subsequent
+product changes; [Ponderosa handoff](PONDEROSA-START-HERE.md) explains how to resume
+work on this existing repository.
+
+Credentials are entered only in the installed app, encrypted with Android
+Keystore and excluded from backup. Keep account data, patient screenshots,
+signing keys and passwords out of Git and support logs. The unofficial
+LibreLinkUp interface can change. Glance is a follower convenience display;
+manufacturer alerts and treatment decisions remain outside its qualification.

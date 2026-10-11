@@ -1,12 +1,30 @@
-# Glance: Ponderosa chat kickoff
+# Glance: resume work and original kickoff
 
-Use **`/home/phoenix/khaleel/glance`** as the working directory for a new Ponderosa chat. Both this file and `GLANCE-ANDROID-SPEC.md` are already in that folder. There is no Ponderosa Project to register. Tell the agent to open and read the files by their exact paths; file presence alone is not a guarantee that the agent receives their contents. Do not create another nested `glance/` directory.
+## Resume the existing app
+
+Glance is already implemented at `/home/phoenix/khaleel/glance`; do not bootstrap
+or rebuild its scope from scratch. Read [README](README.md), the
+[documentation index](docs/README.md), [current architecture](docs/architecture.md)
+and [release guide](docs/release.md), then the original specification and its
+current implementation addendum. Inspect Git status, actual source and pinned
+release/evidence files before changing anything. Current app version is 0.30.0
+(code 35); the Studio launch fix is on main. Preserve signing continuity and
+existing data. Documentation updated 11 October 2026.
+
+The original kickoff below records the initial build request and delivery gates.
+Its future tense, Wednesday arrival and proposed team assignments are historical;
+use current user instructions and current guides when resuming. Unrun physical,
+account and battery tests remain outstanding rather than being waived.
+
+## Original kickoff — 27 September 2026
+
+Use **`/home/phoenix/khaleel/glance`** as the working directory for a new Ponderosa chat. Both this file and `GLANCE-ANDROID-SPEC.md` are already in that folder. No additional Ponderosa project setup is needed for this checkout. Tell the agent to open and read the files by their exact paths; file presence alone is not a guarantee that the agent receives their contents. Do not create another nested `glance/` directory.
 
 The short message to paste into the chat is:
 
 > Work in `/home/phoenix/khaleel/glance`. Read `PONDEROSA-START-HERE.md` and `GLANCE-ANDROID-SPEC.md` in full, then build the app they describe. You are the lead; use Ponderosa agents for independent specialist work if available, and return the signed APK plus the verification evidence specified in the documents. Start with emulator work while I wait for my Galaxy S25 Ultra.
 
-The detailed build request below is also here for the agent to follow after reading this file. It has not been sent to Ponderosa.
+The detailed original build request is preserved below; it has since been used to build the existing app.
 
 ---
 

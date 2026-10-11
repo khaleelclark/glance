@@ -1,5 +1,9 @@
 # Glance 0.24 refinement validation
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Status: integrated implementation and chart review corrections at fc28c35;
 final source review is complete with no HIGH/MEDIUM blocker. Base is clean
 0.23 source d5a91c9. Clean build/signature/push results are supplied separately

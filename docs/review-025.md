@@ -1,5 +1,9 @@
 # Glance 0.25 review record
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 The independent reviewer inspected exact 79d1006, comparing from 0.24 release
 source a9ef2d1. This first bounded review excludes the then-unintegrated chart.
 All source reads were pinned; no reviewer edit/build/test/device/sign/push action

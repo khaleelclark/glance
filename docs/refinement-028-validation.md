@@ -1,5 +1,9 @@
 # Glance 0.28 reading emphasis and accent presets
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 Released base a49a939 (0.27). Root owns UI, integration and release writes.
 The user requested color coding on only the top reading again, a slightly larger
 number, accent presets and matching app logo. The top number changes 42sp to

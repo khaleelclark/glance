@@ -1,8 +1,10 @@
 # VPN compatibility investigation
 
-Status: version 0.22.0 compatibility candidate implemented; independent diagnostic and cookie
-reviews complete. Exact signed-build identity and checks are recorded in the
-release manifest. No live Proton VPN fix has been verified.
+Status: historical 0.22.0 investigation; scoped cookie/diagnostic implementation
+remains in current 0.30 source. Historical independent diagnostic/cookie reviews
+are complete. See [current release](release.md) for artifact identity and checks.
+Live Proton VPN compatibility remains unverified. Documentation checked
+11 October 2026; dated observations below retain their original scope.
 
 On 2026-10-03 the owner reported that Glance failed on the shared-person setup
 screen with “LibreLinkUp returned an unexpected response” when using Proton
@@ -30,12 +32,13 @@ allowlists, and platform TLS validation are unchanged.
 Source-backed comparison found that Glance's default OkHttp client used
 `CookieJar.NO_COOKIES`. The public LibreView country-config response observed
 by the protocol researcher on 2026-10-03 included a Secure, HttpOnly `__cf_bm`
-cookie for `libreview.io`. Cloudflare documents that this cookie supports its
-bot-management decisions and that cookies can distinguish clients sharing an
-IP address. Losing that state between login and the next request is a plausible
+cookie for `libreview.io`. [Cloudflare documents](https://developers.cloudflare.com/fundamentals/reference/policies-compliances/cloudflare-cookies/)
+that `__cf_bm` supports bot-score/session decisions. Its separate `_cfuvid` cookie
+distinguishes users sharing an IP address; that rationale does not describe the
+observed `__cf_bm` cookie. Losing that state between login and the next request is a plausible
 compatibility defect. It is not a captured explanation of the owner's failure.
 
-The source now retains Secure cookies in memory for exact reviewed HTTPS origins
+Since 0.22, the source retains Secure cookies in memory for exact reviewed HTTPS origins
 (host and port), including provider-issued parent-domain cookies needed across
 bootstrap and regional calls. It respects cookie domain, host-only scope, path,
 expiry, replacement and deletion. It bounds storage to 64 cookies and rejects
@@ -56,11 +59,14 @@ The patch does not route around the VPN. Android gives the VPN control over
 whether applications can bypass it; Proton's split tunneling is a paid feature.
 Neither constraint proves that the owner's live failure is a VPN IP rejection.
 
-## Verification
+## Historical 0.22 verification
+
+These counts and native checks qualify the 0.22 fixtures below, not the current
+signed APK. Current build/static results are in [release](release.md).
 
 - Phone JVM suite after cookie/deletion correction: 189 tests passed, zero failures/errors/
   skips (2026-10-03); diagnostic-only phase had 179 passing tests.
-- Debug assembly and debug lint: passed with final production code and the
+- Debug assembly and debug lint: passed with the final 0.22 production code and the
   debug-only native verification fixture. Clean release signing separately
   runs phone/watch unit suites and both debug/release lint variants.
 - Added synthetic transport cases: HTTP 403 HTML rejection without retry or
@@ -82,12 +88,13 @@ Neither constraint proves that the owner's live failure is a VPN IP rejection.
   network error, successful poll, and deletion. See
   [native evidence](evidence/api36-vpn-diagnostics.json) and the two DEMO screenshots
   it lists. This native run used 0.22.0 with the final cookie-deletion correction.
-  Repeat it with `python3 scripts/validate_vpn_diagnostics.py emulator-5556`
-  after installing the debug APK on the API 36 emulator.
-  These are synthetic checks, not live VPN compatibility evidence.
+  Developer-only synthetic rerun: use
+  `python3 scripts/validate_vpn_diagnostics.py emulator-5556` after installing
+  the debug APK on an isolated API36 emulator. Never use owner credentials or a
+  live account in this procedure. These checks are not live VPN evidence.
 - Live Proton/account requests, real phone behavior, and actual compatibility
-  correction: unverified. The owner must reproduce using an installable build
-  with Proton enabled. If setup still fails, share the new HTTP status/type shown
+  correction: unverified. The owner must reproduce on the owner's device using
+  an owner-controlled, personally signed, non-debuggable release with Proton enabled. If setup still fails, share the new HTTP status/type shown
   below the error; that contains no credentials or response contents.
 
 ## References

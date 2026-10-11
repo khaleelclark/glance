@@ -1,6 +1,47 @@
 # Device validation log
 
-Status: work in progress; no live follower account or Galaxy S25 Ultra has been tested yet.
+Current status checked 11 October 2026 against 0.30 release records and the
+Studio launch fix. The owner has reported phone use and Studio updates;
+controlled live-account parity and physical-device qualification remain incomplete.
+
+## Current verification summary
+
+| Area | Recorded result and boundary |
+|---|---|
+| Signed 0.30 build | Clean source `12919d6`; 236 phone / 15 watch unit tests pass; zero failures/errors/skips; zero lint errors. Phone 90 debug / 57 release warnings, watch zero. No emulator run on this exact release source; [release identity](release.md) |
+| Static signed APK checks | Phone and watch APKs are non-debuggable, signatures verified with matching personal signer, debug/demo components absent. Final signed APKs were not launched; static only. See [release](release.md) |
+| 0.30 reading-card UI fixture | 13 API36 debug/synthetic checks at clean `e297c97`, exact colors/height and 200% portrait/landscape reachability. Not signed-APK or exact `12919d6` runtime evidence |
+| History storage/chart fixtures | 1,440-row encrypted-store probe at `6b5fca7`, `sourceDirtyAtRun=true`; 3 chart checks at `8f6fb60`, `sourceDirtyAtRun=true`. Boundaries are recorded in the delivery manifest; not exact release runtime or an explanation of live gaps |
+| History source review | Full/minimal duplicate precision finding closed at exact `3aefcbd`; no open findings in bounded [0.30 review](review-030.md) |
+| Studio accent launch | 4 synthetic API36 checks at clean `61f6e01`; config originated at `2eb9688`, review/docs closure at `57a0902`. Equivalent Android intents retain settings/Teal; no interactive Studio UI or Samsung qualification |
+| Post-release source delta | `12919d6..57a0902` changes only shared `.run` configuration, README/docs/evidence and the validation script. No phone/watch production source or signed APK changed |
+| Notification privacy/retention | Prior API36 debug checks cover redaction, Clear all, actual swipe restoration, retention off and generation guards; [0.27 report](notification-027-validation.md). Not an exact 0.30 rerun |
+| Numeric alarm expiry | Prior 0.27 source/native/system-timeout and process-death evidence; no audible-delivery or Samsung timing claim |
+| Live Update | API36 construction checked; test image does not allow actual promotion. Owner's promotion report does not establish Now bar/chip visibility |
+| Manual retry / provider cooldown | Prior debug synthetic controller/service/preferences checks; not real DNS or provider rate-limit injection |
+| Screen-off / reboot | Short synthetic forced-idle/reboot smoke evidence only; natural overnight/24-hour phone behavior remains not run |
+| Widget / Android Auto | Prior synthetic real AppWidgetHost/provider checks; no actual Android Auto hosting qualification |
+| Watch | 0.30 unit/static checks plus historical 0.19 native synthetic receiver evidence; paired Data Layer/complication-host/Watch7 checks remain unverified |
+| API matrix | Runtime evidence is primarily API36. API30/33/34/35 and API37 qualification remains not run; compile/min/target values do not establish runtime coverage |
+| Owner-device and account acceptance | Same-timestamp parity, real TalkBack, Samsung layout/lock screen/Now bar, audible/DND alerts, paired watch/car, 8-hour unplugged screen-off, 24-hour cadence and matched battery comparison remain outstanding |
+
+Current setup and recovery are in [setup](setup.md) and
+[troubleshooting](troubleshooting.md). Use the acceptance targets in the
+[baseline specification](../GLANCE-ANDROID-SPEC.md) when collecting remaining
+phone evidence. Collect device/OS, duration, settings, a source-free poll-start
+timeline and excluded outages in a separate qualification worksheet/receipt.
+The app export supplies runtime/connection/freshness, last attempt/success/error,
+max wall-time gap, event count, retry, permission and notification facts; it does
+not export the raw timeline. Exclude names, credentials, glucose values, IDs and
+raw provider bodies. The bounded diagnostics summary cannot establish the 95%
+cadence target by itself.
+
+## Historical evidence ledger
+
+The entries below retain the version, source, fixture, dirty state and limits of
+their original checks. UI names, commands and pending statuses describe those
+checkpoints. Later source changes do not extend any receipt. Current signed
+artifact identity and open scenarios are summarized above.
 
 ## Studio launch after changing accent
 
@@ -41,7 +82,7 @@ It has a 196dp minimum height, more padding and a 56sp value, retaining growth,
 wrapping and portrait/landscape scrolling. Delayed/stale/invalid/absent states
 retain neutral presentation and source warnings/time. Integrated debug assembly,
 226 phone tests and debug lint with zero errors pass. Thirteen focused API36 native checks pass, including 200% portrait/landscape
-reachability; source review is tracked; final results/fixture hashes are recorded in
+reachability; source review closed with no HIGH/MEDIUM regression or new LOW; fixture hashes are recorded in
 [reading-card-029-validation.md](reading-card-029-validation.md). No physical or
 live qualification is inferred. Generated release manifests record clean signing
 and source delivery separately.
@@ -85,7 +126,7 @@ alarm-storage checks. Five additional focused UI checks passed after review
 corrections; cleanup failure paths are covered by four fault-injection unit tests.
 Evidence uses DEMO fixtures. See
 [redesign-023-validation.md](redesign-023-validation.md) for commands, exact source
-and fixture boundaries, screenshots, pending review/signing and device limits.
+and fixture boundaries, screenshots, completed bounded review and device limits.
 
 No 0.23 live-account, physical Samsung, TalkBack, overnight, battery, car or watch
 qualification is claimed. The owner's previously successful Android Studio
@@ -123,7 +164,7 @@ continuity; it does not qualify this redesign's device behavior.
 | Prior signed personal test APK | **Historical build/signature pass** — clean source `59f88026211a2d0e0debcc8581414a753d5e313c` produced `release/glance-0.5.0-personal.apk` (versionCode 5). Its 64 unit tests and debug/release lint passed. APK SHA-256 `4404aaf4c46f06804e4eb903e784451bef595b681c9b31b4543d6aa8db0605b0`; signer certificate SHA-256 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`. The 0.6.0 build supersedes it. |
 | Prior signed personal test APK | **Historical build/signature pass** — clean source `250681a253b8c32c86c9fe7748dcde8a2fef2271` produced `release/glance-0.6.0-personal.apk` (versionCode 6). The release command cleaned/rebuilt, ran 68 unit tests (0 failures/errors/skips), ran debug/release lint (0 errors), then signed and verified. APK SHA-256 `220e82b424ee32f03fb6b4428293c3ba25ac3dda25886cfcba60295e9313d704`; signer certificate SHA-256 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`. The 0.7.0 build supersedes it. |
 | Prior signed personal test APK | **Historical build/signature pass** — clean source `63949690f3d4d71e47f0f4de7b2a10758e23a0bc` produced `release/glance-0.7.0-personal.apk` (versionCode 7). The release command cleaned/rebuilt, ran 68 unit tests (0 failures/errors/skips), ran debug/release lint (0 errors, 77 warnings), then signed and verified. APK SHA-256 `1fd883a02d32051e5b00824b3ad47c60eb4cb47d2d4e13bf3a501af5359d0bb1`; signer certificate SHA-256 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`. The 0.8.0 build supersedes it. |
-| Current signed personal test APK | **Pass for build/signature** — clean source `dbe86d332bc8d548053068ec8147e08967428a13` produced `release/glance-0.8.0-personal.apk` (versionCode 8). The release command cleaned/rebuilt, ran 70 unit tests (0 failures/errors/skips), ran debug/release lint (0 errors, 77 warnings), then signed and verified. APK SHA-256 `45571a2c8549eb00d3eff1ae16144eb2aabefe7800bec7027624ec9c02048a8b`; signer certificate SHA-256 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`. The private signing files remain off-repository and still need an operator-controlled backup. |
+| Historical 0.8 signed personal test APK | **Pass for build/signature** — clean source `dbe86d332bc8d548053068ec8147e08967428a13` produced `release/glance-0.8.0-personal.apk` (versionCode 8). The release command cleaned/rebuilt, ran 70 unit tests (0 failures/errors/skips), ran debug/release lint (0 errors, 77 warnings), then signed and verified. APK SHA-256 `45571a2c8549eb00d3eff1ae16144eb2aabefe7800bec7027624ec9c02048a8b`; signer certificate SHA-256 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`. The private signing files remain off-repository and still need an operator-controlled backup. |
 | Same-signer in-place upgrade, API 36 | **Pass for install and package data continuity** — removed the prior debug-signed synthetic emulator app, installed signed 0.1.0/versionCode 1, added a synthetic marker under its private files directory, then `adb install -r release/glance-0.2.0-personal.apk` succeeded and versionCode 2 retained the marker. No live account/settings migration was exercised. |
 | 0.2.0 → 0.3.0 in-place upgrade, API 36 | **Pass for install and package data continuity** — installed signed 0.2.0/versionCode 2, added a new synthetic private-file marker, then `adb install -r release/glance-0.3.0-personal.apk` succeeded; versionCode 3 retained the marker. Actual encrypted account/settings migration remains untested. |
 | 0.3.0 → 0.7.0 in-place upgrade, API 36 | **Pass for signed install and package data continuity** — the original `Glance_API36` AVD had signed 0.3.0/versionCode 3. `adb install -r release/glance-0.7.0-personal.apk` succeeded; versionCode became 7 while appId 10222 and the credential/device-encrypted data inodes stayed the same. `MainActivity` launched without an AndroidRuntime crash. No live encrypted account migration was exercised. |
@@ -143,9 +184,12 @@ continuity; it does not qualify this redesign's device behavior.
 | 0.13.0 main reading layout, API 36 | **Pass for synthetic visual check** — the [portrait](evidence/api36-main-0.13-portrait.png) and [landscape](evidence/api36-main-0.13-landscape.png) cards place the glucose number, unit, and arrow on one baseline, with a plain-language trend description below. The [portrait at 1.5× font size](evidence/api36-main-0.13-largefont.png) kept that row on one line. Unit tests cover all eight source trend categories and stale readings suppress the arrow. Live source values, very large accessibility fonts, and Samsung rendering remain unverified. |
 | 0.14.0 alert wheels and categories, API 36 | **Pass for synthetic UI check** — all four alert channels were registered on app launch. Android initially placed unfired channels under **Show unused categories**; expanding it exposed [Low, Urgent Low, High, and Urgent High](evidence/api36-alert-categories-0.14.png), each separately configurable. Glance's **Sound & priority** button opened the [High category page](evidence/api36-alert-category-high-0.14.png), including Android's Sound and pop-up controls. The [scrolling threshold and cooldown wheels](evidence/api36-alert-wheels-0.14-mgdl.png) changed High from 240 to 241 mg/dL and its repeat time from 5 to 6 minutes; switching to mmol/L preserved the underlying boundary and stepping the wheel changed 13.4 to 13.5 mmol/L. The [dark theme](evidence/api36-alert-wheels-0.14-dark.png) kept the wheel readable. Audible sound choice and Samsung's category screen remain unverified. |
 
-The integrated APK contains the real source adapter, encrypted state, Compose screens, and foreground service. It does not satisfy product acceptance until a live follower account and the target phone are verified.
+By this historical checkpoint the debug APK integrated the real source adapter,
+encrypted state, Compose screens and foreground service. Current signed 0.30
+artifact identity is above. Controlled live-account and target-phone acceptance
+remains outstanding.
 
-## Scenario status
+## Initial scenario status — historical baseline
 
 | Area | Status | Evidence / next action |
 |---|---|---|
@@ -155,7 +199,7 @@ The integrated APK contains the real source adapter, encrypted state, Compose sc
 | Live Update | Not run | Test on API 36+ image, then target phone. |
 | Forced Doze and recovery | Partial | Three debug-only synthetic poll starts remained within 63 seconds in forced idle on API 36. Natural screen-off/phone and network recovery are still unverified. |
 | Reboot | Partial | API 36 emulator resumed debug-only synthetic monitoring via BOOT_COMPLETED; target phone and failure fallback remain unverified. |
-| Screen-off overnight / 24-hour cadence | Not run | Requires integrated app and long device run. |
+| Screen-off overnight / 24-hour cadence | Not run | At this baseline integration and a long run were pending; controlled long target-phone qualification remains outstanding. |
 | Battery comparison | Not run | Requires matched baseline and monitoring on Galaxy S25 Ultra. |
 | Samsung One UI and lock-screen behavior | Not run | Requires target phone and Android/One UI version. |
 | In-place signed APK upgrade | Partial | API 36 accepted 0.1.0 → 0.2.0 → 0.3.0 with the same certificate and retained synthetic private-file markers. Saved account/settings migration and phone behavior remain unverified. |

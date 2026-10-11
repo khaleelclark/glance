@@ -1,11 +1,15 @@
 # Glance 0.25 polish validation
 
-Implementation in progress on clean 0.24 base a9ef2d1. Nickname backend
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
+Initial implementation phase on clean 0.24 base a9ef2d1. Nickname backend
 integrated as bb5ff96, with teal upgrade migration at 265b228. Initial phone
 checks: 214 JVM tests, zero failures/errors/skips; debug assembly successful;
 debug lint zero errors. That first invocation overlapped addition of a debug
 probe, so it is preliminary evidence rather than final release qualification.
-The complete integrated checks will follow the chart handoff. Native preliminary
+The completed integrated checks are recorded later in this report. Native preliminary
 nickname checks passed all six assertions in the real Android Keystore store,
 including recreation, account isolation, encrypted bytes, Unicode normalization,
 blank restoration and accent migration. Light/dark button-navigation screenshots
@@ -29,7 +33,7 @@ LOW issues: permanent legacy accent remapping prevented later Ocean selection;
 nickname cleanup failure at sign-out was silent. Root corrected both with a
 one-time accent migration and propagated nickname cleanup outcome to the
 existing sign-out residual-data warning. Focused fault injection and updated
-Android migration assertions accompany the corrections. Review closure pending.
+Android migration assertions accompany the corrections. At this checkpoint review closure was pending; final closure is recorded below.
 
 At 6c54812, all 17 native chart checks passed with clean source; the 15-check
 synthetic production-screen profile passed with generated evidence/script changes

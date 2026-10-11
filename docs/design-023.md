@@ -1,5 +1,9 @@
 # Glance 0.23 visual design
 
+Historical evidence for the version/source identified below. Commands, UI names
+and results describe that checkpoint; use the [documentation index](README.md)
+for current setup and verification status. Later changes do not extend these receipts.
+
 ## Direction
 
 Glance 0.23 uses a clear ocean-blue identity (`#1677D2`) on soft white/slate

@@ -1,10 +1,54 @@
 # Background monitoring strategy
 
-Status: platform decision, initial service implementation, and test plan,
-researched and updated 2026-09-27. The service/poller unit tests have run and
-the debug APK has installed/launched on an API 36 emulator, but the service has
-not yet been exercised there because app/notification wiring is not integrated.
-No screen-off or physical-phone behavior is verified by this document.
+## Current implementation — checked 11 October 2026
+
+The service is integrated through `GlanceApplication`'s
+`MonitoringDependencyProvider`, controller and notification adapters. The
+user-started foreground session uses `specialUse` on API34+, a monotonic
+`PollCoordinator`, 30-second poll timeout, ±3-second cadence jitter and
+30-second freshness ticks while execution is available. Single-flight work,
+skipped missed slots and persisted cooldowns prevent catch-up bursts.
+Manual Refresh on Now can bypass transient delay with a three-second debounce;
+provider cooldowns remain enforced. Old notification actions are legacy-only.
+
+There is no application wake-lock acquisition or alarm/push/WorkManager loop
+in the shipped scheduler. A coroutine cadence is not a guarantee of waking a
+suspended CPU. The short API36 synthetic forced-idle smoke recorded three gaps
+of 61.398, 57.908 and 62.854 seconds; synthetic reboot recovery was also observed.
+These are historical smoke checks, not an eight-hour/24-hour natural screen-off
+qualification or battery measurement. See [device validation](device-validation.md).
+
+Stop/sign-out invalidate work and remove the card. `honorExplicitSystemStop`
+uses the latest `ApplicationExitInfo.REASON_USER_REQUESTED` record to clear
+monitoring intent; force-stop still requires an explicit app launch. Boot recovery
+waits for `BOOT_COMPLETED` after unlock, stored intent, resume preference,
+notification permission and a selected authenticated connection. A previously
+suppressed card with retention off also prevents automatic boot recovery. Glance
+itself gates both visible Start and boot recovery on notification permission. Start rejection
+leaves an unable-to-start state; it does not post an automatic tap-to-resume
+fallback notification. Reopen and explicitly start from the app.
+
+The standard card uses custom compact/expanded views; enhanced mode uses a
+standard Android template. The owner-requested default-on retention choice
+supersedes the original manual-only design below: delivered running-session
+dismissal restores a regular card without requesting promotion again. With
+retention off, suppression persists while retention remains off until explicit
+restore/start; enabling retention republishes the regular card. No OS/OEM
+undismissability or Now bar admission is guaranteed.
+
+Diagnostics stores bounded source-free wall-time poll events and a largest-gap
+summary, not the proposed full monotonic lateness/percentile/wake-duration report.
+Collect separate qualification evidence to assess the baseline's 95% target.
+Physical Samsung background, natural overnight/24-hour cadence and matched
+battery results remain outstanding. Current setup is in [setup](setup.md).
+
+## Original feasibility decision and test plan — 27 September 2026
+
+The rest of this record preserves the original research, isolated-worktree status
+and proposed measurement plan. Its not-integrated statements, notification
+controls and host observations describe that checkpoint; they do not describe
+current wiring or current host state. Platform references were inspected on that
+date. Later evidence retains its own exact source/APK boundary.
 
 ## Decision
 
@@ -29,8 +73,10 @@ The manifest declaration for API 34+ must include:
 </service>
 ```
 
-Call `startForegroundService()` only from an explicit Start/Resume action while
-the app is visible, then promote immediately with the stable glucose
+Normal `startForegroundService()` entry is an explicit Start/Resume action while
+the app is visible. Enabled boot recovery is the separate `BOOT_COMPLETED`
+exemption, conditional on the checks in the current summary above. Promote
+immediately with the stable glucose
 notification and `FOREGROUND_SERVICE_TYPE_SPECIAL_USE` on API 34+. Catch and
 persist a truthful unable-to-start state if Android rejects the start. Android
 12+ generally rejects background FGS starts, although documented exemptions
@@ -94,7 +140,12 @@ to accept slower/gapped refresh, reconsider a push/server design, or explicitly
 approve a materially different power strategy. It is not acceptable to hide the
 gap by refreshing the reading timestamp.
 
-## Proposed screen-off implementation
+## Original proposed poll lifecycle (historical)
+
+Monotonic scheduling, single-flight work, missed-slot skipping, cooldowns, the
+30-second timeout and freshness projection were integrated. The wake-lock A/B
+path was not implemented. Notification Refresh actions are now legacy-only;
+current manual Refresh is on Now.
 
 ### Poll lifecycle
 
@@ -113,7 +164,7 @@ gap by refreshing the reading timestamp.
    If measurement shows requests beginning but being interrupted during screen
    off, A/B test a non-reference-counted partial wake lock acquired only after
    the poll begins, with a hard 35-second timeout and release in `finally`.
-6. Pause, sign-out, person/account change, and system teardown invalidate the
+6. Stop, sign-out, person/account change, and system teardown invalidate the
    generation before cancelling jobs. Every response checks its captured
    generation before storing or rendering.
 7. Notification freshness is computed from the source measurement timestamp,
@@ -158,29 +209,32 @@ recorded on the actual phone rather than guessed.
 
 ## Notification and Live Update constraints
 
-The foreground notification is the glucose card: one stable ID, a stable
-`IMPORTANCE_LOW` channel, standard style, `setOngoing(true)`, and
+The current regular glucose card uses `DecoratedCustomViewStyle` with compact/
+expanded `RemoteViews`; enhanced mode alone uses standard `BigTextStyle`. Both
+use one stable ID, a silent `IMPORTANCE_LOW` channel, `setOngoing(true)`, and
 `setOnlyAlertOnce(true)`. Routine updates remain silent.
 
 On Android 13+, `POST_NOTIFICATIONS` is not required merely to launch an FGS,
 and the FGS must still supply a notification. If permission is denied, however,
 the FGS notice appears in Task Manager rather than the notification drawer.
-Because the drawer/lock-screen card is Glance's core feature, permission denial
-means setup is incomplete even if the service technically started. See
+This is a generic platform rule. Glance's visible Start and boot recovery are
+both gated on permission, so the normal app path does not start monitoring
+without it. See
 [notification runtime permission](https://developer.android.com/develop/ui/views/notifications/notification-permission).
 
 On Android 14+, users can dismiss most ongoing FGS notifications while the
 device is unlocked, despite `setOngoing(true)`; they remain non-dismissible on
-the lock screen and via Clear all. Respect dismissal and offer **Show
-notification again** in the app. Do not immediately repost in a loop. See
+the lock screen and via Clear all. Current Glance offers **Show notification** and
+default-on **Keep notification visible**: a valid delivered dismissal restores
+the regular card without requesting promotion again. OS/OEM delivery varies. See
 [Android 14 notification behavior](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications).
 
-Glance suppresses ordinary updates after a recorded dismissal while the
-foreground service remains alive. If Android later recreates that service,
-Glance stops the persisted monitoring session before calling `startForeground`;
-the owner must explicitly Resume to start a new session. This avoids restoring
-a dismissed card during a sticky restart. Actual swipe delivery and process
-recreation still need device validation.
+While retention remains off, Glance suppresses ordinary updates after a
+recorded dismissal while the service remains alive. A sticky restart then stops
+the persisted session before `startForeground`; explicit Start is required.
+Turning retention back on republishes the regular card. Historical synthetic
+swipe/retention checks are in [device validation](device-validation.md); physical
+Samsung delivery and recreation remain unverified.
 
 Live Update is progressive enhancement only. Android 16 / API 36 introduced
 the promoted-ongoing capability, and OEMs may add eligibility criteria. A user
@@ -209,9 +263,15 @@ The eligibility rules, checks, styles, and OEM caveat are in
 the API-36 platform check is documented by
 [`canPostPromotedNotifications()`](https://developer.android.com/reference/android/app/NotificationManager#canPostPromotedNotifications()).
 
-## Measurement contract
+## Proposed qualification telemetry — not implemented
 
-Record bounded, non-PHI events using both monotonic elapsed time and wall time:
+The collector/export below is a qualification target, not current app diagnostics.
+`DiagnosticsStore` records bounded fixed-category wall-clock events, last values
+and max wall-time attempt gap. The UI exports a summary and event count, not raw
+events, due/start lateness, percentiles, wake duration, screen/connectivity state
+or exclusion intervals. A separate qualification collector/worksheet is required.
+
+The proposed collector should record bounded, non-PHI events using both clocks:
 
 - service start attempt/result and reason, generation, and process instance;
 - nominal poll due, actual poll start, completion, outcome category, and next
@@ -237,7 +297,7 @@ five minutes. This metric must be reported separately for screen-on, natural
 screen-off, forced Doze, optimized, and unrestricted modes. Emulator results do
 not count as battery evidence.
 
-## Emulator plan
+## Historical emulator readiness and original matrix (27 September 2026)
 
 ### Pine readiness (observed 2026-09-27)
 
@@ -250,18 +310,17 @@ not count as battery evidence.
 | Required runtime packages | build-tools 36.0.0, emulator 37.1.11, platform-tools 37.0.1, platform 37.0, and API 36 Google APIs x86_64 system image revision 7 installed |
 | AVDs | `Glance_API36`, Pixel 9 Pro XL profile, Android 16 / API 36 Google APIs x86_64 |
 | Acceleration | `/dev/kvm` exists as `root:kvm` mode `0660`; `sg kvm -c 'emulator -accel-check'` reports KVM version 12 installed and usable |
-| Current emulator state | `Glance_API36` is booted with KVM and visible to ADB as `emulator-5554`; direct launcher invocation from this worktree shell still fails because host `libpulse.so.0` is missing, so restart reproducibility needs correction |
+| Emulator state at checkpoint | `Glance_API36` was booted with KVM and visible to ADB as `emulator-5554`; direct launcher invocation from that worktree shell failed because host `libpulse.so.0` was missing; restart reproducibility was pending |
 | Disk | approximately 1.1 TiB available on the workspace filesystem |
 
-Pine now has the required API 36 SDK image, ADB, AVD, and working KVM access
-through `sg kvm`. The lead booted the AVD, and this worktree observed it through
-ADB. Directly invoking the emulator launcher from this shell still fails to
-load because `libpulse.so.0` is absent, so a future cold restart must use the
-lead's working launch environment or fix that host dependency. Software-only
-emulation is not proposed as evidence for long screen-off timing. This worktree
-did not change SDK, AVD, KVM, or host package configuration.
+At that checkpoint pine had the required API36 SDK image, ADB, AVD and working
+KVM access through `sg kvm`. The lead booted the AVD and the isolated worktree
+observed it through ADB. Direct launcher invocation failed on missing
+`libpulse.so.0`; cold-start reproducibility was pending in that shell. The
+worktree changed no SDK, AVD, KVM or host package configuration. These are dated
+host observations; see [device validation](device-validation.md) for later checks.
 
-### API 36 evidence from this implementation
+### Initial API36 evidence at the 27 September checkpoint
 
 On the booted `Glance_API36` AVD, ADB reported Android 16 / API 36 and the
 `sdk_gphone64_x86_64` model. The debug APK installed successfully and
@@ -271,14 +330,16 @@ with `aapt2`: it contains `MonitoringService`, `foregroundServiceType` value
 declared special-use subtype. Android reported both foreground-service
 permissions granted to the installed debug package.
 
-The actual foreground start, notification actions, screen-off scheduler, and
-forced-Doze recovery remain **not run** in this branch. The current application
-does not yet install the `MonitoringDependencyProvider`/notification renderer,
-so attempting to treat an immediate service stop as a runtime pass would be
-misleading. Run items 1–7 below after the lead integrates those adapters.
+At this isolated checkpoint foreground start, notification actions, screen-off
+scheduling and forced-Doze recovery were **not run**. The application had not yet
+installed `MonitoringDependencyProvider`/notification adapters. Later integration
+and synthetic service/forced-idle/reboot evidence are recorded in
+[device validation](device-validation.md); the current summary is above.
 
-### Test matrix after pine is enabled
+### Remaining matrix from that checkpoint
 
+This was the original matrix, not a current claim that every item is pending.
+Consult [device validation](device-validation.md) for completed/open boundaries.
 Use clean AVD snapshots for API 30, 33, 34, 35, and 36 or newer stable images
 supported by the frozen toolchain. API 36+ is required for Live Update checks.
 Also use the system image closest to the Galaxy S25 Ultra's actual Android
@@ -321,8 +382,9 @@ Android's official forced-idle and App Standby commands are documented in the
 
 ## Required physical-phone verification
 
-All items below are **not run and unverified** until the Galaxy S25 Ultra is in
-hand. An AOSP emulator cannot qualify Samsung One UI behavior.
+These controlled physical-phone scenarios remain **unverified**. The owner has
+since reported phone use; those reports do not qualify these scenarios. An AOSP
+emulator cannot qualify Samsung One UI behavior.
 
 - actual phone model, Android version, One UI version, security patch, and
   Glance target SDK;

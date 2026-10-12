@@ -1,0 +1,16 @@
+{
+  "applicationId": "com.khaleel.glance",
+  "versionCode": 35,
+  "versionName": "0.30.0",
+  "apk": "glance-0.30.0-personal.apk",
+  "apkSha256": "ac7c1f3edafeb9181b358fadc80c7282828f1c84c23b61a1a6792a8609d6c724",
+  "certificateSha256": "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E",
+  "sourceCommit": "12919d633cc6ebc63277f796eff81b8350513bd2",
+  "tested": {
+    "unitTests": "passed: 236 tests, 0 failures/errors/skips",
+    "lintDebugRelease": "passed: 0 errors, 147 total warnings",
+    "emulator": "not run for this exact source commit; see docs/device-validation.md for prior evidence",
+    "liveLibreLinkUpAccount": "not tested",
+    "GalaxyS25Ultra": "not tested"
+  }
+}

@@ -48,7 +48,7 @@ separate debugging address/port with `adb connect`. For example:
 ```sh
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
-adb -s WATCH_IP:DEBUG_PORT install -r release/glance-0.30.0-watch.apk
+adb -s WATCH_IP:DEBUG_PORT install -r apks/0.30.0/glance-0.30.0-watch.apk
 ```
 
 Use the addresses and ports actually shown on the watch; they can differ. The

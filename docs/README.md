@@ -2,8 +2,9 @@
 
 Current guides checked against Glance **0.30.0 / code 35** and the Studio launch
 configuration on **11 October 2026**. Phone/watch source lives in this repository;
-release binaries/manifests live separately under ignored `release/` on the build
-host and in delivered artifacts. A Git clone does not include those binaries.
+the latest signed APKs/manifests are included under versioned `apks/0.30.0/`
+and in delivered artifacts. Additional build-host outputs remain in ignored
+`release/`. See [APK downloads](../apks/README.md).
 
 ## Current operating and engineering guides
 

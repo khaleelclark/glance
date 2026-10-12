@@ -1,0 +1,182 @@
+{
+  "versionName": "0.30.0",
+  "versionCode": 35,
+  "sourceCommit": "12919d633cc6ebc63277f796eff81b8350513bd2",
+  "cleanSource": true,
+  "phone": {
+    "applicationId": "com.khaleel.glance",
+    "versionCode": 35,
+    "versionName": "0.30.0",
+    "apk": "glance-0.30.0-personal.apk",
+    "apkSha256": "ac7c1f3edafeb9181b358fadc80c7282828f1c84c23b61a1a6792a8609d6c724",
+    "certificateSha256": "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E",
+    "sourceCommit": "12919d633cc6ebc63277f796eff81b8350513bd2",
+    "tested": {
+      "unitTests": "passed: 236 tests, 0 failures/errors/skips",
+      "lintDebugRelease": "passed: 0 errors, 147 total warnings",
+      "emulator": "not run for this exact source commit; see docs/device-validation.md for prior evidence",
+      "liveLibreLinkUpAccount": "not tested",
+      "GalaxyS25Ultra": "not tested"
+    }
+  },
+  "watch": {
+    "applicationId": "com.khaleel.glance",
+    "versionCode": 35,
+    "versionName": "0.30.0",
+    "apk": "glance-0.30.0-watch.apk",
+    "apkSha256": "f1bfd01fc1a1849d980506a49d586729155acc54fd54382977cf3aa736f85ee2",
+    "certificateSha256": "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E",
+    "sourceCommit": "12919d633cc6ebc63277f796eff81b8350513bd2",
+    "companion": "Requires same-signer Glance phone app and Android Wear OS pairing",
+    "tested": {
+      "unitTests": "passed: 15 tests, 0 failures/errors/skips",
+      "lintDebugRelease": "passed: 0 errors, 0 total warnings",
+      "emulator": "not run for this exact source commit; see docs/watch-validation.md",
+      "GalaxyWatch7": "not tested"
+    }
+  },
+  "artifactVerification": {
+    "sourceCommit": "12919d633cc6ebc63277f796eff81b8350513bd2",
+    "cleanSource": true,
+    "apks": {
+      "personal": {
+        "file": "glance-0.30.0-personal.apk",
+        "sha256": "ac7c1f3edafeb9181b358fadc80c7282828f1c84c23b61a1a6792a8609d6c724",
+        "signatureVerified": true,
+        "existingSignerRetained": true,
+        "debuggable": false,
+        "debugDemoComponentsAbsent": true,
+        "tests": {
+          "tests": 236,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "lint": {
+          "debug": {
+            "errors": 0,
+            "warnings": 90
+          },
+          "release": {
+            "errors": 0,
+            "warnings": 57
+          }
+        }
+      },
+      "watch": {
+        "file": "glance-0.30.0-watch.apk",
+        "sha256": "f1bfd01fc1a1849d980506a49d586729155acc54fd54382977cf3aa736f85ee2",
+        "signatureVerified": true,
+        "existingSignerRetained": true,
+        "debuggable": false,
+        "debugDemoComponentsAbsent": true,
+        "tests": {
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "lint": {
+          "debug": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "release": {
+            "errors": 0,
+            "warnings": 0
+          }
+        }
+      }
+    }
+  },
+  "independentReview": {
+    "presentationCommit": "bea5cdfade06fca212ab1860cdb6b455490a56fd",
+    "productionCommit": "3aefcbd34167459f4ffa9d7227d94f10d4b29a55",
+    "highMediumBlockers": 0,
+    "openLowFindings": 0,
+    "scope": "Bounded read-only production source review; later changes only debug fixtures, drivers, docs and evidence; verified production remains identical"
+  },
+  "emulator": {
+    "synthetic": true,
+    "device": "API36 emulator",
+    "checks": {
+      "freshRangeBackgroundDarkContentAndTallerCard": true,
+      "lowRangeBackgroundDarkContentAndTallerCard": true,
+      "highRangeBackgroundDarkContentAndTallerCard": true,
+      "sourceLowRangeBackgroundDarkContentAndTallerCard": true,
+      "sourceHighRangeBackgroundDarkContentAndTallerCard": true,
+      "staleRetainsNeutralCardWarningAndSourceTime": true,
+      "delayedRetainsNeutralCardWarningAndSourceTime": true,
+      "invalidTimeRetainsNeutralCardWarningAndSourceTime": true,
+      "absentReadingRetainsNeutralWaitingCard": true,
+      "bothSystemModesKeepSameRangeBackgroundAndContrast": true,
+      "accentChangesDoNotRecolorTheReadingRangeCard": true,
+      "portraitTwoHundredPercentKeepsCardContentChartAndSettingsReachable": true,
+      "landscapeTwoHundredPercentKeepsCardContentChartAndSettingsReachable": true
+    },
+    "allPassed": true,
+    "freshCardHeightsDp": {
+      "fresh": 176.0,
+      "low": 176.0,
+      "high": 176.0,
+      "sourceLow": 176.0,
+      "sourceHigh": 176.0
+    },
+    "fixtureApkSha256": "486a1c7485de40f112be27085082756238e96c71e3af3d4253fb94bd442de776",
+    "sourceCommitAtRun": "e297c977e0da12cdb1c4602a8ef096ccbe6d3b66",
+    "sourceDirtyAtRun": false,
+    "normalChecksReusedFromPriorCompleteRun": false,
+    "fixtureProductionCommit": "e297c977e0da12cdb1c4602a8ef096ccbe6d3b66",
+    "scope": "Production ReadingHero/FlowRow and scrolling; synthetic source states, actual screenshot colors and touch; requires visual clipping inspection",
+    "SamsungOneUI": "not tested",
+    "liveAccount": "not tested",
+    "TalkBack": "not tested"
+  },
+  "historyStorage": {
+    "synthetic": true,
+    "minuteSamplesPersisted": 1440,
+    "sameValuesAtDifferentTimesRetained": true,
+    "encryptedRoundTripThroughNewStore": true,
+    "sparseBackfillDoesNotEraseCapturedMinuteSamples": true,
+    "duplicateSourceTimesDoNotAddSamples": true,
+    "plaintextSyntheticIdentityAbsent": true,
+    "minimalCanonicalHistoryEncryptedRoundTrip": true,
+    "minimalBackfillPreservesCapturedReportedValues": true,
+    "missingHistoryTrendsRemainUnknown": true,
+    "device": "API36 emulator",
+    "sourceCommitAtRun": "6b5fca7d80975bc8b647cc4b8012815eb9097afc",
+    "sourceDirtyAtRun": true,
+    "fixtureApkSha256": "c171e6b46213bb714b198d3384fbf67ce3d9cf147910b81f0ea0fbb24eede65d"
+  },
+  "minuteHistoryChart": {
+    "synthetic": true,
+    "device": "API36 emulator",
+    "sourceCommitAtRun": "8f6fb609eb05d01318d4be29149e749c2241d0fb",
+    "sourceDirtyAtRun": true,
+    "fixtureApkSha256": "54c613025199b89d372c229745b49a10699e653937fecbe3c2d0b382b314de86",
+    "checks": {
+      "all1440MinuteSamplesReachProductionChart": true,
+      "currentReadingStill113": true,
+      "threeHourPresetStillActionableWithFullDayHistory": true
+    },
+    "scope": "Synthetic integer canonical history with unknown historical trends in production chart; source adapter separately tested with mocked responses; no live cadence claim"
+  },
+  "ownerReportedMonitoring": {
+    "continuousDuringGaps": true,
+    "configuredRefreshMinutes": 1,
+    "observedPollTimingsVerified": false,
+    "liveReturnedSamplesVerified": false
+  },
+  "notRun": [
+    "final signed APK launch",
+    "Samsung One UI layout",
+    "live LibreLinkUp account",
+    "TalkBack",
+    "overnight/24-hour monitoring",
+    "battery comparison",
+    "physical watch",
+    "audible alerts"
+  ],
+  "behavior": "Refined 176dp minimum reading card, 60sp value and larger time/unit/trend text; whole fresh card vivid green in range, red low, yellow high with dark text; old/invalid/absent readings neutral; source/freshness/thresholds unchanged; minimal historical rows accepted and 1500-point backfill preserved",
+  "upgrade": "Studio installation: git pull --ff-only and Run app debug variant from the same computer to preserve local signer/settings. Personal signed APK only replaces same-signer installations. Watch UI unchanged."
+}

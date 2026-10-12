@@ -33,8 +33,9 @@ so a saved Teal or other accent cannot disable the launch target. If the old
 **Run → Edit Configurations → Launch → Specified Activity** and enter that class.
 See [Studio recovery and evidence](docs/studio-accent-launch.md).
 
-For a new installation or an existing **personal release installation**, follow
-[build, signing and upgrades](docs/release.md), then [phone setup](docs/setup.md).
+For a new installation or an existing **personal release installation**, download
+the [latest signed phone and watch APKs](apks/README.md), then follow
+[build, signing and upgrades](docs/release.md) and [phone setup](docs/setup.md).
 A personal release APK cannot update a differently signed Studio build. Cancel
 an uninstall prompt and check the signer before proceeding; uninstalling removes
 local data.

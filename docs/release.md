@@ -7,6 +7,19 @@ Last documentation audit: 11 October 2026. Version changes must update both modu
 
 ## Delivered artifacts and qualification
 
+The latest signed phone/watch APKs and their immutable manifest, checksums and
+verification bundle are included in Git under `apks/0.30.0/`. Use the
+[APK download index](../apks/README.md), or these direct links:
+
+- [Phone APK](../apks/0.30.0/glance-0.30.0-personal.apk)
+- [Watch APK](../apks/0.30.0/glance-0.30.0-watch.apk)
+- [Checksums](../apks/0.30.0/SHA256SUMS)
+- [Delivery and signer manifest](../apks/0.30.0/glance-0.30.0-delivery-manifest.json)
+- [Verification and install bundle](../apks/0.30.0/glance-0.30.0-verification-and-install.zip)
+
+Inclusion checked 12 October 2026: byte-identical to the delivered 0.30 files;
+both APK signatures/checksums reverified. No rebuild or new signer is involved.
+
 The signed 0.30 APKs were built from clean source
 `12919d633cc6ebc63277f796eff81b8350513bd2`. The subsequent Studio configuration
 fix (`57a0902`) and this documentation update require no new APK or signer.
@@ -24,7 +37,8 @@ On the build host, artifacts and manifests are under ignored `release/`:
 `glance-0.30.0-manifest.json`, `glance-0.30.0-watch-manifest.json`,
 `glance-0.30.0-delivery-manifest.json`, `glance-0.30.0-static-verification.json`,
 and `glance-0.30.0-verification-and-install.zip`. They are delivery files,
-not files downloaded by cloning Git. Keep immutable copies with the APKs;
+also copied to the versioned `apks/0.30.0/` directory above for Git downloads.
+Keep immutable copies with the APKs;
 `manifest.json` and `clean-build.log` are overwritten by later signing runs.
 A rebuild from newer source must publish its own checksum/source manifest.
 

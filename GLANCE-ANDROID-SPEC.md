@@ -6,12 +6,12 @@ Working name: **Glance**. User: Khaleel. Followed person: Patrick. Distribution:
 
 This document specifies the app to build. It is not a claim that the app, Abbott integration, or device behavior has already been tested. Numerical defaults and performance targets below are product decisions, not promises made by Abbott or Android.
 
-## Current implementation addendum — 11 October 2026
+## Current implementation addendum — 21 October 2026
 
 The sections below preserve the 27 September baseline and its acceptance targets.
 They are historical requirements, not the current installation guide. Use
 [README](README.md), [setup](docs/setup.md), [release](docs/release.md) and the
-[documentation index](docs/README.md) for the shipped 0.30.0 behavior and evidence.
+[documentation index](docs/README.md) for the current 0.31.0 behavior and evidence.
 Subsequent owner-directed changes supersede these baseline UI/scope defaults:
 
 | Baseline | Current behavior |
@@ -25,6 +25,8 @@ Subsequent owner-directed changes supersede these baseline UI/scope defaults:
 | Proposed storage libraries | Android Keystore AES-GCM/AtomicFile for account/health stores; preferences for ordinary settings and checked privacy grants |
 | History | Up to 24 hours/1,500 validated numeric timestamps; minimal historical rows accepted; guarded reported-value precision preserved; no fabricated missing samples |
 | Launch from default icon | Studio Glance phone configuration explicitly launches always-enabled MainActivity, independent of selected accent alias |
+| Numeric icons / Live Update | Android 17+ encoded numeric masks support content comparison in automatic groups; actual-framework Live Update eligibility selects colorization; Samsung appearance remains unverified |
+| Watch installation | Glance watch Studio configuration or same-signer APK sideload via paired Wi-Fi ADB |
 
 Current app identity: `com.khaleel.glance`, 0.31.0 / code 36 on phone and watch;
 minSdk 30, compile/target SDK 37. Toolchain and signer instructions are in release.md.

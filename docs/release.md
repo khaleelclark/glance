@@ -1,58 +1,58 @@
 # Build, signing, installation and upgrades
 
-Candidate phone/watch source: **0.31.0 / code 36**. Latest delivered APKs remain
-**0.30.0 / code 35** until the candidate's checks/signing finish; see
-[candidate status](notification-031-validation.md). Both use application ID
+Current phone/watch version: **0.31.0 / code 36**. Both use application ID
 `com.khaleel.glance` on their respective devices and require matching certificates
 for Wear Data Layer sharing. Source repository: `khaleelclark/glance`.
-Last documentation audit: 11 October 2026. Version changes must update both modules.
+Release update: 21 October 2026. Version changes must update both modules.
 
 ## Delivered artifacts and qualification
 
-The latest signed phone/watch APKs and their immutable manifest, checksums and
-verification bundle are included in Git under `apks/0.30.0/`. Use the
-[APK download index](../apks/README.md), or these direct links:
+The 0.31 signed phone/watch APKs, immutable manifests, checksums and verification
+bundle are under `apks/0.31.0/`. Use the [APK download index](../apks/README.md):
 
-- [Phone APK](../apks/0.30.0/glance-0.30.0-personal.apk)
-- [Watch APK](../apks/0.30.0/glance-0.30.0-watch.apk)
-- [Checksums](../apks/0.30.0/SHA256SUMS)
-- [Delivery and signer manifest](../apks/0.30.0/glance-0.30.0-delivery-manifest.json)
-- [Verification and install bundle](../apks/0.30.0/glance-0.30.0-verification-and-install.zip)
+- [Phone APK](../apks/0.31.0/glance-0.31.0-personal.apk)
+- [Watch APK](../apks/0.31.0/glance-0.31.0-watch.apk)
+- [Checksums](../apks/0.31.0/SHA256SUMS)
+- [Delivery and signer manifest](../apks/0.31.0/glance-0.31.0-delivery-manifest.json)
+- [Static verification](../apks/0.31.0/glance-0.31.0-static-verification.json)
+- [Verification and install bundle](../apks/0.31.0/glance-0.31.0-verification-and-install.zip)
 
-Inclusion checked 12 October 2026: byte-identical to the delivered 0.30 files;
-both APK signatures/checksums reverified. No rebuild or new signer is involved.
-
-The signed 0.30 APKs were built from clean source
-`12919d633cc6ebc63277f796eff81b8350513bd2`. The subsequent Studio configuration
-fix (`57a0902`) and this documentation update require no new APK or signer.
+Both APKs were signed from clean source
+`4be0762d46442628009c78ac8b7b4b6343c8286b`. Later delivery documentation and
+artifact inclusion do not change the APK source or require rebuilding them.
+Their production source is identical to the revised review pin `db8eb4e`.
+See [0.31 verification](notification-031-validation.md) and [source review](review-031.md).
 
 | Artifact | SHA-256 |
 |---|---|
-| `glance-0.30.0-personal.apk` | `ac7c1f3edafeb9181b358fadc80c7282828f1c84c23b61a1a6792a8609d6c724` |
-| `glance-0.30.0-watch.apk` | `f1bfd01fc1a1849d980506a49d586729155acc54fd54382977cf3aa736f85ee2` |
+| `glance-0.31.0-personal.apk` | `4190c66727cd3bff521c19d3df64859198f571bbe0507cd7d97f8d7e2e2721b0` |
+| `glance-0.31.0-watch.apk` | `18a96e06c8667018a74aa3e46c6abb986760ffe1ae76355b037a968562c75245` |
 
-Personal certificate SHA-256:
+Existing personal certificate SHA-256:
 `837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E`.
-This is a public certificate fingerprint, not the private key.
+This public fingerprint is retained from 0.30; it is not the private key.
+The previous 0.30 files remain immutable under `apks/0.30.0/`.
 
-On the build host, artifacts and manifests are under ignored `release/`:
-`glance-0.30.0-manifest.json`, `glance-0.30.0-watch-manifest.json`,
-`glance-0.30.0-delivery-manifest.json`, `glance-0.30.0-static-verification.json`,
-and `glance-0.30.0-verification-and-install.zip`. They are delivery files,
-also copied to the versioned `apks/0.30.0/` directory above for Git downloads.
-Keep immutable copies with the APKs;
-`manifest.json` and `clean-build.log` are overwritten by later signing runs.
-A rebuild from newer source must publish its own checksum/source manifest.
+Clean release checks pass 236 phone and 15 watch tests, zero failures/errors/skips,
+and zero errors in both modules' debug/release lints. Phone lint has 93 debug /
+57 release warnings; watch has none. Both signed APKs verify package/version,
+matching existing signer, non-debuggable status and absence of debug components
+and fixture markers. This is static signed-APK verification, not runtime proof.
 
-The recorded clean release checks passed 236 phone and 15 watch unit tests,
-zero failures/errors/skips, and zero lint errors. Phone lint retained 90 debug
-and 57 release warnings; watch lint retained zero warnings. Both signatures,
-package/version, non-debuggable status and debug-component exclusion passed
-static verification. Signed APK runtime checks are separate from the bounded
-debug-emulator receipts. See [device status](device-validation.md),
-[0.30 source review](review-030.md), and [watch evidence](watch-validation.md).
-Owner reports of phone use do not complete controlled live-account parity,
-Samsung/Watch7, overnight/24-hour cadence or battery qualification.
+Forty-four bounded API36 debug/synthetic checks cover encoded icon delivery and
+initial grouping, independent cards, latest-number refresh, source-age expiry,
+privacy, Clear all, real monitor swipes with retention on/off and lifecycle guards.
+Each receipt retains its actual source, dirty state and fixture hash. The two
+Android 17 dynamic-summary assertions are not run on API36. Current Android 17
+framework source was inspected/pinned, but physical Android 17 / One UI 9,
+Samsung Now bar, actual promotion, audible/DND delivery, live-source parity,
+paired Watch7, overnight/24-hour cadence and battery qualification remain unverified.
+
+Build-host files remain under ignored `release/`; the same intended files are
+copied to versioned `apks/0.31.0/`. Keep immutable manifests with the APKs.
+`manifest.json` and `clean-build.log` are overwritten by future signing runs;
+a rebuild must publish a new checksum/source manifest. The verification bundle
+contains reports/guides and public signature evidence; APKs are separate downloads.
 
 ## Clean-checkout build
 

@@ -81,13 +81,15 @@ separate debugging address/port with `adb connect`. For example:
 ```sh
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
-adb -s WATCH_IP:DEBUG_PORT install -r wear/build/outputs/apk/debug/wear-debug.apk
+adb -s WATCH_IP:DEBUG_PORT install -r apks/0.31.0/glance-0.31.0-watch.apk
 ```
 
-This command uses a watch debug APK built on the same computer as a Studio phone
-installation (`./gradlew :wear:assembleDebug`). For a personal-signed phone,
-use the matching personal watch APK from [APK downloads](../apks/README.md) as
-the install path instead. Mixing those signing keys prevents Data Layer sharing.
+This command installs the personal-signed watch APK from the repository.
+If you downloaded it separately, use that file's actual path instead. This is
+for a matching personal-signed phone installation. For a Studio/debug phone,
+build `./gradlew :wear:assembleDebug` on its original computer and install
+`wear/build/outputs/apk/debug/wear-debug.apk` instead. Mixing those signing keys
+prevents Data Layer sharing.
 Use the addresses and ports actually shown on the watch; they can differ. The
 pairing code is entered locally into adb, not pasted into Chat. Disable wireless
 debugging when finished. Existing phone installation and LibreLinkUp settings

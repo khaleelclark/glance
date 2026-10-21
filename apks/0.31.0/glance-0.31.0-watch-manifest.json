@@ -1,0 +1,16 @@
+{
+  "applicationId": "com.khaleel.glance",
+  "versionCode": 36,
+  "versionName": "0.31.0",
+  "apk": "glance-0.31.0-watch.apk",
+  "apkSha256": "18a96e06c8667018a74aa3e46c6abb986760ffe1ae76355b037a968562c75245",
+  "certificateSha256": "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E",
+  "sourceCommit": "4be0762d46442628009c78ac8b7b4b6343c8286b",
+  "companion": "Requires same-signer Glance phone app and Android Wear OS pairing",
+  "tested": {
+    "unitTests": "passed: 15 tests, 0 failures/errors/skips",
+    "lintDebugRelease": "passed: 0 errors, 0 total warnings",
+    "emulator": "not run for this exact source commit; see docs/watch-validation.md",
+    "GalaxyWatch7": "not tested"
+  }
+}

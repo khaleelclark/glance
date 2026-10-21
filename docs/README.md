@@ -63,6 +63,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 - [Glance 0.27 independent source review](review-027.md)
 - [Glance 0.28 independent source review](review-028.md)
 - [Glance 0.30 independent source review](review-030.md)
+- [Glance 0.31 independent source review](review-031.md)
 - [Phone UI overhaul in 0.21.0](ui-overhaul-validation.md)
 - [Phone UI refresh in 0.20.0](ui-refresh-validation.md)
 - [Glance 0.19.0 watch verification](watch-validation.md)
@@ -70,7 +71,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 Raw receipts and synthetic screenshots are under `evidence/`, linked from each
 report. Do not overwrite a prior receipt when collecting a newer run; record the
 actual source, dirty state and installed APK hash. Signer/checksum verification
-belongs to each immutable release manifest. Current signed 0.30 checks are
+belongs to each immutable release manifest. Current signed 0.31 checks are
 summarized in [release](release.md); open physical/account tests are in
 [device validation](device-validation.md) and [watch validation](watch-validation.md).
 

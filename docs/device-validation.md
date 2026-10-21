@@ -1,16 +1,17 @@
 # Device validation log
 
-## 0.31 candidate — 21 October 2026
+## 0.31 release — 21 October 2026
 
-The current candidate uses content-comparable numeric icons on Android 17+,
+The 0.31 release uses content-comparable numeric icons on Android 17+,
 keeps earlier bitmap behavior on older versions, and improves framework
 eligibility diagnostics and watch installation. A discarded explicit-group
 candidate passed 12 API36 fixture checks but review found user-swipe coupling;
 that app-provided parent/child relationship has been removed. The revised
-candidate's 15 framework, 19 alert and 10 retention/privacy checks pass on API36;
-review and signing remain pending. The build-host temporary
+release's 15 framework, 19 alert and 10 retention/privacy checks pass on API36.
+Independent correction review closes the MEDIUM with no open findings. Clean signing/static checks
+pass at `4be0762` (236 phone / 15 watch tests; zero lint errors). The build-host temporary
 quota issue was worked around with an ignored disk-backed Java temp directory.
-No new signed APK is delivered at this checkpoint. See
+Signed APKs, manifests and checksums are linked from the release guide. See
 [0.31 evidence and limits](notification-031-validation.md).
 The owner reports Android 17 / One UI 9; physical qualification is unverified.
 

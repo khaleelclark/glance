@@ -52,9 +52,17 @@ icon types, without exporting glucose, names or group identifiers.
 - [Pinned primary-source audit](evidence/android-framework-icon-audit-0.31.0.json)
   records exact Android 16/17 revisions and hashes for GroupHelper and Icon.
   Source inspection is not an Android 17 runtime test.
-- Phone/watch JVM result files contain 236 / 15 tests, zero failures/errors/skips;
-  revised debug assembly and lint pass with zero errors. Final clean release
-  checks, review, signing/static verification and publication remain pending.
+- Clean signed build at `4be0762` passes 236 phone / 15 watch tests with zero
+  failures/errors/skips. Both debug/release lints have zero errors (phone 93
+  debug / 57 release warnings; watch zero). Both APK signatures retain the
+  existing personal signer, version 0.31.0 / code 36, package identity and
+  non-debuggable status; debug components/fixture markers are absent. The APKs
+  have static verification and are not runtime-tested as signed artifacts.
+- [Independent correction review](review-031.md) closes the prior MEDIUM with no
+  HIGH, MEDIUM or concrete LOW at exact `db8eb4e`. Signed source `4be0762` has
+  byte-identical production source; later changes only add debug reporting,
+  guides and evidence. [Release files](../apks/README.md) include both APKs,
+  immutable manifests, checksums and the verification/install bundle.
 - Temporary quota/build and fixture-annotation failures were corrected; failed
   attempts are not counted as passes. Java temporary output was redirected to
   an ignored disk-backed directory.

@@ -16,6 +16,7 @@ import com.khaleel.glance.core.GlucoseFormat
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.notification.GlucoseStatusIcon
+import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import java.util.UUID
 import java.time.ZoneId
 import java.time.Instant
@@ -100,6 +101,11 @@ class GlucoseAlertNotifier(
             .setContentTitle(title)
             .setContentText(detail)
             .setCategory(if (kind.urgent) Notification.CATEGORY_ALARM else Notification.CATEGORY_STATUS)
+            // Use this existing card as the explicit summary for the monitoring child, so the
+            // system does not invent an app-glyph summary. No additional notification is posted.
+            .setGroup(GlucoseNotificationRenderer.GROUP_KEY)
+            .setGroupSummary(true)
+            .setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
             .setContentIntent(open)
             .setDeleteIntent(PendingIntent.getBroadcast(
                 context, notificationId(kind),
@@ -123,6 +129,9 @@ class GlucoseAlertNotifier(
                     .setSmallIcon(R.drawable.ic_glance_status)
                     .setContentTitle("Glance glucose alert")
                     .setContentText("Open Glance to view the reading")
+                    .setGroup(GlucoseNotificationRenderer.GROUP_KEY)
+                    .setGroupSummary(true)
+                    .setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
                     .setVisibility(Notification.VISIBILITY_PUBLIC)
                     .build(),
             )

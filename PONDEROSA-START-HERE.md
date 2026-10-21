@@ -7,9 +7,9 @@ or rebuild its scope from scratch. Read [README](README.md), the
 [documentation index](docs/README.md), [current architecture](docs/architecture.md)
 and [release guide](docs/release.md), then the original specification and its
 current implementation addendum. Inspect Git status, actual source and pinned
-release/evidence files before changing anything. Current app version is 0.30.0
-(code 35); the Studio launch fix is on main. Preserve signing continuity and
-existing data. Documentation updated 11 October 2026.
+release/evidence files before changing anything. Current app version is 0.31.0
+(code 36); the Studio launch fix is on main. Preserve signing continuity and
+existing data. Notification/watch-install update: 21 October 2026.
 
 The original kickoff below records the initial build request and delivery gates.
 Its future tense, Wednesday arrival and proposed team assignments are historical;

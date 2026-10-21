@@ -1,6 +1,6 @@
 # Phone setup and everyday use
 
-Applies to Glance 0.30.0. For installation/signing, start with
+Applies to Glance 0.31.0. For installation/signing, start with
 [release and upgrades](release.md). The app follows one explicitly selected
 LibreLinkUp connection; it does not connect directly to a sensor.
 

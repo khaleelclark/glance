@@ -184,6 +184,8 @@ class DebugNotificationActivity : Activity() {
                 .put("requestExtra", notification.extras.getBoolean("android.requestPromotedOngoing"))
                 .put("criticalText", notification.extras.getString("android.shortCriticalText"))
                 .put("customViewAbsent", notification.contentView == null && notification.bigContentView == null)
+                .put("promotableCharacteristics", notification.hasPromotableCharacteristics())
+                .put("colorizedPromotableCharacteristics", builder.setColorized(true).build().hasPromotableCharacteristics())
             java.io.File(context.filesDir, "live-api-check.json").writeText(result.toString())
             manager.notify(GlucoseNotificationRenderer.NOTIFICATION_ID, notification)
             return

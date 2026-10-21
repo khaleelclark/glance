@@ -1,6 +1,6 @@
 # Glance Wear companion
 
-Current module: 0.30.0 / code 35. For installation, matching phone/watch
+Current module: 0.31.0 / code 36 (watch runtime unchanged from 0.30). For installation, matching phone/watch
 certificates and current Settings names, use [watch setup](../docs/watch.md) and
 [release guide](../docs/release.md). These implementation notes describe the
 passive read-only receiver; physical paired-device qualification is separate.

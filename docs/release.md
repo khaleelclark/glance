@@ -1,6 +1,8 @@
 # Build, signing, installation and upgrades
 
-Current phone/watch version: **0.30.0 / code 35**. Both use application ID
+Candidate phone/watch source: **0.31.0 / code 36**. Latest delivered APKs remain
+**0.30.0 / code 35** until the candidate's checks/signing finish; see
+[candidate status](notification-031-validation.md). Both use application ID
 `com.khaleel.glance` on their respective devices and require matching certificates
 for Wear Data Layer sharing. Source repository: `khaleelclark/glance`.
 Last documentation audit: 11 October 2026. Version changes must update both modules.

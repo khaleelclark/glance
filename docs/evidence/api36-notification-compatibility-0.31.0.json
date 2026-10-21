@@ -1,0 +1,31 @@
+{
+  "synthetic": true,
+  "allPassed": true,
+  "checks": {
+    "requestedLayoutMeetsActualFrameworkEligibility": true,
+    "colorizationOnlyUsedWhenPlainLayoutIneligible": true,
+    "promotionRequestAndCriticalTextPreserved": true,
+    "promotedRequestHasNoCustomViewsOrGroupSummary": true,
+    "ineligibleLayoutDoesNotKeepUnhelpfulColorization": true,
+    "oldSeparateBitmapIconsProduceNonNumericAutoSummary": true,
+    "twoCardsUseExplicitGroupWithNumericAlertSummary": true,
+    "explicitSummaryTracksLatestNumberSilentlyAndKeepsTrigger": true,
+    "monitoringChildRemainsOngoingAndNotSummary": true,
+    "dismissingAlertKeepsNumericMonitoringCard": true,
+    "notificationDiagnosticsContainNoFixtureValueOrName": true
+  },
+  "framework": {
+    "sdkFull": 3600000,
+    "plainLayoutEligible": false,
+    "colorizedLayoutEligible": true,
+    "promotionAllowed": false
+  },
+  "scope": "API36 notification grouping/eligibility; no Samsung, actual promotion, sound, or live source qualification",
+  "device": "API36 emulator",
+  "sourceCommitAtRun": "ebe302837501523e77a715190f851b55c4606a96",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "1bd01db5b6fdc40262b64ab6bf1b2786674caeccf603644a3473793941ac7359",
+  "SamsungOneUI": "not tested",
+  "actualLiveUpdatePromotion": "not tested",
+  "liveAccount": "not tested"
+}

@@ -34,13 +34,46 @@ directs the owner to turn off or remove Glance on the watch before restarting.
 
 ## Install the companion
 
-Current APKs are `glance-0.30.0-personal.apk` and `glance-0.30.0-watch.apk`
-(versionCode 35). See [release and upgrades](release.md) for checksums and source.
+Current source is 0.31.0 / code 36. See [release and upgrades](release.md) and
+[APK downloads](../apks/README.md) for available signed builds and source.
 The watch APK must be signed with the same certificate as the installed phone app.
 For an existing Studio/debug phone, build the `wear` debug variant on the same
 computer with the same key; a personal-signed watch cannot share with a differently
 signed Studio phone. Do not uninstall the phone merely to align these signers. There
 is no Play Store listing or automatic store installation in this personal build.
+### Existing Android Studio phone installation (recommended for the owner)
+
+Use the **same computer and checkout** that install Glance on your phone, so
+Studio signs both apps with the same debug key. Installing only the phone app
+does not automatically install this personal companion on the watch.
+
+1. Keep the watch paired to the phone in Galaxy Wearable. Put the computer and
+   watch on the same Wi-Fi network.
+2. On the watch, open **Settings → About watch → Software information** and tap
+   **Software version** seven times to enable Developer options. Menu wording
+   can vary by watch software.
+3. Open **Settings → Developer options**. Enable **ADB debugging** if offered,
+   then **Wireless debugging → Pair new device**.
+4. In Studio, open **Pair Devices Using Wi-Fi**, choose pairing by code, and
+   enter the address/port and code shown by the watch. If Studio does not find
+   it, use `adb pair` / `adb connect` as below. The connection port is on the
+   main Wireless debugging page and can differ from the pairing port.
+5. Select **Glance watch** beside Run, select the watch as the target, then Run.
+   If Studio asks for a module, select **wear**, debug variant. If the shared
+   configuration is absent, create an Android App run configuration for `wear`
+   with default activity (or `com.khaleel.glance.wear.MainActivity`).
+6. Open Glance on the watch. On the phone, enable **Settings → Devices → Share
+   watch readings** and start monitoring. Keep both devices paired/connected.
+7. Edit a watch face with a text complication slot and choose **Glance glucose**
+   to see the value on the face. The app does not add this automatically.
+
+Optional: enable **Watch notification** on the phone and enable notifications
+inside the watch app, granting its notification permission. Turn wireless
+debugging off after installation. Never uninstall the phone to resolve a signer
+mismatch; use the same computer/key instead.
+
+### APK / command-line installation
+
 For sideloading, enable Developer options and Wireless debugging on the watch,
 use the watch's pairing code and pairing address with `adb pair`, then its
 separate debugging address/port with `adb connect`. For example:
@@ -48,9 +81,13 @@ separate debugging address/port with `adb connect`. For example:
 ```sh
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
-adb -s WATCH_IP:DEBUG_PORT install -r apks/0.30.0/glance-0.30.0-watch.apk
+adb -s WATCH_IP:DEBUG_PORT install -r wear/build/outputs/apk/debug/wear-debug.apk
 ```
 
+This command uses a watch debug APK built on the same computer as a Studio phone
+installation (`./gradlew :wear:assembleDebug`). For a personal-signed phone,
+use the matching personal watch APK from [APK downloads](../apks/README.md) as
+the install path instead. Mixing those signing keys prevents Data Layer sharing.
 Use the addresses and ports actually shown on the watch; they can differ. The
 pairing code is entered locally into adb, not pasted into Chat. Disable wireless
 debugging when finished. Existing phone installation and LibreLinkUp settings
@@ -106,9 +143,10 @@ release manifests. Physical Watch7 pairing, face rendering, wrist/ambient
 presentation, disconnected timing and battery measurements remain separate
 qualification checks. See [watch-validation.md](watch-validation.md).
 
-Official references checked 2026-10-01:
+Official references checked 2026-10-21:
 
 - [Data Layer transport and package/signature security](https://developer.android.com/training/wearables/data/overview)
+- [Pair and connect a watch over Wi-Fi](https://developer.android.com/training/wearables/get-started/debug-wifi)
 - [Complication service, timelines and push updates](https://developer.android.com/training/wearables/complications/exposing-data)
 - [Native and bridged watch notifications](https://developer.android.com/training/wearables/notifications)
 - [Ongoing/non-clearable phone cards are not bridged](https://developer.android.com/training/wearables/notifications/bridger)

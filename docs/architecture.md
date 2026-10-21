@@ -1,6 +1,6 @@
 # Current architecture
 
-Applies to 0.30.0 and the shared Studio launch fix; checked 11 October 2026.
+Applies to 0.31.0, including notification grouping/platform compatibility; checked 21 October 2026.
 The phone connects directly to LibreLinkUp. Pine/Ponderosa build the app and
 are outside its runtime data path. The optional watch receives a credential-free
 projection from the phone, not its own account or polling worker.
@@ -47,6 +47,12 @@ Stop/sign-out invalidate work and remove the monitoring notification.
 
 The regular notification uses a silent channel and custom compact/expanded
 views. Live Update uses a standard Android template with promotion checks.
+The monitoring card is a group child; the single existing threshold alert is
+the explicit group summary with a silently refreshed numeric icon. This avoids
+an extra auto-summary/app glyph without a third card. Live Update keeps a
+non-summary template and chooses colorization only if the actual framework's
+`hasPromotableCharacteristics()` requires it. Diagnostics distinguishes shape
+eligibility, requested/actual promotion, group summaries and icon types.
 A shared publication gate orders final state/privacy checks and notify/cancel.
 The default-on retention choice restores the regular card on a delivered
 current-session dismissal callback; there is no automatic re-promotion loop.

@@ -20,6 +20,12 @@ object LiveUpdateSupport {
         if (Build.VERSION.SDK_INT < 36) return
         builder.setShortCriticalText(text)
         builder.addExtras(Bundle().apply { putBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
+        // Early Android 16 requires colorization; newer builds require it off. Ask the actual
+        // framework instead of assuming Samsung's behavior from SDK_INT / One UI version.
+        if (!builder.build().hasPromotableCharacteristics()) {
+            builder.setColorized(true)
+            if (!builder.build().hasPromotableCharacteristics()) builder.setColorized(false)
+        }
     }
 
     fun settingsIntent(context: Context): Intent =
@@ -34,9 +40,11 @@ object LiveUpdateSupport {
     /** Posting facts only: no glucose, names, timestamps or chip contents. */
     fun diagnostics(context: Context): String {
         val manager = context.getSystemService(NotificationManager::class.java)
-        val posted = manager.activeNotifications.firstOrNull {
+        val active = manager.activeNotifications
+        val record = active.firstOrNull {
             it.id == GlucoseNotificationRenderer.NOTIFICATION_ID
-        }?.notification
+        }
+        val posted = record?.notification
         val channel = manager.getNotificationChannel(GlucoseNotificationRenderer.CHANNEL_ID)
         return listOf(
             "Monitoring card posted: ${posted != null}",
@@ -46,6 +54,12 @@ object LiveUpdateSupport {
             "Public clear-all protection flag: ${posted?.publicVersion?.let { it.flags and Notification.FLAG_NO_CLEAR != 0 } ?: false}",
             "Promotion requested: ${posted?.extras?.getBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING) ?: false}",
             "Promoted flag: ${posted?.let { it.flags and Notification.FLAG_PROMOTED_ONGOING != 0 } ?: false}",
+            "Platform layout eligible: ${if (Build.VERSION.SDK_INT >= 36) posted?.hasPromotableCharacteristics() ?: false else "unsupported"}",
+            "Colorization requested: ${posted?.extras?.getBoolean(Notification.EXTRA_COLORIZED) ?: false}",
+            "Monitoring icon type: ${posted?.smallIcon?.type ?: "absent"}",
+            "Monitoring automatically grouped: ${record?.overrideGroupKey != null}",
+            "App group summaries: ${active.count { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 }}",
+            "Active alert icon types: ${active.filter { it.notification.channelId.startsWith("glucose_alert_") }.map { it.notification.smallIcon.type }.distinct().sorted().joinToString().ifEmpty { "none" }}",
             "Chip text supplied: ${Build.VERSION.SDK_INT >= 36 && !posted?.shortCriticalText.isNullOrEmpty()}",
             "Custom layout supplied: ${posted?.let { it.contentView != null || it.bigContentView != null } ?: false}",
             "Monitoring channel importance: ${channel?.importance ?: "not created"}",
@@ -75,7 +89,9 @@ object LiveUpdateSupport {
                 if (posted.shortCriticalText.isNullOrEmpty())
                     " No chip text is supplied. Glance hides chip values when its lock-screen values are off." else ""
         } else if (posted.extras.getBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING)) {
-            "Live Update requested; Android has not promoted the card. Check Samsung's Live notifications and Now bar settings."
+            if (!posted.hasPromotableCharacteristics())
+                "Android rejected the Live Update layout. The regular notification remains available."
+            else "Live Update layout eligible and requested; Android has not promoted the card. Check Samsung's Live notifications and Now bar settings."
         } else "Using the regular card. Enable Status chip Live Update to request promotion."
     }
 }

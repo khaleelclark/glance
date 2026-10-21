@@ -26,7 +26,7 @@ Subsequent owner-directed changes supersede these baseline UI/scope defaults:
 | History | Up to 24 hours/1,500 validated numeric timestamps; minimal historical rows accepted; guarded reported-value precision preserved; no fabricated missing samples |
 | Launch from default icon | Studio Glance phone configuration explicitly launches always-enabled MainActivity, independent of selected accent alias |
 
-Current app identity: `com.khaleel.glance`, 0.30.0 / code 35 on phone and watch;
+Current app identity: `com.khaleel.glance`, 0.31.0 / code 36 on phone and watch;
 minSdk 30, compile/target SDK 37. Toolchain and signer instructions are in release.md.
 Current verification remains narrower than the definition of done below:
 controlled live-account parity, physical Samsung/watch/car, real TalkBack,

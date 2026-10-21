@@ -153,6 +153,8 @@ class MainActivity : ComponentActivity() {
                     "Events retained: " + diagnostic.eventCount + "\n" +
                     "Next allowed fetch: " + (display.nextAllowedFetch ?: "now") + "\n" +
                     "Notification permission: " + setupState.notificationPermission + "\n" +
+                    "Numeric status icons enabled: " + controller.settings.numericStatusIcon + "\n" +
+                    "Lock-screen values enabled: " + controller.settings.showOnLockScreen + "\n" +
                     "Live Update: " + LiveUpdateSupport.status(this) + "\n" +
                     LiveUpdateSupport.diagnostics(this)
                 AlertDialog(

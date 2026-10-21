@@ -1,9 +1,9 @@
 # Documentation index
 
-Current guides checked against Glance **0.30.0 / code 35** and the Studio launch
-configuration on **11 October 2026**. Phone/watch source lives in this repository;
-the latest signed APKs/manifests are included under versioned `apks/0.30.0/`
-and in delivered artifacts. Additional build-host outputs remain in ignored
+Current guides cover Glance **0.31.0 / code 36**, including the notification
+and watch-install update on **21 October 2026**. Phone/watch source lives in this repository;
+signed APKs/manifests are included in versioned `apks/` folders
+and delivered artifacts; the APK index identifies the latest included version. Additional build-host outputs remain in ignored
 `release/`. See [APK downloads](../apks/README.md).
 
 ## Current operating and engineering guides
@@ -47,6 +47,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 - [Glance 0.16.0 reference layout](notification-0.16-validation.md)
 - [Glance 0.18.1 notification retention](notification-0.18-validation.md)
 - [Glance 0.27 glucose status icons and retention](notification-027-validation.md)
+- [Glance 0.31 notification grouping and platform eligibility](notification-031-validation.md)
 - [Glance 0.29 taller range-filled reading card](reading-card-029-validation.md)
 - [Glance 0.30 richer green, smaller card and larger text](reading-card-030-validation.md)
 - [Glance 0.23.0: focused redesign and alarm log](redesign-023-validation.md)

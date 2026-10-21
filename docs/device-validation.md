@@ -1,5 +1,17 @@
 # Device validation log
 
+## 0.31 candidate — 21 October 2026
+
+Notification grouping, framework eligibility diagnostics and watch installation
+changes are in progress. Eleven bounded API36 framework checks passed on the
+candidate debug fixture; final lint/native reruns, independent review and
+signing remain pending after a build-host temporary-file quota failure.
+No new signed APK is delivered at this checkpoint. See
+[0.31 evidence and limits](notification-031-validation.md).
+The owner reports Android 17 / One UI 9; physical qualification is unverified.
+
+The following 0.30 summary and historical ledger retain their original scope.
+
 Current status checked 11 October 2026 against 0.30 release records and the
 Studio launch fix. The owner has reported phone use and Studio updates;
 controlled live-account parity and physical-device qualification remain incomplete.

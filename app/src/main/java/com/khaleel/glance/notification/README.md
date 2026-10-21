@@ -13,6 +13,11 @@ Enhanced mode requests promotion on Android 16 (API 36.0) and newer when
 setter, which was added in API 36.1. Short critical text is available in API
 36.0. The supported standard BigText style avoids custom RemoteViews in
 promoted mode. Android and Samsung still decide whether to promote the card.
+The running framework's `hasPromotableCharacteristics()` decides colorization:
+early Android 16 requires it, while newer platform documentation prohibits it.
+The default uncolorized template is retained when eligible; colorization is
+tried only if needed and retained only if that makes the layout eligible.
+This does not bypass permission/OEM controls or prove actual promotion.
 Settings reports the effective permission/channel/posting state and links to
 `ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS` with `EXTRA_APP_PACKAGE`;
 missing screens fall back to app notification settings.
@@ -29,6 +34,16 @@ too. Alert delete intents use an opaque per-post token and explicit non-exported
 receiver; delayed callbacks cannot clear a later alarm. Missing/dismissed alerts
 are not republished by icon refresh. A new process discards an unscoped prior
 alarm card on first render, keeping its encrypted history record.
+
+From 0.31 both cards use an explicit group. The monitoring card is a child and
+the existing threshold alert is its summary, so the app updates the group's
+numeric icon itself. No third summary notification is posted. A non-summary
+monitoring card remains eligible for Live Update by the platform shape rules.
+The regular card remains after the alert's delete-intent callback in an API36
+foreground-service check; the added summary-timeout check is pending. Real Samsung dismissal/group layout
+and watch bridging remain separate checks. Diagnostics exports group-summary
+counts, automatic-group presence, icon types and layout eligibility, never the
+icon's glucose content or group/person identifiers.
 
 Ongoing and NO_CLEAR request protection from Clear all on both card variants.
 The owner reports Samsung clearing the card anyway. The explicit personal-build

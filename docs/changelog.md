@@ -6,6 +6,22 @@ sections supersede earlier behavior; use [setup](setup.md),
 [release and upgrades](release.md), and the [documentation index](README.md) for
 current instructions. These notes do not extend the scope of any test receipt.
 
+## 0.31.0 alert group icon and Live Update compatibility
+
+Low/High/Urgent Low/Urgent High alerts now supply the explicit notification
+group summary, using the latest eligible glucose icon while retaining the
+original triggering reading/time in the alert body. The ongoing monitor is its
+child; no third card or new sound channel is added. Privacy, freshness, silent
+icon updates and system-owned alert expiry remain in effect.
+
+Live Update requests use the actual platform's layout-eligibility check to
+handle differing Android 16 colorization rules. Redacted diagnostics now show
+layout eligibility, grouping and icon types separately from promotion. Samsung
+Now bar admission remains unverified, including the owner's Android 17 / One UI 9.
+The watch runtime is unchanged; both modules advance to code 36 for matching
+release identity. A shared Glance watch run configuration and step-by-step
+Studio/watch pairing instructions are included. See [0.31 checks](notification-031-validation.md).
+
 ## 0.23.0 focused redesign and alarm log
 
 The default accent is ocean blue (`#1677D2`), with a rounded native G logo on

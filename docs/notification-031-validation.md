@@ -35,17 +35,29 @@ icon types, without exporting glucose, names or group identifiers.
 - [Baseline 19 alert checks](evidence/api36-alert-icons-0.27.0-investigation-20261021.json)
   passed on clean `ebe3028` / existing 0.30 source. The prior build already
   supplies numeric individual alerts; this does not test Samsung grouping.
-- The revised fixture tests encoded image delivery/pixels, a numeric initial
-  automatic summary, the API37 production gate, separate monitoring/alert cards,
-  latest-number refresh, safe diagnostics and actual framework layout eligibility.
-  Android 17-only assertions additionally test summary updates and numeric
-  removal, but are not run on API36. Final revised results are pending.
-- Phone/watch JVM result files contain 236 / 15 tests with zero failures/errors/
-  skips. The prior candidate's corrected debug lint passed with zero errors.
-  Final clean release build/lint, revised native checks, review, signing/static
-  verification and publication remain pending. No 0.31 APK is delivered yet.
-- The temporary-file quota failure was worked around by using an ignored,
-  disk-backed Java temp directory; failed attempts are not counted as passes.
+- [15 revised framework checks](evidence/api36-notification-compatibility-0.31.0.json)
+  pass on clean `db8eb4e`, debug fixture SHA-256 `920530e626bcfaa2c67f6f9326fa5c3f8401b2586a87e5848ece0a8b30c64f16`.
+  They check encoded image delivery/pixels, numeric initial automatic summary,
+  the API37 production gate, separate cards, latest-number refresh, FGS expiry,
+  safe diagnostics and actual framework layout eligibility. Android 17-only
+  dynamic-summary/number-removal assertions are NOT RUN on API36.
+- [19 alert checks](evidence/api36-alert-icons-0.27.0-grouping-031.json) and
+  [10 retention/privacy checks](evidence/api36-notification-0.31.0-retention.json)
+  pass against `db8eb4e` with dirty-source debug exception-reporting/evidence
+  changes. Their exact installed fixture hash is recorded; the later debug
+  change only adds failure stack/completed-check reporting. Retention includes
+  actual glucose-card swipes with Keep visible on/off. It does not test a
+  Samsung automatic-group swipe. An earlier alert-probe attempt failed without
+  useful detail; the instrumented retry passed all 19, and is the claimed run.
+- [Pinned primary-source audit](evidence/android-framework-icon-audit-0.31.0.json)
+  records exact Android 16/17 revisions and hashes for GroupHelper and Icon.
+  Source inspection is not an Android 17 runtime test.
+- Phone/watch JVM result files contain 236 / 15 tests, zero failures/errors/skips;
+  revised debug assembly and lint pass with zero errors. Final clean release
+  checks, review, signing/static verification and publication remain pending.
+- Temporary quota/build and fixture-annotation failures were corrected; failed
+  attempts are not counted as passes. Java temporary output was redirected to
+  an ignored disk-backed directory.
 
 The shared **Glance watch** Studio configuration targets `wear` and
 `com.khaleel.glance.wear.MainActivity`; XML/module/manifest consistency is checked.

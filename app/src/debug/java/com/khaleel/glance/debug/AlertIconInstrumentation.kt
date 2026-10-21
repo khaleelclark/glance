@@ -149,7 +149,10 @@ class AlertIconInstrumentation : Instrumentation() {
             File(context.filesDir, "alert-icon-probe.json").writeText(receipt.toString(2))
             finish(Activity.RESULT_OK, Bundle().apply { putString("checks", checks.toString()) })
         } catch (failure: Throwable) {
-            finish(Activity.RESULT_CANCELED, Bundle().apply { putString("failure", failure.toString()) })
+            finish(Activity.RESULT_CANCELED, Bundle().apply {
+                putString("failure", failure.stackTraceToString())
+                putString("completedChecks", checks.toString())
+            })
         } finally { notifier.clear(); app.controller.settings.numericStatusIcon = oldNumeric }
     }
 }

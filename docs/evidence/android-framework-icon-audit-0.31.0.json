@@ -1,0 +1,30 @@
+{
+  "inspectedAt": "2026-10-21",
+  "scope": "Read-only primary source inspection; no Android17 or Samsung runtime qualification",
+  "sources": [
+    {
+      "branch": "android16-release",
+      "commit": "99b01a65cc4c104933788b3143285ab6bae65827",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/99b01a65cc4c104933788b3143285ab6bae65827/services/core/java/com/android/server/notification/GroupHelper.java",
+      "sha256": "1ba8fabb967f2b876f1405af2ebcbbf151dcf9d499e4ae175d6b90c11dcde7c1"
+    },
+    {
+      "branch": "android16-release",
+      "commit": "99b01a65cc4c104933788b3143285ab6bae65827",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/99b01a65cc4c104933788b3143285ab6bae65827/graphics/java/android/graphics/drawable/Icon.java",
+      "sha256": "edd6d71bb74b2295b1c650cad3279fca937b6c23ec69f2a805e0f58fdc59a88a"
+    },
+    {
+      "branch": "android17-release",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/services/core/java/com/android/server/notification/GroupHelper.java",
+      "sha256": "94b8ef9c4b1182b1ee40416c99e6a339317e2621db95e30de453ac4d6b8a4941"
+    },
+    {
+      "branch": "android17-release",
+      "commit": "94b4c163b7dfe5ce3607f7bb8456f9573f7de57d",
+      "url": "https://android.googlesource.com/platform/frameworks/base/+/94b4c163b7dfe5ce3607f7bb8456f9573f7de57d/graphics/java/android/graphics/drawable/Icon.java",
+      "sha256": "7ef76298e3e15b77dadf54b67345481d390c2ea5ee174ed8abfee06259086d76"
+    }
+  ]
+}

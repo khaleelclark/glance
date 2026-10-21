@@ -7,7 +7,8 @@ keeps earlier bitmap behavior on older versions, and improves framework
 eligibility diagnostics and watch installation. A discarded explicit-group
 candidate passed 12 API36 fixture checks but review found user-swipe coupling;
 that app-provided parent/child relationship has been removed. The revised
-candidate's final checks, review and signing are pending. The build-host temporary
+candidate's 15 framework, 19 alert and 10 retention/privacy checks pass on API36;
+review and signing remain pending. The build-host temporary
 quota issue was worked around with an ignored disk-backed Java temp directory.
 No new signed APK is delivered at this checkpoint. See
 [0.31 evidence and limits](notification-031-validation.md).

@@ -35,15 +35,16 @@ receiver; delayed callbacks cannot clear a later alarm. Missing/dismissed alerts
 are not republished by icon refresh. A new process discards an unscoped prior
 alarm card on first render, keeping its encrypted history record.
 
-From 0.31 both cards use an explicit group. The monitoring card is a child and
-the existing threshold alert is its summary, so the app updates the group's
-numeric icon itself. No third summary notification is posted. A non-summary
-monitoring card remains eligible for Live Update by the platform shape rules.
-The regular card remains after the alert's delete-intent callback in an API36
-foreground-service check; the added summary-timeout check is pending. Real Samsung dismissal/group layout
-and watch bridging remain separate checks. Diagnostics exports group-summary
-counts, automatic-group presence, icon types and layout eligibility, never the
-icon's glucose content or group/person identifiers.
+From 0.31, Android 17+ numeric small icons encode the same 96×96 mask as PNG
+Icon.TYPE_DATA. `Icon.sameAs` compares encoded bytes, whereas TYPE_BITMAP
+compares object identity. Android 17 GroupHelper updates summary attributes on
+child changes, allowing a common current number to follow updates. API36's
+section-based grouping can retain initial summary attributes, so its production
+path keeps the previous bitmap representation. No app-provided group/summary
+is added. This removes the proposed parent/child dismissal coupling found in
+review; the discarded explicit-group candidate is recorded separately.
+Diagnostics exports group-summary counts, automatic-group presence, icon types
+and layout eligibility, never glucose content or group/person identifiers.
 
 Ongoing and NO_CLEAR request protection from Clear all on both card variants.
 The owner reports Samsung clearing the card anyway. The explicit personal-build

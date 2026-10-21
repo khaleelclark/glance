@@ -50,7 +50,7 @@ class AlertIconInstrumentation : Instrumentation() {
             while (!test()) { check(SystemClock.uptimeMillis() < deadline); SystemClock.sleep(20) }
         }
         fun iconMatches(notification: Notification, text: String): Boolean {
-            if (notification.smallIcon.type != Icon.TYPE_BITMAP) return false
+            if (notification.smallIcon.type !in listOf(Icon.TYPE_BITMAP, Icon.TYPE_DATA)) return false
             val actual = (notification.smallIcon.loadDrawable(context) as BitmapDrawable).bitmap
             val expected = (GlucoseStatusIcon.create(text).loadDrawable(context) as BitmapDrawable).bitmap
             return actual.sameAs(expected)

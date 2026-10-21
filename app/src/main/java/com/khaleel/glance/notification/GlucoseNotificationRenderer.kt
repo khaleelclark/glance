@@ -78,10 +78,6 @@ class GlucoseNotificationRenderer(
             .setContentText(emphasizedReading(content.text))
             .setContentIntent(contentIntent())
             .setCategory(Notification.CATEGORY_SERVICE)
-            // The visible threshold alert owns the group summary and its numeric icon. Keeping
-            // this card a child also preserves Live Update eligibility (summaries are ineligible).
-            .setGroup(GROUP_KEY)
-            .setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
             .setOngoing(state.monitoringEnabled)
             .setOnlyAlertOnce(true)
             .setShowWhen(state.reading != null)
@@ -216,8 +212,6 @@ class GlucoseNotificationRenderer(
             .setContentText("Reading hidden on lock screen")
             .setContentIntent(contentIntent())
             .setCategory(Notification.CATEGORY_SERVICE)
-            .setGroup(GROUP_KEY)
-            .setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
             .setOngoing(state.monitoringEnabled)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
@@ -231,7 +225,6 @@ class GlucoseNotificationRenderer(
     companion object {
         const val CHANNEL_ID = "glucose_monitoring"
         const val NOTIFICATION_ID = 1001
-        const val GROUP_KEY = "com.khaleel.glance.GLUCOSE"
 
         const val ACTION_OPEN = "com.khaleel.glance.action.OPEN"
         const val ACTION_REFRESH = "com.khaleel.glance.action.REFRESH"

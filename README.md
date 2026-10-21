@@ -7,7 +7,7 @@ An optional Wear OS companion receives readings from the phone.
 
 Current app version: **0.31.0**, versionCode **36**, package
 `com.khaleel.glance`. The Studio launch configuration fix is included on `main`.
-The 0.31 notification update controls the alert group icon and checks Live Update
+The 0.31 notification update uses comparable numeric icons on Android 17+ and checks Live Update
 layout eligibility on the actual platform. See [notification checks](docs/notification-031-validation.md)
 and [APK downloads](apks/README.md) for artifact identity and verification boundaries.
 

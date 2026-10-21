@@ -66,7 +66,11 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
         var resultCode = Activity.RESULT_CANCELED
         var resultExtras = Bundle()
         try {
+            app.controller.setMonitoringEnabled(false)
+            context.stopService(Intent(context, MonitoringService::class.java))
+            app.hideCurrentNotification()
             manager.cancelAll()
+            await { manager.activeNotifications.isEmpty() }
             manager.createNotificationChannel(android.app.NotificationChannel(
                 GlucoseNotificationRenderer.CHANNEL_ID, "Glucose monitoring", NotificationManager.IMPORTANCE_LOW))
             val oldLayout = builder().build()
@@ -74,7 +78,7 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             facts.put("plainLayoutEligible", oldLayout.hasPromotableCharacteristics())
                 .put("colorizedLayoutEligible", colorizedLayout.hasPromotableCharacteristics())
                 .put("promotionAllowed", manager.canPostPromotedNotifications())
-            val liveBuilder = builder().setGroup(GlucoseNotificationRenderer.GROUP_KEY)
+            val liveBuilder = builder()
             LiveUpdateSupport.request(liveBuilder, "112")
             val live = liveBuilder.build()
             record("requestedLayoutMeetsActualFrameworkEligibility") { live.hasPromotableCharacteristics() }
@@ -104,6 +108,30 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             record("oldSeparateBitmapIconsProduceNonNumericAutoSummary") { !matches(summary()!!.smallIcon, "112") }
             manager.cancelAll()
             await { manager.activeNotifications.isEmpty() }
+            ids.forEach { id -> manager.notify(id,
+                builder().setSmallIcon(GlucoseStatusIcon.create("112", encoded = true)).build()) }
+            await { summary()?.smallIcon?.let { matches(it, "112") } == true }
+            record("contentEncodedIconsProduceNumericInitialAutoSummary") { matches(summary()!!.smallIcon, "112") }
+            record("encodedIconPixelsAndTypeSurviveSystemPosting") {
+                manager.activeNotifications.filter { it.id in ids }.all {
+                    it.notification.smallIcon.type == Icon.TYPE_DATA && matches(it.notification.smallIcon, "112")
+                }
+            }
+            record("productionEncodingIsEnabledOnlyOnAndroid17OrNewer") {
+                GlucoseStatusIcon.create("112").type ==
+                    if (Build.VERSION.SDK_INT >= 37) Icon.TYPE_DATA else Icon.TYPE_BITMAP
+            }
+            if (Build.VERSION.SDK_INT >= 37) {
+                ids.forEach { id -> manager.notify(id,
+                    builder().setSmallIcon(GlucoseStatusIcon.create("113")).build()) }
+                await { summary()?.smallIcon?.let { matches(it, "113") } == true }
+                checks.put("android17AutoSummaryTracksUpdatedCommonValue", true)
+                ids.forEach { id -> manager.notify(id, builder().build()) }
+                await { summary()?.smallIcon?.type == Icon.TYPE_RESOURCE }
+                checks.put("android17AutoSummaryDropsNumberWhenChildrenDropIt", true)
+            }
+            manager.cancelAll()
+            await { manager.activeNotifications.isEmpty() }
             context.startActivity(Intent(context, DebugNotificationActivity::class.java)
                 .putExtra("mode", "service-demo").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             await { manager.activeNotifications.any {
@@ -123,18 +151,19 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
                 it.notification.channelId.startsWith("glucose_alert_")
             }
             await { alarm() != null && monitoring() != null }
-            record("twoCardsUseExplicitGroupWithNumericAlertSummary") {
+            record("twoSeparateNumericCardsWithoutAppProvidedGroupOrSummary") {
                 val active = manager.activeNotifications
-                active.size == 2 && alarm()!!.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 &&
-                    alarm()!!.groupKey == monitoring()!!.groupKey &&
-                    active.all { it.overrideGroupKey == null } && matches(summary()!!.smallIcon, "240")
+                active.size == 2 && active.all {
+                    it.notification.group == null && it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
+                } && matches(alarm()!!.notification.smallIcon, "240") &&
+                    matches(monitoring()!!.notification.smallIcon, "240")
             }
             val trigger = alarm()!!.notification
             val latest = state(248.0)
             GlucoseNotificationRenderer(context, latest, GlucoseUnit.MG_DL, true).post()
             notifier.refreshIcon(latest, GlucoseUnit.MG_DL, true)
-            await { summary()?.smallIcon?.let { matches(it, "248") } == true }
-            record("explicitSummaryTracksLatestNumberSilentlyAndKeepsTrigger") {
+            await { alarm()?.notification?.smallIcon?.let { matches(it, "248") } == true }
+            record("alertTracksLatestNumberSilentlyAndKeepsTrigger") {
                 val current = alarm()!!.notification
                 current.extras.getCharSequence(Notification.EXTRA_TEXT) == trigger.extras.getCharSequence(Notification.EXTRA_TEXT) &&
                     current.`when` == trigger.`when` && current.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0
@@ -154,7 +183,7 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             notifier.post(AlertKind.LOW, expiring, GlucoseUnit.MG_DL, true)
             await { alarm() != null }
             await { alarm() == null }
-            record("systemExpiryOfAlertSummaryKeepsForegroundMonitoringCard") {
+            record("systemExpiryOfAlertKeepsForegroundMonitoringCard") {
                 val current = monitoring()?.notification
                 current != null && current.flags and Notification.FLAG_FOREGROUND_SERVICE != 0 &&
                     matches(current.smallIcon, "248")

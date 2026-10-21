@@ -11,7 +11,8 @@
     "twoCardsUseExplicitGroupWithNumericAlertSummary": true,
     "explicitSummaryTracksLatestNumberSilentlyAndKeepsTrigger": true,
     "monitoringChildRemainsOngoingAndNotSummary": true,
-    "dismissingAlertKeepsNumericMonitoringCard": true,
+    "alertDeleteIntentCallbackKeepsNumericMonitoringCard": true,
+    "systemExpiryOfAlertSummaryKeepsForegroundMonitoringCard": true,
     "notificationDiagnosticsContainNoFixtureValueOrName": true
   },
   "framework": {
@@ -22,9 +23,9 @@
   },
   "scope": "API36 notification grouping/eligibility; no Samsung, actual promotion, sound, or live source qualification",
   "device": "API36 emulator",
-  "sourceCommitAtRun": "ebe302837501523e77a715190f851b55c4606a96",
-  "sourceDirtyAtRun": true,
-  "fixtureApkSha256": "1bd01db5b6fdc40262b64ab6bf1b2786674caeccf603644a3473793941ac7359",
+  "sourceCommitAtRun": "dc708a4c587f1e075960e51b60fc017c9e9432ae",
+  "sourceDirtyAtRun": false,
+  "fixtureApkSha256": "9782af29458acff3a2167b526c1a1b6c2735653e638969d1d4c212a8fd136b8c",
   "SamsungOneUI": "not tested",
   "actualLiveUpdatePromotion": "not tested",
   "liveAccount": "not tested"

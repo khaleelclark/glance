@@ -34,13 +34,12 @@ numeric status icons are suppressed too. While visible, an eligible numeric
 alert icon may follow a newer source reading without changing its triggering
 body/time or logging another event. System-owned expiry bounds those numeric
 cards to the latest eligible source freshness deadline; the log remains.
-In 0.31 the existing alert is the explicit group summary for the monitoring
-child. This supplies the group's latest eligible number instead of leaving an
-automatic group to substitute the app glyph. It adds no notification ID or
-sound channel. The monitor remains a non-summary card, preserving its platform
-Live Update layout eligibility. Its delete-intent callback retains the real
-foreground-service card in a bounded API36 check; summary expiry is pending. Samsung
-presentation, audible delivery and watch bridging still need physical checks.
+In 0.31, Android 17+ numeric icons use identical encoded image data for equal
+numbers. Android can compare their contents when selecting an automatic group
+icon. The app adds no explicit notification group/summary or additional card,
+and preserves the previous alert dismissal path. Android 16 and earlier retain
+the existing bitmap representation. Final Samsung grouping, audible delivery
+and watch bridging still require physical checks.
 See [notification implementation notes](../app/src/main/java/com/khaleel/glance/notification/README.md).
 
 Each category has its own Android notification channel, registered at app

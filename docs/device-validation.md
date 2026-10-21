@@ -2,10 +2,13 @@
 
 ## 0.31 candidate — 21 October 2026
 
-Notification grouping, framework eligibility diagnostics and watch installation
-changes are in progress. Eleven bounded API36 framework checks passed on the
-candidate debug fixture; final lint/native reruns, independent review and
-signing remain pending after a build-host temporary-file quota failure.
+The current candidate uses content-comparable numeric icons on Android 17+,
+keeps earlier bitmap behavior on older versions, and improves framework
+eligibility diagnostics and watch installation. A discarded explicit-group
+candidate passed 12 API36 fixture checks but review found user-swipe coupling;
+that app-provided parent/child relationship has been removed. The revised
+candidate's final checks, review and signing are pending. The build-host temporary
+quota issue was worked around with an ignored disk-backed Java temp directory.
 No new signed APK is delivered at this checkpoint. See
 [0.31 evidence and limits](notification-031-validation.md).
 The owner reports Android 17 / One UI 9; physical qualification is unverified.

@@ -47,12 +47,14 @@ Stop/sign-out invalidate work and remove the monitoring notification.
 
 The regular notification uses a silent channel and custom compact/expanded
 views. Live Update uses a standard Android template with promotion checks.
-The monitoring card is a group child; the single existing threshold alert is
-the explicit group summary with a silently refreshed numeric icon. This avoids
-an extra auto-summary/app glyph without a third card. Live Update keeps a
-non-summary template and chooses colorization only if the actual framework's
-`hasPromotableCharacteristics()` requires it. Diagnostics distinguishes shape
-eligibility, requested/actual promotion, group summaries and icon types.
+On Android 17+, numeric small icons use deterministic PNG data, which platform
+GroupHelper compares by content. Matching monitor/alert values can therefore
+supply a numeric automatic summary instead of an app glyph. No app-provided
+notification group or summary is added; prior independent dismissal semantics
+are retained. Earlier Android versions keep bitmap icons because their grouped
+summary update behavior differs. Live Update chooses colorization only if the
+actual framework's `hasPromotableCharacteristics()` requires it. Diagnostics
+separates shape eligibility, requested/actual promotion, grouping and icon types.
 A shared publication gate orders final state/privacy checks and notify/cancel.
 The default-on retention choice restores the regular card on a delivered
 current-session dismissal callback; there is no automatic re-promotion loop.

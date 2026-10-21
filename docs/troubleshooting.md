@@ -43,12 +43,14 @@ in LibreLinkUp. A removed selected connection never silently switches person.
 ## Notification disappears or Live Update is absent
 
 If the glucose card remains but a low/high alert changes the status-bar number
-to the Glance droplet, update to 0.31. Both cards now share an explicit group;
-the existing alert is its summary and supplies the latest eligible numeric icon.
-No third permanent card is added. The alert text still identifies the original
-triggering value/time; its icon follows the latest reading silently. Privacy,
-freshness and the numeric-icon preference still apply. Android/Samsung control
-the final status-bar layout; this change has emulator checks, not phone proof.
+to the Glance droplet, 0.31 changes numeric icons on Android 17+ so Android can
+compare equal monitor/alert icon contents when selecting an automatic summary
+icon. The app adds no explicit group/summary or third card; independent alert
+and monitoring dismissal behavior is retained. The alert text still identifies
+its original triggering value/time while its icon follows the latest reading
+silently. Privacy, freshness and the numeric-icon preference still apply.
+Android/Samsung control the final status-bar layout; physical One UI 9 behavior
+is unverified. Earlier Android versions keep their prior icon representation.
 
 Check Android notification permission and the **Glucose monitoring** channel.
 While monitoring is enabled, use **Settings → Notification → Show notification**.

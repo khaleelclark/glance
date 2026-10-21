@@ -8,11 +8,13 @@ current instructions. These notes do not extend the scope of any test receipt.
 
 ## 0.31.0 alert group icon and Live Update compatibility
 
-Low/High/Urgent Low/Urgent High alerts now supply the explicit notification
-group summary, using the latest eligible glucose icon while retaining the
-original triggering reading/time in the alert body. The ongoing monitor is its
-child; no third card or new sound channel is added. Privacy, freshness, silent
-icon updates and system-owned alert expiry remain in effect.
+Android 17+ low/high alert and monitoring icons now use deterministic encoded
+image data. The framework compares that content when selecting an automatic
+group icon, so equal current numbers can remain numeric. No explicit group,
+summary, extra card or channel is added. Alert text retains its original
+triggering reading/time; its icon follows the latest eligible reading quietly.
+Privacy, freshness and system-owned alert expiry remain in effect. Older
+Android versions keep their prior bitmap icons because summary updates differ.
 
 Live Update requests use the actual platform's layout-eligibility check to
 handle differing Android 16 colorization rules. Redacted diagnostics now show

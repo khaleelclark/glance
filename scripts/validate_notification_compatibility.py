@@ -26,7 +26,7 @@ run("shell", "run-as", "com.khaleel.glance", "rm", "-f", "files/notification-com
 output = run("shell", "am", "instrument", "-w", "com.khaleel.glance/.debug.NotificationCompatibilityInstrumentation")
 assert "INSTRUMENTATION_CODE: -1" in output, output
 result = json.loads(run("shell", "run-as", "com.khaleel.glance", "cat", "files/notification-compatibility-probe.json"))
-assert result["allPassed"] and len(result["checks"]) == 12 and all(result["checks"].values())
+assert result["allPassed"] and len(result["checks"]) == (17 if result["framework"]["sdkFull"] >= 3700000 else 15) and all(result["checks"].values())
 result.update(
     device="API36 emulator", sourceCommitAtRun=head, sourceDirtyAtRun=dirty,
     fixtureApkSha256=hashlib.sha256((ROOT / "app/build/outputs/apk/debug/app-debug.apk").read_bytes()).hexdigest(),

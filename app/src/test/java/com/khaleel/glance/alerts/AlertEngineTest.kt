@@ -9,6 +9,7 @@ import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceResult
+import com.khaleel.glance.core.SpecialValue
 import com.khaleel.glance.core.Trend
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -111,6 +112,29 @@ class AlertEngineTest {
         assertEquals(emptyList<AlertKind>(), delivery.posted)
         assertEquals(emptyMap<AlertKind, Instant>(), store.state.lastFiredAt)
         assertEquals(emptyList<AlertHistoryEntry>(), history.events.value)
+    }
+
+    @Test fun currentDisplayMustRemainEligibleAndMatchThePublishedSample() {
+        val sample = reading(305.0, start)
+        val captured = display(sample)
+        val ineligible = listOf(
+            captured.copy(runtime = RuntimeState.STOPPED),
+            captured.copy(freshness = ReadingFreshness.STALE),
+            captured.copy(reading = sample.copy(valueMgDl = 304.0)),
+            captured.copy(reading = sample.copy(specialValue = SpecialValue.HIGH)),
+        )
+
+        ineligible.forEach { live ->
+            val store = MemoryStore()
+            val delivery = MemoryDelivery()
+            val history = MemoryHistory()
+            AlertEngine(store, delivery, MutableClock(start), { live }, { false }, history)
+                .onPollResult(SourceResult.Success(sample), captured, GlucoseUnit.MG_DL, false)
+
+            assertTrue(delivery.posted.isEmpty())
+            assertEquals(AlertSnapshot(), store.state)
+            assertTrue(history.events.value.isEmpty())
+        }
     }
 
     @Test fun failedNotificationPostDoesNotCreateHistory() {

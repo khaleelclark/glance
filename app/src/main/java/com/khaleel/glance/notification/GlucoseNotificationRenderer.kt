@@ -97,7 +97,9 @@ class GlucoseNotificationRenderer(
 
         state.reading?.let { builder.setWhen(it.measuredAt.toEpochMilli()) }
 
-        actionGeneration?.let { builder.setDeleteIntent(dismissIntent(it)) }
+        actionGeneration?.let {
+            builder.setDeleteIntent(dismissIntent(it, NotificationVisibility.epoch(appContext)))
+        }
 
         if (!lockScreenVisible) {
             builder.setPublicVersion(buildRedactedPublicVersion())
@@ -156,11 +158,12 @@ class GlucoseNotificationRenderer(
         )
     }
 
-    private fun dismissIntent(generation: Long): PendingIntent {
+    private fun dismissIntent(generation: Long, presentationEpoch: Long): PendingIntent {
         val intent = Intent(appContext, NotificationDismissReceiver::class.java)
             .setAction(NotificationDismissReceiver.ACTION_DISMISSED)
-            .setData(Uri.parse("glance://notification-dismissed/$generation"))
+            .setData(Uri.parse("glance://notification-dismissed/$generation/$presentationEpoch"))
             .putExtra(NotificationDismissReceiver.EXTRA_GENERATION, generation)
+            .putExtra(NotificationDismissReceiver.EXTRA_PRESENTATION_EPOCH, presentationEpoch)
         return PendingIntent.getBroadcast(
             appContext,
             REQUEST_DISMISS,

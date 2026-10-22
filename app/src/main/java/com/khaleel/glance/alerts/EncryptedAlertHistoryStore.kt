@@ -15,11 +15,24 @@ import org.json.JSONObject
 import java.time.Duration
 import java.time.Instant
 
+internal interface AlertHistoryStorage {
+    fun read(): JSONObject?
+    fun write(payload: JSONObject)
+}
+
 /** Encrypted, atomic, no-backup alarm history. It is never included in diagnostics. */
-class EncryptedAlertHistoryStore(
-    private val encrypted: SecureFileStore,
+class EncryptedAlertHistoryStore internal constructor(
+    private val storage: AlertHistoryStorage,
     private val clock: Clock,
 ) : AlertHistoryPersistence {
+    constructor(encrypted: SecureFileStore, clock: Clock) : this(
+        object : AlertHistoryStorage {
+            override fun read() = encrypted.read(FILE_NAME)
+            override fun write(payload: JSONObject) = encrypted.write(FILE_NAME, payload)
+        },
+        clock,
+    )
+
     private var loadFailure: Exception? = null
     private val mutableEvents = MutableStateFlow(try {
         load()
@@ -48,20 +61,21 @@ class EncryptedAlertHistoryStore(
     }
 
     private fun write(entries: List<AlertHistoryEntry>) {
-        encrypted.write(FILE_NAME, JSONObject().apply {
+        storage.write(JSONObject().apply {
             put("version", CURRENT_VERSION)
             put("events", JSONArray().apply { entries.forEach { put(toJson(it)) } })
         })
     }
 
     private fun load(): List<AlertHistoryEntry> {
-        val root = encrypted.read(FILE_NAME) ?: return emptyList()
+        val root = storage.read() ?: return emptyList()
         require(root.optInt("version", -1) == CURRENT_VERSION) {
             "Unsupported alarm history"
         }
         val items = root.getJSONArray("events")
-        val parsed = (0 until minOf(items.length(), MAX_PARSE_COUNT)).mapNotNull { index ->
-            items.optJSONObject(index)?.let { runCatching { fromJson(it) }.getOrNull() }
+        require(items.length() <= MAX_PARSE_COUNT) { "Alarm history is too large" }
+        val parsed = (0 until items.length()).map { index ->
+            fromJson(items.getJSONObject(index))
         }
         return AlertHistoryRetention.retain(parsed, clock.now())
     }

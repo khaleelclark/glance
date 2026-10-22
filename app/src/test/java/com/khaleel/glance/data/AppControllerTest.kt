@@ -128,6 +128,59 @@ class AppControllerTest {
         assertEquals(1, source.latestCalls)
     }
 
+    @Test fun providerCooldownBlocksRepeatedSignInWithoutAnotherRequest() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }.apply {
+            signInResult = SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val controller = AppController(
+            source, MemoryAuth(null), MemoryPatient(), MemorySettings(), FakeClock(start),
+        )
+
+        val first = controller.signIn(credentials)
+        val repeated = controller.signIn(credentials)
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (first as SourceResult.Failure).error.kind)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (repeated as SourceResult.Failure).error.kind)
+        assertEquals(retryAt, repeated.error.retryAfter)
+        assertEquals(1, source.signInCalls)
+    }
+
+    @Test fun providerCooldownBlocksRepeatedConnectionListsWithoutAnotherRequest() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource(
+            onConnections = { SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt)) },
+            onLatest = { _, _ -> SourceResult.Success(reading(patrick)) },
+        )
+        val controller = controller(source, MemoryPatient())
+
+        val first = controller.connections()
+        val repeated = controller.connections()
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (first as SourceResult.Failure).error.kind)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (repeated as SourceResult.Failure).error.kind)
+        assertEquals(1, source.connectionsCalls)
+    }
+
+    @Test fun providerCooldownSurvivesClearingAndSelectingAPerson() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource { _, _ ->
+            SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        controller.poll()
+
+        controller.clearSelectedPerson()
+        controller.selectPerson(other)
+        val repeated = controller.poll(manual = true)
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (repeated as SourceResult.Failure).error.kind)
+        assertEquals(retryAt, settings.retryWindow?.until)
+        assertEquals(1, source.latestCalls)
+    }
+
     @Test fun fixedDnsCanRefreshWhileAutomaticNetworkRetryIsStillWaiting() = runBlocking {
         var offline = true
         val source = FakeSource { _, _ ->
@@ -254,6 +307,7 @@ class AppControllerTest {
         val restarted = AppController(source, auth, patient, settings, clock)
         assertEquals(SourceErrorKind.RATE_LIMITED, (restarted.poll(manual = true) as SourceResult.Failure).error.kind)
         assertEquals(retryAt, settings.nextAllowedFetch)
+        assertEquals(1, source.signInCalls)
         assertEquals(0, source.latestCalls)
     }
 
@@ -292,6 +346,66 @@ class AppControllerTest {
         val controller = controller(source, MemoryPatient())
         assertEquals(listOf(patrick), (controller.connections() as SourceResult.Success).value)
         assertEquals(2, calls)
+    }
+
+    @Test fun obsoleteConnectionListCannotCrossAccountBoundary() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val pending = CompletableDeferred<SourceResult<List<Connection>>>()
+        val accountB = session.copy(accountId = "account-b", token = "token-b")
+        val credentialsB = Credentials("other@example.invalid", "other-password")
+        val source = FakeSource(
+            onConnections = { requestedSession ->
+                if (requestedSession.accountId == session.accountId) {
+                    entered.complete(Unit)
+                    withContext(NonCancellable) { pending.await() }
+                } else {
+                    SourceResult.Success(listOf(other))
+                }
+            },
+            onLatest = { _, _ -> SourceResult.Success(reading(patrick)) },
+        )
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val controller = AppController(
+            source, auth, MemoryPatient(), MemorySettings(), FakeClock(start),
+        )
+
+        val oldList = async { controller.connections() }
+        entered.await()
+        controller.signOut()
+        source.signInResult = SourceResult.Success(accountB)
+        assertTrue(controller.signIn(credentialsB) is SourceResult.Success)
+        pending.complete(SourceResult.Success(listOf(patrick)))
+
+        val obsolete = oldList.await() as SourceResult.Failure
+        assertEquals(SourceErrorKind.AUTH_EXPIRED, obsolete.error.kind)
+        assertEquals(accountB.accountId, auth.saved?.session?.accountId)
+        assertNull(controller.display.value.person)
+    }
+
+    @Test fun identityChangeResetsTransientBackoffWithoutClearingProviderCooldown() = runBlocking {
+        val clock = FakeClock(start)
+        val retryAt = start.plusSeconds(906)
+        var error = SourceError(SourceErrorKind.NETWORK)
+        val source = FakeSource { _, _ -> SourceResult.Failure(error) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings, clock)
+        controller.selectPerson(patrick)
+        repeat(2) {
+            controller.poll(manual = true)
+            clock.advanceMillis(3_000)
+        }
+        error = SourceError(SourceErrorKind.RATE_LIMITED, retryAt)
+        controller.poll(manual = true)
+
+        controller.selectPerson(other)
+        assertEquals(retryAt, settings.retryWindow?.until)
+        clock.advanceMillis(901_000)
+        error = SourceError(SourceErrorKind.NETWORK)
+        controller.poll(manual = true)
+
+        assertEquals(RetryReason.TRANSIENT, settings.retryWindow?.reason)
+        assertTrue(settings.nextAllowedFetch!! >= clock.now().plusSeconds(60))
+        assertTrue(settings.nextAllowedFetch!! <= clock.now().plusSeconds(75))
     }
 
     @Test fun timeoutInvalidatesLateSourceResultAndPublishesBackoff() = runBlocking {
@@ -748,6 +862,8 @@ class AppControllerTest {
         var snapshotHistory: List<Reading> = emptyList()
         @Volatile
         var latestCalls = 0
+        @Volatile
+        var connectionsCalls = 0
         var signInCalls = 0
         var transportClears = 0
         override fun clearTransportSession() { transportClears++ }
@@ -758,7 +874,10 @@ class AppControllerTest {
             signInCalls++
             return signInResult
         }
-        override suspend fun connections(session: Session) = onConnections(session)
+        override suspend fun connections(session: Session): SourceResult<List<Connection>> {
+            connectionsCalls++
+            return onConnections(session)
+        }
         override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> {
             latestCalls++
             return onLatest(session, connectionId)

@@ -142,8 +142,22 @@ class AppController(
         return runCatching { settings.setRetryWindow(value) }.getOrDefault(false)
     }
 
+    private fun activeProviderCooldown(): RetryWindow? = retryWindow?.takeIf {
+        it.reason == RetryReason.PROVIDER && clock.now().isBefore(it.until)
+    }
+
+    @Synchronized
+    private fun providerCooldownFailure(): SourceError? = activeProviderCooldown()?.let {
+        mutableDisplay.value = snapshot(ConnectionState.BACKING_OFF)
+        SourceError(SourceErrorKind.RATE_LIMITED, it.until)
+    }
+
+    private fun clearRetryForIdentityBoundary(): Boolean =
+        if (activeProviderCooldown() != null) true else persistRetryWindow(null)
+
     /** Clears old-account data before contacting the new account. */
     suspend fun signIn(credentials: Credentials): SourceResult<List<Connection>> {
+        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         val capturedGeneration: Long
         val previousAccountId: String?
         synchronized(this) {
@@ -154,7 +168,7 @@ class AppController(
             authAttemptsStopped = false
             val monitoringStored = runCatching { settings.setMonitoringEnabled(false) }.getOrDefault(false)
             monitoringEnabled = false
-            val retryStored = persistRetryWindow(null)
+            val retryStored = clearRetryForIdentityBoundary()
             authStore.clear()
             patientStore.clear()
             auth = null
@@ -172,6 +186,7 @@ class AppController(
             return SourceResult.Failure(updateFailure(login.error, capturedGeneration))
         }
         val session = (login as SourceResult.Success).value
+        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         val connections = source.connections(session)
         if (connections is SourceResult.Failure) {
             return SourceResult.Failure(updateFailure(connections.error, capturedGeneration))
@@ -197,6 +212,7 @@ class AppController(
                 return SourceResult.Failure(error)
             }
             auth = saved
+            consecutiveFailures = 0
             mutableDisplay.value = snapshot(ConnectionState.READY, RuntimeState.STOPPED)
         }
         return connections
@@ -214,12 +230,15 @@ class AppController(
         }
         generation++
         patient = next
-        if (!persistRetryWindow(null)) {
+        consecutiveFailures = 0
+        if (!clearRetryForIdentityBoundary()) {
             val error = SourceError(SourceErrorKind.STORAGE)
             updateFailure(error, generation)
             return SourceResult.Failure(error)
         }
-        mutableDisplay.value = snapshot(ConnectionState.READY)
+        mutableDisplay.value = snapshot(
+            if (activeProviderCooldown() == null) ConnectionState.READY else ConnectionState.BACKING_OFF,
+        )
         return SourceResult.Success(Unit)
     }
 
@@ -229,12 +248,15 @@ class AppController(
         generation++
         patient = StoredPatientState(null, null)
         patientStore.clear()
-        if (!persistRetryWindow(null)) {
+        consecutiveFailures = 0
+        if (!clearRetryForIdentityBoundary()) {
             val error = SourceError(SourceErrorKind.STORAGE)
             updateFailure(error, generation)
             return
         }
-        mutableDisplay.value = snapshot(ConnectionState.READY)
+        mutableDisplay.value = snapshot(
+            if (activeProviderCooldown() == null) ConnectionState.READY else ConnectionState.BACKING_OFF,
+        )
     }
 
     /** Changes display text only; provider identity and cached readings remain untouched. */
@@ -262,22 +284,32 @@ class AppController(
     }
 
     suspend fun connections(): SourceResult<List<Connection>> {
+        val (capturedGeneration, capturedAccountId) = synchronized(this) {
+            generation to auth?.session?.accountId
+        }
+        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         val session = sessionOrRecover() ?: return SourceResult.Failure(currentAuthError())
-        val capturedGeneration = synchronized(this) { generation }
+        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         var result = source.connections(session)
         if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.AUTH_EXPIRED) {
             val recovered = recoverSession(session.token)
             if (recovered == null) return SourceResult.Failure(currentAuthError())
+            providerCooldownFailure()?.let { return SourceResult.Failure(it) }
             result = source.connections(recovered)
         }
         if (result is SourceResult.Failure) {
             return SourceResult.Failure(updateFailure(result.error, capturedGeneration))
         }
         if (result is SourceResult.Success) {
-            val selectedId = synchronized(this) { patient.selected?.id }
-            if (selectedId != null && result.value.none { it.id == selectedId }) {
-                synchronized(this) { mutableDisplay.value = snapshot(ConnectionState.CONNECTION_REMOVED) }
-                return SourceResult.Failure(SourceError(SourceErrorKind.CONNECTION_REMOVED))
+            synchronized(this) {
+                if (generation != capturedGeneration || auth?.session?.accountId != capturedAccountId) {
+                    return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+                }
+                val selectedId = patient.selected?.id
+                if (selectedId != null && result.value.none { it.id == selectedId }) {
+                    mutableDisplay.value = snapshot(ConnectionState.CONNECTION_REMOVED)
+                    return SourceResult.Failure(SourceError(SourceErrorKind.CONNECTION_REMOVED))
+                }
             }
         }
         return result
@@ -317,13 +349,10 @@ class AppController(
         val (selected, capturedGeneration) = synchronized(this) { patient.selected to generation }
         if (selected == null) return SourceResult.Failure(SourceError(SourceErrorKind.CONNECTION_REMOVED))
         val now = clock.now()
+        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         retryWindow?.takeIf { now < it.until }?.let {
-            if (!manual || it.reason == RetryReason.PROVIDER) {
-                if (it.reason == RetryReason.PROVIDER) {
-                    synchronized(this) { mutableDisplay.value = snapshot(ConnectionState.BACKING_OFF) }
-                }
-                val kind = if (it.reason == RetryReason.PROVIDER) SourceErrorKind.RATE_LIMITED else SourceErrorKind.SERVER
-                return SourceResult.Failure(SourceError(kind, it.until))
+            if (!manual) {
+                return SourceResult.Failure(SourceError(SourceErrorKind.SERVER, it.until))
             }
         }
         if (manual) {
@@ -338,10 +367,12 @@ class AppController(
         diagnostics.pollAttempt(now)
         // recoverSession already records the exact failure/deadline; do not count it twice.
         val session = sessionOrRecover() ?: return SourceResult.Failure(currentAuthError())
+        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         var result = source.snapshot(session, selected.id)
         if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.AUTH_EXPIRED) {
             val recovered = recoverSession(session.token)
             if (recovered == null) return SourceResult.Failure(currentAuthError())
+            providerCooldownFailure()?.let { return SourceResult.Failure(it) }
             result = source.snapshot(recovered, selected.id)
         }
         if (result is SourceResult.Success && result.value.current.connectionId != selected.id) {
@@ -449,6 +480,7 @@ class AppController(
             if (authAttemptsStopped) return@withLock null
             (auth?.credentials ?: return@withLock null) to generation
         }
+        providerCooldownFailure()?.let { return@withLock null }
         val result = source.signIn(credentials)
         if (result !is SourceResult.Success) {
             if (result is SourceResult.Failure) updateFailure(result.error, capturedGeneration)
@@ -494,6 +526,7 @@ class AppController(
         settings.clear()
         monitoringEnabled = false
         retryWindow = null
+        consecutiveFailures = 0
         authStore.clear()
         patientStore.clear()
         val nicknamesCleared = runCatching { nicknameStore.clear() }.isSuccess

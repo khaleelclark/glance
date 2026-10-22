@@ -19,6 +19,7 @@ KEYSTORE = KEY_DIR / "personal-release.jks"
 PASSWORD_FILE = KEY_DIR / "signing-password.txt"
 UNSIGNED = ROOT / "app" / "build" / "outputs" / "apk" / "release" / "app-release-unsigned.apk"
 OUT_DIR = ROOT / "release"
+EXPECTED_CERTIFICATE_SHA256 = "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E"
 
 
 def run(*args: str, env: dict[str, str] | None = None) -> str:
@@ -26,6 +27,13 @@ def run(*args: str, env: dict[str, str] | None = None) -> str:
         args, cwd=ROOT, env=env, check=True, capture_output=True, text=True,
     )
     return result.stdout + result.stderr
+
+
+def release_fingerprint(verification: str) -> str:
+    match = re.search(r"Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]+)", verification)
+    if not match or match.group(1).upper() != EXPECTED_CERTIFICATE_SHA256:
+        raise RuntimeError("Release certificate does not match the existing Glance signer")
+    return match.group(1).upper()
 
 
 def main() -> int:
@@ -122,9 +130,7 @@ def main() -> int:
             "--out", str(temporary), str(UNSIGNED), env=env,
         )
         verification = run(str(APK_SIGNER), "verify", "--verbose", "--print-certs", str(temporary))
-        fingerprint_match = re.search(r"Signer #1 certificate SHA-256 digest: ([0-9a-f]+)", verification)
-        if not fingerprint_match:
-            raise RuntimeError("apksigner did not report a certificate SHA-256 fingerprint")
+        fingerprint = release_fingerprint(verification)
         temporary.replace(out_apk)
         sha256 = hashlib.sha256(out_apk.read_bytes()).hexdigest()
         manifest = {
@@ -133,7 +139,7 @@ def main() -> int:
             "versionName": version_name,
             "apk": out_apk.name,
             "apkSha256": sha256,
-            "certificateSha256": fingerprint_match.group(1).upper(),
+            "certificateSha256": fingerprint,
             "sourceCommit": source_commit,
             "tested": {
                 "unitTests": f"passed: {test_count} tests, 0 failures/errors/skips",
@@ -157,9 +163,7 @@ def main() -> int:
                 "--ks-pass", "env:GLANCE_SIGNING_PASSWORD", "--key-pass", "env:GLANCE_SIGNING_PASSWORD",
                 "--out", str(watch_temp), str(watch_unsigned), env=env)
             watch_verification = run(str(APK_SIGNER), "verify", "--verbose", "--print-certs", str(watch_temp))
-            watch_fingerprint = re.search(r"Signer #1 certificate SHA-256 digest: ([0-9a-f]+)", watch_verification)
-            if not watch_fingerprint or watch_fingerprint.group(1) != fingerprint_match.group(1):
-                raise RuntimeError("Phone and watch signers do not match")
+            release_fingerprint(watch_verification)
             watch_temp.replace(watch_apk)
         finally:
             watch_temp.unlink(missing_ok=True)

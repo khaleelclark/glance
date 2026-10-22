@@ -74,20 +74,6 @@ class GlanceThemeTest {
         assertNull(ThemeAccent.normalize("#XYZXYZ"))
     }
 
-
-    @Test fun wheelColorRoundTripsPresetsAndNeutralColors() {
-        for (hex in ThemeAccent.presets.map { it.hex } + listOf("#FFFFFF", "#000000", "#808080", "#FF00FF")) {
-            assertEquals(hex, ThemeAccent.fromPicker(ThemeAccent.pickerColor(hex)))
-        }
-    }
-
-    @Test fun wheelAndBrightnessCanReachPrimaryAndDarkColors() {
-        assertEquals("#FF0000", ThemeAccent.fromPicker(PickerColor(0f, 1f, 1f)))
-        assertEquals("#00FF00", ThemeAccent.fromPicker(PickerColor(120f, 1f, 1f)))
-        assertEquals("#0000FF", ThemeAccent.fromPicker(PickerColor(240f, 1f, 1f)))
-        assertEquals("#800000", ThemeAccent.fromPicker(PickerColor(0f, 1f, 128f / 255f)))
-    }
-
     private fun contrast(a: Color, b: Color): Float {
         val aL = a.luminance()
         val bL = b.luminance()

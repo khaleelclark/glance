@@ -34,7 +34,7 @@ directs the owner to turn off or remove Glance on the watch before restarting.
 
 ## Install the companion
 
-Current source is 0.31.0 / code 36. See [release and upgrades](release.md) and
+Current source is 0.32.0 / code 37. See [release and upgrades](release.md) and
 [APK downloads](../apks/README.md) for available signed builds and source.
 The watch APK must be signed with the same certificate as the installed phone app.
 For an existing Studio/debug phone, build the `wear` debug variant on the same
@@ -81,7 +81,7 @@ separate debugging address/port with `adb connect`. For example:
 ```sh
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
-adb -s WATCH_IP:DEBUG_PORT install -r apks/0.31.0/glance-0.31.0-watch.apk
+adb -s WATCH_IP:DEBUG_PORT install -r apks/0.32.0/glance-0.32.0-watch.apk
 ```
 
 This command installs the personal-signed watch APK from the repository.

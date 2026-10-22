@@ -73,7 +73,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 Raw receipts and synthetic screenshots are under `evidence/`, linked from each
 report. Do not overwrite a prior receipt when collecting a newer run; record the
 actual source, dirty state and installed APK hash. Signer/checksum verification
-belongs to each immutable release manifest. Current signed 0.31 checks are
+belongs to each immutable release manifest. Current signed 0.32 checks are
 summarized in [release](release.md); open physical/account tests are in
 [device validation](device-validation.md) and [watch validation](watch-validation.md).
 

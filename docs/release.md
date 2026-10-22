@@ -126,6 +126,8 @@ The existing personal key and password file are outside Git at
 Back up both files securely under the owner's control. Loss prevents future
 normal in-place upgrades; generating a replacement key does not repair that.
 Neither file belongs in an APK, artifact bundle, screenshot or support log.
+The signing script checks both APKs against this established public certificate
+before replacing their outputs; a different valid key is rejected.
 
 On another authorized build machine, securely restore both files to that
 location with mode 0600, or set `GLANCE_SIGNING_DIR` to their directory. Set

@@ -45,6 +45,7 @@ import com.khaleel.glance.ui.SetupUiState
 import com.khaleel.glance.ui.UserSettingsUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -63,6 +64,13 @@ class MainActivity : ComponentActivity() {
     private var setupState by mutableStateOf(SetupUiState(SetupStep.SIGN_IN))
     private var settingsUi by mutableStateOf(UserSettingsUi(GlucoseUnit.MG_DL, false, 1, true, true))
     private var showDiagnostics by mutableStateOf(false)
+    private var accountRequestVersion = 0L
+    private var accountRequestJob: Job? = null
+
+    private fun invalidateAccountRequests(): Long {
+        accountRequestJob?.cancel()
+        return ++accountRequestVersion
+    }
 
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -245,9 +253,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadConnections() {
+        val requestVersion = invalidateAccountRequests()
         connectionState = connectionState.copy(loading = true, problem = null, responseInfo = null)
-        scope.launch {
+        accountRequestJob = scope.launch {
             val result = runCatching { controller.connections() }.getOrNull()
+            if (accountRequestVersion != requestVersion) return@launch
             connectionState = when (result) {
                 is SourceResult.Success -> ConnectionSetupUiState(
                     connections = result.value,
@@ -271,13 +281,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopMonitoring() {
-        controller.setMonitoringEnabled(false)
+        val saved = controller.setMonitoringEnabled(false)
         app.widgetRenderer.redact()
         app.watchPublisher.redact()
         stopService(Intent(this, MonitoringService::class.java))
         app.hideCurrentNotification()
         app.alertEngine.clearNotifications()
         setupState = setupState.copy(startingMonitoring = false)
+        if (!saved) Toast.makeText(this,
+            "Monitoring stopped, but Stop could not be saved across restart. Please try again.",
+            Toast.LENGTH_LONG).show()
     }
 
     private fun renderSettingsChange() {
@@ -289,12 +302,15 @@ class MainActivity : ComponentActivity() {
 
     private val callbacks = GlanceCallbacks(
         onSignIn = { credentials ->
+            val requestVersion = invalidateAccountRequests()
+            connectionState = ConnectionSetupUiState()
             stopMonitoring()
             // A new sign-in begins a new account session; no previous account's log follows it.
             if (clearAlarmLog()) {
                 accountState = AccountUiState(AccountStatus.SIGNING_IN)
-                scope.launch {
+                accountRequestJob = scope.launch {
                     val result = runCatching { controller.signIn(credentials) }.getOrNull()
+                    if (accountRequestVersion != requestVersion) return@launch
                     when (result) {
                         is SourceResult.Success -> {
                             accountState = AccountUiState(AccountStatus.SIGNED_IN)
@@ -342,7 +358,10 @@ class MainActivity : ComponentActivity() {
         onStopMonitoring = { stopMonitoring() },
         onResumeMonitoring = { startMonitoring() },
         onRefresh = {
-            scope.launch {
+            if (controller.display.value.runtime == RuntimeState.RUNNING) {
+                if (!MonitoringService.requestRefresh(this)) Toast.makeText(this,
+                    "Could not request refresh. Check monitoring status and try again.", Toast.LENGTH_SHORT).show()
+            } else scope.launch {
                 val result = controller.poll(manual = true)
                 if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.REFRESH_DEBOUNCED) {
                     android.widget.Toast.makeText(this@MainActivity,
@@ -355,7 +374,7 @@ class MainActivity : ComponentActivity() {
             }
         },
         onRestoreNotification = {
-            if (controller.display.value.monitoringEnabled) app.showCurrentNotification(restore = true)
+            if (controller.display.value.monitoringEnabled) restoreNotification()
             refreshSettings()
         },
         onUnitChanged = { controller.settings.unit = it; renderSettingsChange() },
@@ -366,7 +385,7 @@ class MainActivity : ComponentActivity() {
         onIntervalChanged = { controller.settings.intervalMinutes = it; renderSettingsChange() },
         onEnhancedNotificationChanged = {
             controller.settings.enhancedNotification = it
-            if (it) NotificationVisibility.restore(this)
+            if (it) restoreNotification()
             renderSettingsChange()
         },
         onKeepNotificationVisibleChanged = { visible ->
@@ -424,6 +443,8 @@ class MainActivity : ComponentActivity() {
             } else if (controller.display.value.connection == ConnectionState.SIGN_IN_REQUIRED ||
                 controller.display.value.connection == ConnectionState.TERMS_REQUIRED
             ) {
+                invalidateAccountRequests()
+                connectionState = ConnectionSetupUiState()
                 stopMonitoring()
                 accountState = AccountUiState(AccountStatus.SIGNED_OUT)
                 setupState = setupState.copy(step = SetupStep.SIGN_IN)
@@ -473,7 +494,15 @@ class MainActivity : ComponentActivity() {
             if (showError) Toast.makeText(this, "Could not clear the alarm log. Please try again.", Toast.LENGTH_LONG).show()
         }.isSuccess
 
+    private fun restoreNotification() {
+        runCatching { app.showCurrentNotification(restore = true) }.onFailure {
+            Toast.makeText(this, "Could not save notification restore. Please try again.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun signOut() {
+        invalidateAccountRequests()
+        connectionState = ConnectionSetupUiState()
         saveLockScreenVisibility(false)
         saveWidgetVisibility(false)
         saveWatchVisibility(false)

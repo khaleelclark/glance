@@ -161,10 +161,15 @@ class DebugNotificationActivity : Activity() {
                 context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE)
                     .getLong("dismiss_generation", Long.MIN_VALUE)
             } else MonitoringService.currentActionGeneration ?: return
+            val epoch = if (mode == "dismiss-saved") {
+                context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE)
+                    .getLong("dismiss_epoch", Long.MIN_VALUE)
+            } else com.khaleel.glance.notification.NotificationVisibility.epoch(context)
             context.sendBroadcast(Intent(context, com.khaleel.glance.notification.NotificationDismissReceiver::class.java)
                 .setAction(com.khaleel.glance.notification.NotificationDismissReceiver.ACTION_DISMISSED)
                 .putExtra(com.khaleel.glance.notification.NotificationDismissReceiver.EXTRA_GENERATION,
-                    intent.getLongExtra("generation", generation)))
+                    intent.getLongExtra("generation", generation))
+                .putExtra(com.khaleel.glance.notification.NotificationDismissReceiver.EXTRA_PRESENTATION_EPOCH, epoch))
             return
         }
         if (mode == "live-api-check" && android.os.Build.VERSION.SDK_INT >= 36) {
@@ -274,7 +279,8 @@ class DebugNotificationActivity : Activity() {
         if (mode in listOf("service-pause", "service-stop-person", "service-stop-account")) {
             val app = context.applicationContext as com.khaleel.glance.GlanceApplication
             context.getSharedPreferences("debug_fixture", Context.MODE_PRIVATE).edit()
-                .putLong("dismiss_generation", MonitoringService.currentActionGeneration ?: Long.MIN_VALUE).commit()
+                .putLong("dismiss_generation", MonitoringService.currentActionGeneration ?: Long.MIN_VALUE)
+                .putLong("dismiss_epoch", com.khaleel.glance.notification.NotificationVisibility.epoch(context)).commit()
             app.controller.setMonitoringEnabled(false)
             context.stopService(Intent(context, MonitoringService::class.java))
             app.hideCurrentNotification()

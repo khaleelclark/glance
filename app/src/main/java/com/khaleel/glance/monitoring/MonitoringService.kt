@@ -191,7 +191,11 @@ class MonitoringService : Service() {
         /** Call only from a visible, explicit user Start/Resume action. */
         fun start(context: Context, restoreNotification: Boolean = true): Boolean {
             val deps = resolveDependencies(context) ?: return false
-            if (restoreNotification) NotificationVisibility.restore(context)
+            try {
+                if (restoreNotification) deps.notifications.restore()
+            } catch (_: java.io.IOException) {
+                return false
+            }
             if (!deps.controller.setMonitoringEnabled(true)) return false
             deps.controller.setRuntime(RuntimeState.STARTING)
             val actionGeneration = nextActionGeneration()

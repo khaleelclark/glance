@@ -37,6 +37,7 @@ data class MonitoringPresentation(
 
 /** The starting notification must use local state only and must never poll. */
 interface MonitoringNotifications {
+    fun restore() {}
     fun startingNotification(service: Service, presentation: MonitoringPresentation): Notification
     fun render(presentation: MonitoringPresentation)
     fun hide()

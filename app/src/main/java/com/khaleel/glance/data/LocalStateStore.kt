@@ -264,7 +264,6 @@ class UserSettings(context: Context) : SettingsPersistence {
 
     override fun setMonitoringEnabled(value: Boolean): Boolean {
         val previous = monitoringEnabled
-        if (previous == value) return true
         val committed = runCatching {
             prefs.edit().putBoolean("monitoring_enabled", value).commit()
         }.getOrDefault(false)
@@ -282,7 +281,6 @@ class UserSettings(context: Context) : SettingsPersistence {
 
     override fun setRetryWindow(value: RetryWindow?): Boolean {
         val previous = retryWindow
-        if (previous == value) return true
         val committed = runCatching {
             prefs.edit()
                 .putLong("next_allowed_fetch", value?.until?.toEpochMilli() ?: 0L)

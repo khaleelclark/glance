@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "sdk": 36,
+  "sourceCommitAtRun": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "32f4b18986ddb2114eb2cec09ab49795424cd6a7b7b126c7997aa407945a884b",
+  "installedApkHashVerified": true,
+  "checks": {
+    "nowRestoreActionAbsentBeforeDismissal": true,
+    "deliveredDismissalRestoresRegularWithoutAutomaticPromotion": true,
+    "nowRestoreActionClearsDismissalAndDisappears": true,
+    "settingsRestoreLiveUpdateClearsDismissal": true
+  },
+  "scope": "Actual Now/Settings UI after synthetic current-session delete callbacks; no Samsung/API37/promotion/real shade swipe qualification"
+}

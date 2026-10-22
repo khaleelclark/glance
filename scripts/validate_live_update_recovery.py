@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,12 +42,23 @@ def tap(label):
 
 
 def main():
-    run("shell", "am", "start", "-W", "-n", "com.khaleel.glance/.MainActivity")
+    run("shell", "cmd", "statusbar", "collapse")
+    run("shell", "am", "start", "-W", "--activity-single-top", "-n", "com.khaleel.glance/.MainActivity")
 
 
 def probe():
     fixture("notification-probe")
     return dict(line.split(": ", 1) for line in run("shell", "run-as", "com.khaleel.glance", "cat", "files/notification-probe.txt").splitlines())
+
+
+def await_dismissal(value):
+    deadline = time.monotonic() + 8
+    while True:
+        nodes()  # Wait for the Activity transition and delivered broadcast to settle.
+        result = probe()
+        if result["Regular card after dismissal"] == value:
+            return result
+        assert time.monotonic() < deadline, result
 
 
 assert args.serial.startswith("emulator-") and run("shell", "getprop", "ro.kernel.qemu").strip() == "1"
@@ -58,6 +70,8 @@ try:
     run("shell", "input", "keyevent", "KEYCODE_WAKEUP")
     run("shell", "wm", "dismiss-keyguard")
     fixture("demo-clear")
+    # Finish prior fixture teardown before creating the new synthetic service session.
+    run("shell", "am", "force-stop", "com.khaleel.glance")
     fixture("notification-retention")
     fixture("service-demo")
     main()
@@ -70,7 +84,7 @@ try:
     assert not any(node.get("text") == "Restore Live Update" for node in nodes())
     checks["nowRestoreActionAbsentBeforeDismissal"] = True
     fixture("dismiss-active")
-    dismissed = probe()
+    dismissed = await_dismissal("true")
     assert dismissed["Regular card after dismissal"] == "true" and dismissed["Promotion requested"] == "false"
     checks["deliveredDismissalRestoresRegularWithoutAutomaticPromotion"] = True
     main()
@@ -80,7 +94,7 @@ try:
     assert probe()["Regular card after dismissal"] == "false"
     checks["nowRestoreActionClearsDismissalAndDisappears"] = True
     fixture("dismiss-active")
-    assert probe()["Regular card after dismissal"] == "true"
+    assert await_dismissal("true")["Regular card after dismissal"] == "true"
     main()
     tap("Settings")
     tap("Restore Live Update")

@@ -1,7 +1,10 @@
 {
   "evidenceKind": "owner-supplied screenshots, inspected by lead",
   "captureDate": "2026-10-22",
-  "screenshotLabels": ["1062.jpg", "1064.jpg"],
+  "screenshotLabels": [
+    "1062.jpg",
+    "1064.jpg"
+  ],
   "appVersionReported": "0.31.0",
   "androidApiReported": 37,
   "installedApkHash": "not collected",
@@ -41,5 +44,6 @@
     "Samsung developer-toggle state and visual result after changing it",
     "Low-alert icon behavior or a permanent non-clearable pin"
   ],
-  "privacy": "No glucose, person, account, source timestamp, notification contents, screenshot pixels, or group identifiers copied into this receipt."
+  "privacy": "No glucose, person, account, source timestamp, notification contents, screenshot pixels, or group identifiers copied into this receipt.",
+  "subsequentDeveloperToggleResult": "Owner selected Live format now appears after enabling Live notifications for all apps; supplied crop shows blue pill with duplicated numeric icon/text."
 }

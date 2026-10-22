@@ -1,0 +1,40 @@
+{
+  "synthetic": true,
+  "allPassed": true,
+  "checks": {
+    "requestedLayoutMeetsActualFrameworkEligibility": true,
+    "colorizationOnlyUsedWhenPlainLayoutIneligible": true,
+    "promotionRequestAndCriticalTextPreserved": true,
+    "promotedRequestHasNoCustomViewsOrGroupSummary": true,
+    "allSevenLiveAccentsKeepLogoSingleValueAndFrameworkEligibility": true,
+    "unknownLiveAccentUsesUiLilacFallback": true,
+    "privateLiveRequestKeepsLogoAndNoGlucoseChipText": true,
+    "ineligibleLayoutDoesNotKeepUnhelpfulColorization": true,
+    "oldSeparateBitmapIconsProduceNonNumericAutoSummary": true,
+    "diagnosticsSeparateSummaryResourceIconFromNumericAlerts": true,
+    "contentEncodedIconsProduceNumericInitialAutoSummary": true,
+    "encodedIconPixelsAndTypeSurviveSystemPosting": true,
+    "productionEncodingIsEnabledOnlyOnAndroid17OrNewer": true,
+    "twoSeparateNumericCardsWithoutAppProvidedGroupOrSummary": true,
+    "alertTracksLatestNumberSilentlyAndKeepsTrigger": true,
+    "monitoringChildRemainsOngoingAndNotSummary": true,
+    "diagnosticsCompareAlertToMonitoringWithoutExportingPixels": true,
+    "alertDeleteIntentCallbackKeepsNumericMonitoringCard": true,
+    "systemExpiryOfAlertKeepsForegroundMonitoringCard": true,
+    "notificationDiagnosticsContainNoFixtureValueOrName": true
+  },
+  "framework": {
+    "sdkFull": 3600000,
+    "plainLayoutEligible": false,
+    "colorizedLayoutEligible": true,
+    "promotionAllowed": false
+  },
+  "scope": "API36 notification grouping/eligibility; no Samsung, actual promotion, sound, or live source qualification",
+  "device": "API36 emulator",
+  "sourceCommitAtRun": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "32f4b18986ddb2114eb2cec09ab49795424cd6a7b7b126c7997aa407945a884b",
+  "SamsungOneUI": "not tested",
+  "actualLiveUpdatePromotion": "not tested",
+  "liveAccount": "not tested"
+}

@@ -1,0 +1,20 @@
+{
+  "sdk": "36",
+  "checks": {
+    "legacy_grant_not_reimported_after_process_recreation_other_settings_preserved": true,
+    "original_and_public_clear_protection": true,
+    "old_generation_ignored": true,
+    "clear_all_removes_disposable_but_retains_glance": true,
+    "real_swipe_restores_regular_card": true,
+    "privacy_off_posts_redacted_card_without_numeric_icon_graph_or_chip": true,
+    "retention_off_respects_real_swipe": true,
+    "stop_removes_card_and_no_restoration": true,
+    "person-change_rejects_old_delete_intent": true,
+    "sign-out_rejects_old_delete_intent": true
+  },
+  "promotion_on_emulator": false,
+  "samsung_now_bar": "not tested",
+  "sourceCommitAtRun": "not captured by legacy driver",
+  "scope": "10 retention/privacy checks including real monitor shade swipes on API36; no Samsung/API37/promotion proof",
+  "provenanceLimit": "Legacy driver did not capture source/installed APK identity. Adjacent compatibility/alert receipts retain their own hashes; do not infer this receipt is exact-source qualification."
+}

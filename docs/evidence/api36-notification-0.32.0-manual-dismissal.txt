@@ -1,0 +1,23 @@
+Monitoring card posted: false
+Ongoing flag: false
+Clear-all protection flag: false
+Foreground-service flag: false
+Public clear-all protection flag: false
+Promotion requested: false
+Promoted flag: false
+Platform layout eligible: false
+Colorization requested: false
+Monitoring icon type: absent
+Monitoring automatically grouped: false
+Posted group summaries (includes system): 0
+Group summary icon types: none
+Group summary icons match monitor: none
+Individual alerts posted: 0
+Individual alert icon types: none
+Individual alert icons match monitor: none
+Chip text supplied: false
+Custom layout supplied: false
+Monitoring channel importance: 2
+Keep card visible: false
+Card updates suppressed: true
+Regular card after dismissal: false

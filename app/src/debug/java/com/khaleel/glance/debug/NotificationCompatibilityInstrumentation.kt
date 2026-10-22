@@ -57,6 +57,9 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
         fun record(name: String, predicate: () -> Boolean) {
             check(predicate()) { name }; checks.put(name, true)
         }
+        // Avoid the framework enqueue limiter when synthetic cases post much faster
+        // than the real one-minute monitoring cadence.
+        fun pace() { SystemClock.sleep(650) }
         fun await(predicate: () -> Boolean) {
             val end = SystemClock.uptimeMillis() + 12_000
             while (!predicate()) { check(SystemClock.uptimeMillis() < end); SystemClock.sleep(50) }
@@ -129,7 +132,7 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             // alarm plus one monitoring card; this tests GroupHelper's icon decision separately.
             ids.forEach { id ->
                 val pixels = (GlucoseStatusIcon.create("112").loadDrawable(context) as BitmapDrawable).bitmap
-                manager.notify(id, builder().setSmallIcon(Icon.createWithBitmap(pixels)).build())
+                pace(); manager.notify(id, builder().setSmallIcon(Icon.createWithBitmap(pixels)).build())
             }
             await { summary() != null }
             record("oldSeparateBitmapIconsProduceNonNumericAutoSummary") { !matches(summary()!!.smallIcon, "112") }
@@ -137,11 +140,11 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             await { manager.activeNotifications.isEmpty() }
             notifier.ensureChannels()
             val alertChannel = com.khaleel.glance.alerts.GlucoseAlertNotifier.channelId(AlertKind.LOW)
-            ids.forEach { id -> manager.notify(id,
+            ids.forEach { id -> pace(); manager.notify(id,
                 builder(alertChannel).setSmallIcon(GlucoseStatusIcon.create(
                     if (id == ids.first) "111" else "112", encoded = true)).build()) }
             await { summary()?.smallIcon?.type == Icon.TYPE_RESOURCE }
-            GlucoseNotificationRenderer(context, state(112.0), GlucoseUnit.MG_DL, true).post()
+            pace(); GlucoseNotificationRenderer(context, state(112.0), GlucoseUnit.MG_DL, true).post()
             await { manager.activeNotifications.any { it.id == GlucoseNotificationRenderer.NOTIFICATION_ID } }
             record("diagnosticsSeparateSummaryResourceIconFromNumericAlerts") {
                 val report = LiveUpdateSupport.diagnostics(context)
@@ -156,7 +159,7 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             }
             manager.cancelAll()
             await { manager.activeNotifications.isEmpty() }
-            ids.forEach { id -> manager.notify(id,
+            ids.forEach { id -> pace(); manager.notify(id,
                 builder().setSmallIcon(GlucoseStatusIcon.create("112", encoded = true)).build()) }
             await { summary()?.smallIcon?.let { matches(it, "112") } == true }
             record("contentEncodedIconsProduceNumericInitialAutoSummary") { matches(summary()!!.smallIcon, "112") }
@@ -170,11 +173,11 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
                     if (Build.VERSION.SDK_INT >= 37) Icon.TYPE_DATA else Icon.TYPE_BITMAP
             }
             if (Build.VERSION.SDK_INT >= 37) {
-                ids.forEach { id -> manager.notify(id,
+                ids.forEach { id -> pace(); manager.notify(id,
                     builder().setSmallIcon(GlucoseStatusIcon.create("113")).build()) }
                 await { summary()?.smallIcon?.let { matches(it, "113") } == true }
                 checks.put("android17AutoSummaryTracksUpdatedCommonValue", true)
-                ids.forEach { id -> manager.notify(id, builder().build()) }
+                ids.forEach { id -> pace(); manager.notify(id, builder().build()) }
                 await { summary()?.smallIcon?.type == Icon.TYPE_RESOURCE }
                 checks.put("android17AutoSummaryDropsNumberWhenChildrenDropIt", true)
             }
@@ -187,11 +190,12 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
                     it.notification.flags and Notification.FLAG_FOREGROUND_SERVICE != 0
             } }
             await { app.controller.display.value.runtime == RuntimeState.RUNNING }
+            pace()
             app.controller.settings.numericStatusIcon = true
             notifier.ensureChannels()
             val initial = state(240.0)
-            GlucoseNotificationRenderer(context, initial, GlucoseUnit.MG_DL, true).post()
-            notifier.post(AlertKind.HIGH, initial, GlucoseUnit.MG_DL, true)
+            pace(); GlucoseNotificationRenderer(context, initial, GlucoseUnit.MG_DL, true).post()
+            pace(); notifier.post(AlertKind.HIGH, initial, GlucoseUnit.MG_DL, true)
             fun monitoring() = manager.activeNotifications.firstOrNull {
                 it.id == GlucoseNotificationRenderer.NOTIFICATION_ID
             }
@@ -208,8 +212,8 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             }
             val trigger = alarm()!!.notification
             val latest = state(248.0)
-            GlucoseNotificationRenderer(context, latest, GlucoseUnit.MG_DL, true).post()
-            notifier.refreshIcon(latest, GlucoseUnit.MG_DL, true)
+            pace(); GlucoseNotificationRenderer(context, latest, GlucoseUnit.MG_DL, true).post()
+            pace(); notifier.refreshIcon(latest, GlucoseUnit.MG_DL, true)
             await { alarm()?.notification?.smallIcon?.let { matches(it, "248") } == true }
             record("alertTracksLatestNumberSilentlyAndKeepsTrigger") {
                 val current = alarm()!!.notification
@@ -235,7 +239,7 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             }
             val expiring = state(55.0).let { it.copy(reading = it.reading!!.copy(
                 measuredAt = Instant.now().minusSeconds(298))) }
-            notifier.post(AlertKind.LOW, expiring, GlucoseUnit.MG_DL, true)
+            pace(); notifier.post(AlertKind.LOW, expiring, GlucoseUnit.MG_DL, true)
             await { alarm() != null }
             await { alarm() == null }
             record("systemExpiryOfAlertKeepsForegroundMonitoringCard") {

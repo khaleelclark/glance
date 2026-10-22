@@ -33,7 +33,22 @@ A subsequent alert fixture exceeded Android’s per-package notification enqueue
 rate: NotificationService reported shedding a post at 6.84 enqueues/second.
 That attempt is not counted as a pass. The debug fixture now paces synthetic
 posts and excludes automatic group summaries when selecting the real alarm.
-The paced alert rerun, recovery UI, source review and signed checks are pending.
+The paced rerun passes all 23 alert checks. Ten retention/privacy checks, including
+real monitor shade swipes, also pass. The first recovery-UI attempt saw the
+SystemUI shade left open by that fixture; its driver now collapses the shade
+before opening MainActivity. That incomplete attempt is not counted as a pass.
+The final debug build/lint pass with zero errors. A later compatibility rerun
+also hit the platform enqueue limiter (6.19/second); its synthetic posts are now
+paced too. The paced compatibility (20), alert (23) and actual recovery UI (4) checks now
+pass on the same debug APK, with installed-hash verification in the UI receipt.
+The UI driver collapses the previous shade and starts an isolated synthetic
+process before testing the new monitoring session, avoiding unfinished prior
+fixture teardown. Failed attempts are not counted as passes. Source review and
+clean signing are still pending. The legacy retention driver did not capture exact
+source/APK identity; that receipt is kept with this provenance limitation, not
+reported as exact-source qualification.
+A debug-only API36 getter needed an explicit version guard to satisfy lint; the
+guarded fixture is included in the final build.
 The native compatibility fixture adds three checks: all seven accent colors
 plus the logo/single text/actual-framework eligibility; the shared Lilac fallback
 for an unknown accent; and a private chip retaining the logo without value text.
@@ -47,3 +62,11 @@ remains open; no fix is claimed for it.
 - [Notification accent color](https://developer.android.com/reference/android/app/Notification.Builder#setColor(int))
 - [Live Update requirements and dismissal](https://developer.android.com/develop/ui/views/notifications/live-update)
 - [Samsung's supported Now bar controls](https://www.samsung.com/us/support/answer/ANS10004605/)
+
+Current 0.32 native receipts (API36, dirty source at `d7b43ee`; Samsung/API37
+and actual promotion remain outside these checks):
+
+- [20 framework checks](evidence/api36-notification-compatibility-0.32.0-paced-reviewed-source-20261022.json)
+- [23 alert checks](evidence/api36-alert-icons-0.27.0-appearance-032-final-20261022.json)
+- [4 actual restore UI checks](evidence/api36-live-update-recovery-0.32.0-final-20261022.json)
+- [10 earlier retention/privacy checks](evidence/api36-notification-0.32.0-retention.json), with the legacy source-identity limitation recorded above.

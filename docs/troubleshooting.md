@@ -104,9 +104,11 @@ Now bar card. Choose **Graph** for the regular card/thumbnail. Hidden lock-scree
 values deliberately suppress numeric icon/chip/thumbnail; enable that privacy
 grant only if the resulting exposure is wanted. See [setup](setup.md).
 
-If status says **Keeping the regular card after dismissal**, Glance intentionally
-is not requesting promotion. Choose **Presentation → Graph**, then
-**Presentation → Live Update** to explicitly request it again. A restored Graph
+If status says the Live Update was dismissed, Glance intentionally is not
+requesting promotion. With Live Update selected, tap **Restore Live Update**
+on Now or in Notification settings to explicitly request it again. In 0.31 the
+Settings button is labeled **Show notification**; Graph → Live Update also resets
+the fallback. A restored Graph
 card having `Promotion requested: false` / `Platform layout eligible: false`
 does not establish that Samsung rejected a Live Update template. Export the
 status after the explicit retry to distinguish that case.
@@ -145,7 +147,11 @@ installed APK hash was not collected. The earlier fallback's cause remains
 unestablished; a late-callback hypothesis is not a verified owner-device defect.
 The owner subsequently confirms that Glance is absent from Samsung's normal
 Now bar / Live notifications app list. The optional developer-switch test below
-is the next discriminator; it has not been performed or verified for Glance.
+was then tried: the owner confirmed the Live format appeared and supplied a
+status-chip crop. This is a positive observation for that device/configuration,
+not a supported universal enablement route. No public app-side bypass has been
+established. From 0.32, the chip uses a droplet and one value with the selected
+accent supplied to Android; Samsung’s final tint still needs verification.
 
 For a missing Samsung Live Update, export **Account & support → Diagnostics**
 after reproducing it. The report now distinguishes requested promotion, actual

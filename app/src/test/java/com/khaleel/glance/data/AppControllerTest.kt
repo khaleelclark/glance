@@ -354,7 +354,7 @@ class AppControllerTest {
 
         val result = controller.setMonitoringEnabled(true)
 
-        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertFalse(result)
         assertFalse(controller.display.value.monitoringEnabled)
         assertEquals(RuntimeState.STOPPED, controller.display.value.runtime)
         assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
@@ -375,13 +375,13 @@ class AppControllerTest {
         pending.complete(SourceResult.Success(reading(patrick)))
         poll.await()
 
-        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertFalse(result)
         assertFalse(controller.display.value.monitoringEnabled)
         assertEquals(RuntimeState.STOPPED, controller.display.value.runtime)
         assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
         assertNull(controller.display.value.reading)
         assertNull(patient.state.lastReading)
-        assertTrue(settings.monitoringEnabled)
+        assertFalse(settings.monitoringEnabled)
     }
 
     @Test fun failedProviderCooldownPersistenceReportsStorageAndFailsClosedInProcess() = runBlocking {
@@ -727,7 +727,10 @@ class AppControllerTest {
         override val monitoringEnabled: Boolean get() = monitoring
         override val retryWindow: com.khaleel.glance.data.RetryWindow? get() = retry
         override fun setMonitoringEnabled(value: Boolean): Boolean {
-            if (failMonitoringWrites) return false
+            if (failMonitoringWrites) {
+                if (!value) monitoring = false
+                return false
+            }
             monitoring = value
             return true
         }

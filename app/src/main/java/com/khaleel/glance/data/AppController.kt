@@ -119,7 +119,7 @@ class AppController(
     }
 
     @Synchronized
-    fun setMonitoringEnabled(enabled: Boolean): SourceResult<Unit> {
+    fun setMonitoringEnabled(enabled: Boolean): Boolean {
         val stored = runCatching { settings.setMonitoringEnabled(enabled) }.getOrDefault(false)
         monitoringEnabled = enabled && stored
         if (!enabled) generation++
@@ -128,10 +128,8 @@ class AppController(
             connection,
             if (monitoringEnabled) mutableDisplay.value.runtime else RuntimeState.STOPPED,
         )
-        if (stored) return SourceResult.Success(Unit)
-        val error = SourceError(SourceErrorKind.STORAGE)
-        diagnostics.sourceFailure(clock.now(), error)
-        return SourceResult.Failure(error)
+        if (!stored) diagnostics.sourceFailure(clock.now(), SourceError(SourceErrorKind.STORAGE))
+        return stored
     }
 
     @Synchronized

@@ -269,8 +269,13 @@ class UserSettings(context: Context) : SettingsPersistence {
             prefs.edit().putBoolean("monitoring_enabled", value).commit()
         }.getOrDefault(false)
         if (!committed) {
-            // commit() updates this process before disk I/O; restore the accepted value.
-            runCatching { prefs.edit().putBoolean("monitoring_enabled", previous).commit() }
+            if (value) {
+                // A failed Start must stay off.
+                runCatching { prefs.edit().putBoolean("monitoring_enabled", previous).commit() }
+            } else {
+                // Stop is effective in this process even when durable storage failed.
+                runCatching { prefs.edit().putBoolean("monitoring_enabled", false).apply() }
+            }
         }
         return committed
     }

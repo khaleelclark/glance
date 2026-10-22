@@ -42,7 +42,11 @@ internal class NotificationPresentation(private val storage: NotificationVisibil
         if (expectedEpoch != accepted.epoch) return false
         if (accepted.dismissed) return true
         val next = accepted.copy(dismissed = true)
-        if (!storage.write(next)) throw IOException("Could not save notification dismissal")
+        if (!storage.write(next)) {
+            // Conservatively suppress promotion in this process even when durability failed.
+            accepted = next
+            throw IOException("Could not save notification dismissal")
+        }
         accepted = next
         return true
     }

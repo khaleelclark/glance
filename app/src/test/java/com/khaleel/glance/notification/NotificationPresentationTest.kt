@@ -22,20 +22,26 @@ class NotificationPresentationTest {
         assertEquals(NotificationPresentationState(false, 5), presentation.current())
     }
 
-    @Test fun `failed dismissal and restore retain only accepted state`() {
-        for (operation in listOf<(NotificationPresentation) -> Unit>(
-            { it.dismiss(4) },
-            { it.restore() },
-        )) {
-            val initial = NotificationPresentationState(false, 4)
-            val storage = Storage(initial).apply { fail = true }
-            val presentation = NotificationPresentation(storage)
+    @Test fun `failed dismissal suppresses promotion in memory without claiming durability`() {
+        val initial = NotificationPresentationState(false, 4)
+        val storage = Storage(initial).apply { fail = true }
+        val presentation = NotificationPresentation(storage)
 
-            assertThrows(IOException::class.java) { operation(presentation) }
-            assertEquals(initial, presentation.current())
-            assertEquals(initial, storage.disk)
-            assertFalse(initial == storage.memory)
-        }
+        assertThrows(IOException::class.java) { presentation.dismiss(4) }
+        assertEquals(NotificationPresentationState(true, 4), presentation.current())
+        assertEquals(initial, storage.disk)
+        assertEquals(NotificationPresentationState(true, 4), storage.memory)
+    }
+
+    @Test fun `failed restore keeps suppression despite mutated preference memory`() {
+        val initial = NotificationPresentationState(true, 4)
+        val storage = Storage(initial).apply { fail = true }
+        val presentation = NotificationPresentation(storage)
+
+        assertThrows(IOException::class.java) { presentation.restore() }
+        assertEquals(initial, presentation.current())
+        assertEquals(initial, storage.disk)
+        assertEquals(NotificationPresentationState(false, 5), storage.memory)
     }
 
     @Test fun `dismissal already writing completes before restore and restore wins`() {

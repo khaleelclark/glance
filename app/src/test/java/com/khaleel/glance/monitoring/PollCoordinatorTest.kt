@@ -32,6 +32,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
 
 class PollCoordinatorTest {
     private val base = Instant.parse("2026-09-27T12:00:00Z")
@@ -116,6 +117,30 @@ class PollCoordinatorTest {
     }
 
     @Test
+    fun completedManualRefreshNearDueTimeStartsANewFullInterval() = runBlocking {
+        val calls = AtomicInteger()
+        lateinit var fixture: Fixture
+        val manualCompleted = CompletableDeferred<Unit>()
+        fixture = fixture(sourceResult = {
+            if (calls.incrementAndGet() == 2) {
+                fixture.clock.elapsed = 61_001L
+                manualCompleted.complete(Unit)
+            }
+            SourceResult.Success(reading(patrick))
+        })
+
+        fixture.coordinator.start(7L)
+        withTimeout(3_000) { while (calls.get() < 1) kotlinx.coroutines.yield() }
+        fixture.clock.elapsed = 60_000L
+        fixture.coordinator.requestRefresh()
+        withTimeout(3_000) { manualCompleted.await() }
+        delay(100)
+
+        assertEquals(2, fixture.source.latestCalls)
+        fixture.coordinator.stop()
+    }
+
+    @Test
     fun blockedConnectionStillAgesReadingWithoutNetworkFetch() = runBlocking {
         val fixture = fixture(
             initialReading = reading(patrick),
@@ -145,8 +170,10 @@ class PollCoordinatorTest {
         val clock = FakeClock(base, 1_000L)
         val source = FakeSource(sourceResult)
         val settings = MemorySettings().apply {
-            monitoringEnabled = true
-            retryWindow = nextAllowed?.let { com.khaleel.glance.data.RetryWindow(it, com.khaleel.glance.data.RetryReason.PROVIDER) }
+            setMonitoringEnabled(true)
+            setRetryWindow(nextAllowed?.let {
+                com.khaleel.glance.data.RetryWindow(it, com.khaleel.glance.data.RetryReason.PROVIDER)
+            })
         }
         val controller = AppController(
             source = source,
@@ -193,7 +220,7 @@ class PollCoordinatorTest {
 
     private class FakeClock(
         var wall: Instant,
-        private val elapsed: Long,
+        @Volatile var elapsed: Long,
     ) : Clock {
         override fun now(): Instant = wall
         override fun elapsedRealtimeMillis(): Long = elapsed
@@ -220,9 +247,16 @@ class PollCoordinatorTest {
         override var accentHex = "#087E82"
         override var intervalMinutes = 1
         override var resumeAfterBoot = true
-        override var monitoringEnabled = false
-        override var retryWindow: com.khaleel.glance.data.RetryWindow? = null
-        override fun clear() { monitoringEnabled = false; retryWindow = null }
+        private var monitoring = false
+        private var retry: com.khaleel.glance.data.RetryWindow? = null
+        override val monitoringEnabled: Boolean get() = monitoring
+        override val retryWindow: com.khaleel.glance.data.RetryWindow? get() = retry
+        override fun setMonitoringEnabled(value: Boolean): Boolean { monitoring = value; return true }
+        override fun setRetryWindow(value: com.khaleel.glance.data.RetryWindow?): Boolean {
+            retry = value
+            return true
+        }
+        override fun clear() { monitoring = false; retry = null }
     }
 
     private class FakeSource(

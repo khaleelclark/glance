@@ -52,6 +52,8 @@ class AppController(
     private var consecutiveFailures = 0
     private var lastManualRefreshElapsed: Long? = null
     private var authAttemptsStopped = false
+    private var monitoringEnabled = settings.monitoringEnabled
+    private var retryWindow = settings.retryWindow
     private var auth: SavedAuth? = try { authStore.load() } catch (_: Exception) {
         authStore.clear() // restored ciphertext or invalidated Keystore key requires sign-in
         null
@@ -74,16 +76,16 @@ class AppController(
 
     private val mutableDisplay = MutableStateFlow(
         DisplayState(
-            monitoringEnabled = settings.monitoringEnabled,
+            monitoringEnabled = monitoringEnabled,
             runtime = RuntimeState.STOPPED,
             connection = if (auth == null) ConnectionState.SIGN_IN_REQUIRED else ConnectionState.READY,
             person = displayedPerson(),
             reading = patient.lastReading,
             freshness = ReadingPolicy.freshness(patient.lastReading, clock.now()),
             lastSuccessfulFetch = null,
-            nextAllowedFetch = settings.nextAllowedFetch,
+            nextAllowedFetch = retryWindow?.until,
             history = patient.history,
-            providerRetryAt = settings.retryWindow?.takeIf { it.reason == RetryReason.PROVIDER }?.until,
+            providerRetryAt = retryWindow?.takeIf { it.reason == RetryReason.PROVIDER }?.until,
         ),
     )
     val display: StateFlow<DisplayState> = mutableDisplay
@@ -98,16 +100,16 @@ class AppController(
     }
 
     private fun snapshot(connection: ConnectionState, runtime: RuntimeState = mutableDisplay.value.runtime) = DisplayState(
-        monitoringEnabled = settings.monitoringEnabled,
+        monitoringEnabled = monitoringEnabled,
         runtime = runtime,
         connection = if (auth == null) ConnectionState.SIGN_IN_REQUIRED else connection,
         person = displayedPerson(),
         reading = patient.lastReading,
         freshness = ReadingPolicy.freshness(patient.lastReading, clock.now()),
         lastSuccessfulFetch = mutableDisplay.value.lastSuccessfulFetch,
-        nextAllowedFetch = settings.nextAllowedFetch,
+        nextAllowedFetch = retryWindow?.until,
         history = patient.history,
-        providerRetryAt = settings.retryWindow?.takeIf { it.reason == RetryReason.PROVIDER }?.until,
+        providerRetryAt = retryWindow?.takeIf { it.reason == RetryReason.PROVIDER }?.until,
     )
 
     @Synchronized
@@ -117,15 +119,29 @@ class AppController(
     }
 
     @Synchronized
-    fun setMonitoringEnabled(enabled: Boolean) {
-        settings.monitoringEnabled = enabled
+    fun setMonitoringEnabled(enabled: Boolean): SourceResult<Unit> {
+        val stored = runCatching { settings.setMonitoringEnabled(enabled) }.getOrDefault(false)
+        monitoringEnabled = enabled && stored
         if (!enabled) generation++
-        mutableDisplay.value = snapshot(mutableDisplay.value.connection, if (enabled) mutableDisplay.value.runtime else RuntimeState.STOPPED)
+        val connection = if (stored) mutableDisplay.value.connection else ConnectionState.LOCAL_ERROR
+        mutableDisplay.value = snapshot(
+            connection,
+            if (monitoringEnabled) mutableDisplay.value.runtime else RuntimeState.STOPPED,
+        )
+        if (stored) return SourceResult.Success(Unit)
+        val error = SourceError(SourceErrorKind.STORAGE)
+        diagnostics.sourceFailure(clock.now(), error)
+        return SourceResult.Failure(error)
     }
 
     @Synchronized
     fun updateFreshness() {
         mutableDisplay.value = snapshot(mutableDisplay.value.connection)
+    }
+
+    private fun persistRetryWindow(value: RetryWindow?): Boolean {
+        retryWindow = value
+        return runCatching { settings.setRetryWindow(value) }.getOrDefault(false)
     }
 
     /** Clears old-account data before contacting the new account. */
@@ -138,24 +154,29 @@ class AppController(
             previousAccountId = auth?.session?.accountId
             source.clearTransportSession()
             authAttemptsStopped = false
-            settings.monitoringEnabled = false
-            settings.retryWindow = null
+            val monitoringStored = runCatching { settings.setMonitoringEnabled(false) }.getOrDefault(false)
+            monitoringEnabled = false
+            val retryStored = persistRetryWindow(null)
             authStore.clear()
             patientStore.clear()
             auth = null
             patient = StoredPatientState(null, null)
+            if (!monitoringStored || !retryStored) {
+                val error = SourceError(SourceErrorKind.STORAGE)
+                diagnostics.sourceFailure(clock.now(), error)
+                mutableDisplay.value = snapshot(ConnectionState.LOCAL_ERROR, RuntimeState.STOPPED)
+                return SourceResult.Failure(error)
+            }
             mutableDisplay.value = snapshot(ConnectionState.SIGN_IN_REQUIRED, RuntimeState.STOPPED)
         }
         val login = source.signIn(credentials)
         if (login is SourceResult.Failure) {
-            updateFailure(login.error, capturedGeneration)
-            return login
+            return SourceResult.Failure(updateFailure(login.error, capturedGeneration))
         }
         val session = (login as SourceResult.Success).value
         val connections = source.connections(session)
         if (connections is SourceResult.Failure) {
-            updateFailure(connections.error, capturedGeneration)
-            return connections
+            return SourceResult.Failure(updateFailure(connections.error, capturedGeneration))
         }
         synchronized(this) {
             if (generation != capturedGeneration) return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
@@ -195,7 +216,11 @@ class AppController(
         }
         generation++
         patient = next
-        settings.retryWindow = null
+        if (!persistRetryWindow(null)) {
+            val error = SourceError(SourceErrorKind.STORAGE)
+            updateFailure(error, generation)
+            return SourceResult.Failure(error)
+        }
         mutableDisplay.value = snapshot(ConnectionState.READY)
         return SourceResult.Success(Unit)
     }
@@ -206,7 +231,11 @@ class AppController(
         generation++
         patient = StoredPatientState(null, null)
         patientStore.clear()
-        settings.retryWindow = null
+        if (!persistRetryWindow(null)) {
+            val error = SourceError(SourceErrorKind.STORAGE)
+            updateFailure(error, generation)
+            return
+        }
         mutableDisplay.value = snapshot(ConnectionState.READY)
     }
 
@@ -244,8 +273,7 @@ class AppController(
             result = source.connections(recovered)
         }
         if (result is SourceResult.Failure) {
-            updateFailure(result.error, capturedGeneration)
-            return result
+            return SourceResult.Failure(updateFailure(result.error, capturedGeneration))
         }
         if (result is SourceResult.Success) {
             val selectedId = synchronized(this) { patient.selected?.id }
@@ -291,7 +319,7 @@ class AppController(
         val (selected, capturedGeneration) = synchronized(this) { patient.selected to generation }
         if (selected == null) return SourceResult.Failure(SourceError(SourceErrorKind.CONNECTION_REMOVED))
         val now = clock.now()
-        settings.retryWindow?.takeIf { now < it.until }?.let {
+        retryWindow?.takeIf { now < it.until }?.let {
             if (!manual || it.reason == RetryReason.PROVIDER) {
                 if (it.reason == RetryReason.PROVIDER) {
                     synchronized(this) { mutableDisplay.value = snapshot(ConnectionState.BACKING_OFF) }
@@ -344,11 +372,17 @@ class AppController(
                     }
                     patient = next
                     consecutiveFailures = 0
-                    settings.retryWindow = null
+                    if (!persistRetryWindow(null)) {
+                        val error = SourceError(SourceErrorKind.STORAGE)
+                        updateFailure(error, capturedGeneration)
+                        return SourceResult.Failure(error)
+                    }
                     mutableDisplay.value = snapshot(ConnectionState.READY).copy(lastSuccessfulFetch = clock.now())
                     diagnostics.pollSuccess(clock.now())
                 }
-                is SourceResult.Failure -> updateFailure(result.error, capturedGeneration)
+                is SourceResult.Failure -> {
+                    return SourceResult.Failure(updateFailure(result.error, capturedGeneration))
+                }
             }
         }
         return result.toReadingResult()
@@ -360,10 +394,32 @@ class AppController(
     }
 
     @Synchronized
-    private fun updateFailure(error: SourceError, capturedGeneration: Long) {
-        if (generation != capturedGeneration) return
+    private fun updateFailure(error: SourceError, capturedGeneration: Long): SourceError {
+        if (generation != capturedGeneration) return error
         diagnostics.sourceFailure(clock.now(), error)
-        val state = when (error.kind) {
+        var effectiveError = error
+        if (error.kind == SourceErrorKind.RATE_LIMITED) {
+            if (!persistRetryWindow(RetryWindow(
+                error.retryAfter ?: clock.now().plus(Duration.ofMinutes(15)), RetryReason.PROVIDER,
+            ))) effectiveError = SourceError(SourceErrorKind.STORAGE)
+        } else if (error.kind == SourceErrorKind.NETWORK ||
+            error.kind == SourceErrorKind.SERVER || error.kind == SourceErrorKind.PROTOCOL
+        ) {
+            // Automatic retries retain exponential backoff. An explicit manual retry can
+            // bypass it, but never replace a still-active provider cooldown.
+            val minutes = min(15, 1 shl min(4, consecutiveFailures++))
+            if (retryWindow?.let { it.reason == RetryReason.PROVIDER && clock.now() < it.until } != true &&
+                !persistRetryWindow(RetryWindow(
+                    clock.now().plus(Duration.ofMinutes(minutes.toLong()))
+                        .plusMillis(Random.nextLong(0, 15_001)),
+                    RetryReason.TRANSIENT,
+                ))
+            ) {
+                effectiveError = SourceError(SourceErrorKind.STORAGE)
+            }
+        }
+        if (effectiveError !== error) diagnostics.sourceFailure(clock.now(), effectiveError)
+        val state = when (effectiveError.kind) {
             SourceErrorKind.NETWORK -> ConnectionState.OFFLINE
             SourceErrorKind.INVALID_CREDENTIALS, SourceErrorKind.AUTH_EXPIRED -> {
                 authAttemptsStopped = true
@@ -378,25 +434,8 @@ class AppController(
             SourceErrorKind.STORAGE -> ConnectionState.LOCAL_ERROR
             else -> ConnectionState.BACKING_OFF
         }
-        if (error.kind == SourceErrorKind.RATE_LIMITED) {
-            settings.retryWindow = RetryWindow(
-                error.retryAfter ?: clock.now().plus(Duration.ofMinutes(15)), RetryReason.PROVIDER,
-            )
-        } else if (error.kind == SourceErrorKind.NETWORK ||
-            error.kind == SourceErrorKind.SERVER || error.kind == SourceErrorKind.PROTOCOL
-        ) {
-            // Automatic retries retain exponential backoff. An explicit manual retry can
-            // bypass it, but never replace a still-active provider cooldown.
-            val minutes = min(15, 1 shl min(4, consecutiveFailures++))
-            if (settings.retryWindow?.let { it.reason == RetryReason.PROVIDER && clock.now() < it.until } != true) {
-                settings.retryWindow = RetryWindow(
-                    clock.now().plus(Duration.ofMinutes(minutes.toLong()))
-                        .plusMillis(Random.nextLong(0, 15_001)),
-                    RetryReason.TRANSIENT,
-                )
-            }
-        }
         mutableDisplay.value = snapshot(state)
+        return effectiveError
     }
 
     private suspend fun sessionOrRecover() = synchronized(this) { if (authAttemptsStopped) null else auth?.session }
@@ -441,12 +480,12 @@ class AppController(
             ConnectionState.OFFLINE -> SourceErrorKind.NETWORK
             ConnectionState.PROTOCOL_ERROR -> SourceErrorKind.PROTOCOL
             ConnectionState.LOCAL_ERROR -> SourceErrorKind.STORAGE
-            ConnectionState.BACKING_OFF -> if (settings.retryWindow?.reason == RetryReason.PROVIDER) {
+            ConnectionState.BACKING_OFF -> if (retryWindow?.reason == RetryReason.PROVIDER) {
                 SourceErrorKind.RATE_LIMITED
             } else SourceErrorKind.SERVER
             else -> SourceErrorKind.AUTH_EXPIRED
         },
-        retryAfter = settings.nextAllowedFetch,
+        retryAfter = retryWindow?.until,
     )
 
     @Synchronized
@@ -455,6 +494,8 @@ class AppController(
         source.clearTransportSession()
         authAttemptsStopped = true
         settings.clear()
+        monitoringEnabled = false
+        retryWindow = null
         authStore.clear()
         patientStore.clear()
         val nicknamesCleared = runCatching { nicknameStore.clear() }.isSuccess

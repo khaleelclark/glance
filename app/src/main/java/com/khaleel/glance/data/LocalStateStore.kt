@@ -203,9 +203,11 @@ interface SettingsPersistence {
     var accentHex: String
     var intervalMinutes: Int
     var resumeAfterBoot: Boolean
-    var monitoringEnabled: Boolean
-    var retryWindow: RetryWindow?
+    val monitoringEnabled: Boolean
+    val retryWindow: RetryWindow?
     val nextAllowedFetch: Instant? get() = retryWindow?.until
+    fun setMonitoringEnabled(value: Boolean): Boolean
+    fun setRetryWindow(value: RetryWindow?): Boolean
     fun clear()
 }
 
@@ -245,10 +247,9 @@ class UserSettings(context: Context) : SettingsPersistence {
     override var resumeAfterBoot: Boolean
         get() = prefs.getBoolean("resume_after_boot", true)
         set(value) = prefs.edit().putBoolean("resume_after_boot", value).apply()
-    override var monitoringEnabled: Boolean
+    override val monitoringEnabled: Boolean
         get() = prefs.getBoolean("monitoring_enabled", false)
-        set(value) = prefs.edit().putBoolean("monitoring_enabled", value).commit().let { require(it) }
-    override var retryWindow: RetryWindow?
+    override val retryWindow: RetryWindow?
         get() {
             // Read the reason and deadline from one preference snapshot.
             val stored = prefs.all
@@ -260,10 +261,40 @@ class UserSettings(context: Context) : SettingsPersistence {
             }.getOrDefault(RetryReason.PROVIDER)
             return RetryWindow(until, reason)
         }
-        set(value) = prefs.edit()
-            .putLong("next_allowed_fetch", value?.until?.toEpochMilli() ?: 0L)
-            .putString("retry_reason", value?.reason?.name)
-            .commit().let { require(it) }
+
+    override fun setMonitoringEnabled(value: Boolean): Boolean {
+        val previous = monitoringEnabled
+        if (previous == value) return true
+        val committed = runCatching {
+            prefs.edit().putBoolean("monitoring_enabled", value).commit()
+        }.getOrDefault(false)
+        if (!committed) {
+            // commit() updates this process before disk I/O; restore the accepted value.
+            runCatching { prefs.edit().putBoolean("monitoring_enabled", previous).commit() }
+        }
+        return committed
+    }
+
+    override fun setRetryWindow(value: RetryWindow?): Boolean {
+        val previous = retryWindow
+        if (previous == value) return true
+        val committed = runCatching {
+            prefs.edit()
+                .putLong("next_allowed_fetch", value?.until?.toEpochMilli() ?: 0L)
+                .putString("retry_reason", value?.reason?.name)
+                .commit()
+        }.getOrDefault(false)
+        if (!committed) {
+            // Keep reads in this process aligned with the last accepted disk value.
+            runCatching {
+                prefs.edit()
+                    .putLong("next_allowed_fetch", previous?.until?.toEpochMilli() ?: 0L)
+                    .putString("retry_reason", previous?.reason?.name)
+                    .commit()
+            }
+        }
+        return committed
+    }
 
     override fun clear() {
         // Privacy failure must not prevent credentials and patient caches from being cleared.

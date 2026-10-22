@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.khaleel.glance.core.RuntimeState
+import com.khaleel.glance.core.SourceResult
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import com.khaleel.glance.notification.NotificationVisibility
 import kotlinx.coroutines.CoroutineScope
@@ -192,7 +193,7 @@ class MonitoringService : Service() {
         fun start(context: Context, restoreNotification: Boolean = true): Boolean {
             val deps = resolveDependencies(context) ?: return false
             if (restoreNotification) NotificationVisibility.restore(context)
-            deps.controller.setMonitoringEnabled(true)
+            if (deps.controller.setMonitoringEnabled(true) is SourceResult.Failure) return false
             deps.controller.setRuntime(RuntimeState.STARTING)
             val actionGeneration = nextActionGeneration()
             val intent = serviceIntent(context, ACTION_START, actionGeneration)
@@ -212,6 +213,17 @@ class MonitoringService : Service() {
                 }
                 false
             }
+        }
+
+        /** Route an in-app refresh through the live service scheduler. */
+        fun refresh(context: Context): Boolean {
+            val actionGeneration = currentActionGeneration ?: return false
+            return runCatching {
+                ContextCompat.startForegroundService(
+                    context,
+                    serviceIntent(context, ACTION_REFRESH, actionGeneration),
+                )
+            }.isSuccess
         }
 
         fun refreshPendingIntent(context: Context, actionGeneration: Long): PendingIntent =

@@ -92,7 +92,7 @@ class PollCoordinator(
             val elapsedNow = dependencies.clock.elapsedRealtimeMillis()
             val interval = dependencies.controller.settings.intervalMinutes
                 .coerceIn(1, 5) * 60_000L
-            val cooldownDelay = dependencies.controller.settings.nextAllowedFetch
+            val cooldownDelay = display.nextAllowedFetch
                 ?.let { Duration.between(dependencies.clock.now(), it).toMillis().coerceAtLeast(0L) }
                 ?: 0L
             val dueDelay = (nominalDueElapsed - elapsedNow).coerceAtLeast(0L)
@@ -127,6 +127,8 @@ class PollCoordinator(
                     }
                     nominalDueElapsed += (interval + jitter).coerceAtLeast(1L)
                 } while (nominalDueElapsed <= after)
+            } else if (decision == PollDecision.COMPLETED || decision == PollDecision.TIMED_OUT) {
+                nominalDueElapsed = after + interval
             }
         }
     }
@@ -145,7 +147,7 @@ class PollCoordinator(
             val display = controller.display.value
             if (!display.monitoringEnabled) return PollDecision.DISABLED
             if (display.connection.blocksAutomaticPolling()) return PollDecision.BLOCKED
-            if (trigger == PollTrigger.AUTOMATIC && controller.settings.nextAllowedFetch?.isAfter(dependencies.clock.now()) == true) {
+            if (trigger == PollTrigger.AUTOMATIC && display.nextAllowedFetch?.isAfter(dependencies.clock.now()) == true) {
                 return PollDecision.COOLDOWN
             }
 

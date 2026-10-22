@@ -10,6 +10,7 @@ import com.khaleel.glance.core.GlucoseSource
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.ReadingFreshness
+import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
@@ -343,6 +344,68 @@ class AppControllerTest {
         assertEquals(1, source.latestCalls)
     }
 
+    @Test fun failedStartIntentPersistenceLeavesMonitoringStoppedWithStorageError() {
+        val settings = MemorySettings().apply { failMonitoringWrites = true }
+        val controller = controller(
+            FakeSource { _, _ -> SourceResult.Success(reading(patrick)) },
+            MemoryPatient(),
+            settings,
+        )
+
+        val result = controller.setMonitoringEnabled(true)
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertFalse(controller.display.value.monitoringEnabled)
+        assertEquals(RuntimeState.STOPPED, controller.display.value.runtime)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+    }
+
+    @Test fun failedStopIntentPersistenceStillStopsAndRejectsLateReading() = runBlocking {
+        val pending = CompletableDeferred<SourceResult<Reading>>()
+        val source = FakeSource { _, _ -> pending.await() }
+        val patient = MemoryPatient()
+        val settings = MemorySettings().apply { setMonitoringEnabled(true) }
+        val controller = controller(source, patient, settings)
+        controller.selectPerson(patrick)
+        val poll = async { controller.poll() }
+        withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+        settings.failMonitoringWrites = true
+
+        val result = controller.setMonitoringEnabled(false)
+        pending.complete(SourceResult.Success(reading(patrick)))
+        poll.await()
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertFalse(controller.display.value.monitoringEnabled)
+        assertEquals(RuntimeState.STOPPED, controller.display.value.runtime)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertNull(controller.display.value.reading)
+        assertNull(patient.state.lastReading)
+        assertTrue(settings.monitoringEnabled)
+    }
+
+    @Test fun failedProviderCooldownPersistenceReportsStorageAndFailsClosedInProcess() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource { _, _ ->
+            SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        settings.failRetryWrites = true
+
+        val result = controller.poll()
+        val blocked = controller.poll(manual = true)
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertEquals(SourceErrorKind.STORAGE, (blocked as SourceResult.Failure).error.kind)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertEquals(retryAt, controller.display.value.providerRetryAt)
+        assertEquals(retryAt, controller.display.value.nextAllowedFetch)
+        assertNull(settings.retryWindow)
+        assertEquals(1, source.latestCalls)
+    }
+
     @Test fun failedSignInPersistenceKeepsAccountSignedOut() = runBlocking {
         val auth = MemoryAuth(null).apply { failSave = true }
         val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
@@ -657,9 +720,23 @@ class AppControllerTest {
         override var accentHex = "#087E82"
         override var intervalMinutes = 1
         override var resumeAfterBoot = true
-        override var monitoringEnabled = false
-        override var retryWindow: com.khaleel.glance.data.RetryWindow? = null
-        override fun clear() { monitoringEnabled = false; retryWindow = null }
+        private var monitoring = false
+        private var retry: com.khaleel.glance.data.RetryWindow? = null
+        var failMonitoringWrites = false
+        var failRetryWrites = false
+        override val monitoringEnabled: Boolean get() = monitoring
+        override val retryWindow: com.khaleel.glance.data.RetryWindow? get() = retry
+        override fun setMonitoringEnabled(value: Boolean): Boolean {
+            if (failMonitoringWrites) return false
+            monitoring = value
+            return true
+        }
+        override fun setRetryWindow(value: com.khaleel.glance.data.RetryWindow?): Boolean {
+            if (failRetryWrites) return false
+            retry = value
+            return true
+        }
+        override fun clear() { monitoring = false; retry = null }
     }
     private class FakeSource(
         val onConnections: suspend (Session) -> SourceResult<List<Connection>> = { SourceResult.Success(emptyList()) },

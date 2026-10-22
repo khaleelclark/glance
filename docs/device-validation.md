@@ -1,5 +1,22 @@
 # Device validation log
 
+## 0.32 release — 22 October 2026
+
+Clean source `41fa21c` passes 236 phone / 15 watch tests, all four lints with
+zero errors, signing continuity and static debug exclusion. Its production
+source is identical to the independently reviewed `d7b43ee`; no production
+findings remain. Forty-seven API36 debug checks share one installed fixture
+hash: 20 framework/appearance, 23 alert and 4 actual restore UI checks. The
+separate earlier 10-check retention receipt has a legacy source-identity limit.
+See [0.32 verification](notification-032-validation.md) and [review](review-032.md).
+
+The owner confirmed the prior 0.31 Live format became visible after Samsung's
+**Live notifications for all apps** developer toggle. This is device-specific
+owner evidence, not a supported app-side enablement route or qualification of
+0.32's color/contrast/recovery. The low-alert icon issue remains open. The new
+signed APK has not been run on the owner's phone. The historical records below
+retain their own source/device boundaries.
+
 ## 0.31 release — 21 October 2026
 
 The 0.31 release uses content-comparable numeric icons on Android 17+,

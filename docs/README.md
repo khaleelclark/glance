@@ -64,6 +64,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 - [Glance 0.27 independent source review](review-027.md)
 - [Glance 0.28 independent source review](review-028.md)
 - [Glance 0.30 independent source review](review-030.md)
+- [Glance 0.32 independent source review](review-032.md)
 - [Glance 0.31 independent source review](review-031.md)
 - [Phone UI overhaul in 0.21.0](ui-overhaul-validation.md)
 - [Phone UI refresh in 0.20.0](ui-refresh-validation.md)

@@ -1,0 +1,66 @@
+{
+  "sourceCommit": "41fa21cc0d8c5c2419db7e963e3fb497a22a512a",
+  "cleanSource": true,
+  "staticVerificationSha256": "0ead7040a9dbc50f32840319ca1daf746365d1bfcbc4860bbd420ce7789b8344",
+  "logs": [
+    {
+      "file": "docs/evidence/build-0.32.0-clean.log",
+      "sha256": "9aac603e17dece7665356c59aa872aa63f4d0936374b8a7af0a5fd1834bafee5"
+    },
+    {
+      "file": "docs/evidence/build-0.32.0-final-debug.log",
+      "sha256": "05746b35628b7fdb4415883a1e153218960b47d217bcc665ad8bc0860dbc9d58"
+    }
+  ],
+  "apks": {
+    "personal": {
+      "file": "glance-0.32.0-personal.apk",
+      "sha256": "4daa243ead8f56b1f07f08f9301dc8eba940915e53f8ff07aff7a00f02de8977",
+      "signatureVerified": true,
+      "existingSignerRetained": true,
+      "debuggable": false,
+      "debugDemoComponentsAbsent": true,
+      "tests": {
+        "tests": 236,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "lint": {
+        "debug": {
+          "errors": 0,
+          "warnings": 96
+        },
+        "release": {
+          "errors": 0,
+          "warnings": 58
+        }
+      }
+    },
+    "watch": {
+      "file": "glance-0.32.0-watch.apk",
+      "sha256": "08a50edc47f8f711d510041695961e6daaae0cee45e395be982313a61fd89560",
+      "signatureVerified": true,
+      "existingSignerRetained": true,
+      "debuggable": false,
+      "debugDemoComponentsAbsent": true,
+      "tests": {
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "lint": {
+        "debug": {
+          "errors": 0,
+          "warnings": 0
+        },
+        "release": {
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    }
+  },
+  "reviewDocumentationLow": "Closed by final post-API-guard debug build/lint and subsequent clean build with all four lints passing; no production-source finding."
+}

@@ -1,0 +1,131 @@
+{
+  "versionName": "0.32.0",
+  "versionCode": 37,
+  "sourceCommit": "41fa21cc0d8c5c2419db7e963e3fb497a22a512a",
+  "cleanSource": true,
+  "phone": {
+    "applicationId": "com.khaleel.glance",
+    "versionCode": 37,
+    "versionName": "0.32.0",
+    "apk": "glance-0.32.0-personal.apk",
+    "apkSha256": "4daa243ead8f56b1f07f08f9301dc8eba940915e53f8ff07aff7a00f02de8977",
+    "certificateSha256": "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E",
+    "sourceCommit": "41fa21cc0d8c5c2419db7e963e3fb497a22a512a",
+    "tested": {
+      "unitTests": "passed: 236 tests, 0 failures/errors/skips",
+      "lintDebugRelease": "passed: 0 errors, 154 total warnings",
+      "emulator": "not run for this exact source commit; see docs/device-validation.md for prior evidence",
+      "liveLibreLinkUpAccount": "not tested",
+      "GalaxyS25Ultra": "not tested"
+    }
+  },
+  "watch": {
+    "applicationId": "com.khaleel.glance",
+    "versionCode": 37,
+    "versionName": "0.32.0",
+    "apk": "glance-0.32.0-watch.apk",
+    "apkSha256": "08a50edc47f8f711d510041695961e6daaae0cee45e395be982313a61fd89560",
+    "certificateSha256": "837148EAF9B9DEFAB6617ED0EB2F62FA49E04A14F216C4CFD719B8D71778977E",
+    "sourceCommit": "41fa21cc0d8c5c2419db7e963e3fb497a22a512a",
+    "companion": "Requires same-signer Glance phone app and Android Wear OS pairing",
+    "tested": {
+      "unitTests": "passed: 15 tests, 0 failures/errors/skips",
+      "lintDebugRelease": "passed: 0 errors, 0 total warnings",
+      "emulator": "not run for this exact source commit; see docs/watch-validation.md",
+      "GalaxyWatch7": "not tested"
+    }
+  },
+  "artifactVerification": {
+    "sourceCommit": "41fa21cc0d8c5c2419db7e963e3fb497a22a512a",
+    "cleanSource": true,
+    "apks": {
+      "personal": {
+        "file": "glance-0.32.0-personal.apk",
+        "sha256": "4daa243ead8f56b1f07f08f9301dc8eba940915e53f8ff07aff7a00f02de8977",
+        "signatureVerified": true,
+        "existingSignerRetained": true,
+        "debuggable": false,
+        "debugDemoComponentsAbsent": true,
+        "tests": {
+          "tests": 236,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "lint": {
+          "debug": {
+            "errors": 0,
+            "warnings": 96
+          },
+          "release": {
+            "errors": 0,
+            "warnings": 58
+          }
+        }
+      },
+      "watch": {
+        "file": "glance-0.32.0-watch.apk",
+        "sha256": "08a50edc47f8f711d510041695961e6daaae0cee45e395be982313a61fd89560",
+        "signatureVerified": true,
+        "existingSignerRetained": true,
+        "debuggable": false,
+        "debugDemoComponentsAbsent": true,
+        "tests": {
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "lint": {
+          "debug": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "release": {
+            "errors": 0,
+            "warnings": 0
+          }
+        }
+      }
+    }
+  },
+  "reviewedProductionSource": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+  "independentReview": {
+    "status": "completed",
+    "source": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+    "productionFindings": "none",
+    "documentationLow": "closed by post-guard debug and clean build receipt",
+    "report": "docs/review-032.md"
+  },
+  "nativeEvidence": [
+    {
+      "file": "docs/evidence/api36-notification-compatibility-0.32.0-paced-reviewed-source-20261022.json",
+      "checks": 20,
+      "sourceCommitAtRun": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+      "sourceDirtyAtRun": true,
+      "fixtureApkSha256": "32f4b18986ddb2114eb2cec09ab49795424cd6a7b7b126c7997aa407945a884b"
+    },
+    {
+      "file": "docs/evidence/api36-alert-icons-0.27.0-appearance-032-final-20261022.json",
+      "checks": 23,
+      "sourceCommitAtRun": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+      "sourceDirtyAtRun": true,
+      "fixtureApkSha256": "32f4b18986ddb2114eb2cec09ab49795424cd6a7b7b126c7997aa407945a884b"
+    },
+    {
+      "file": "docs/evidence/api36-live-update-recovery-0.32.0-final-20261022.json",
+      "checks": 4,
+      "sourceCommitAtRun": "d7b43ee8e5a51d59c553837e9202e9c3f6bf4d5f",
+      "sourceDirtyAtRun": true,
+      "fixtureApkSha256": "32f4b18986ddb2114eb2cec09ab49795424cd6a7b7b126c7997aa407945a884b"
+    }
+  ],
+  "qualification": {
+    "updatedSamsungTintAndLogo": "not tested on new APK",
+    "actualPromotionOnNewApk": "not tested; prior 0.31 owner observation only",
+    "SamsungAdmission": "owner reports developer toggle enabled Live format on their device; no supported app-side bypass established",
+    "lowAlertIcon": "owner issue remains open",
+    "restore": "4 actual API36 UI checks after delivered synthetic callbacks; Samsung real swipe recovery not qualified",
+    "liveAccountAndBattery": "not tested"
+  }
+}

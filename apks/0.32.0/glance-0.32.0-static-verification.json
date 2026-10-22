@@ -1,0 +1,54 @@
+{
+  "sourceCommit": "41fa21cc0d8c5c2419db7e963e3fb497a22a512a",
+  "cleanSource": true,
+  "apks": {
+    "personal": {
+      "file": "glance-0.32.0-personal.apk",
+      "sha256": "4daa243ead8f56b1f07f08f9301dc8eba940915e53f8ff07aff7a00f02de8977",
+      "signatureVerified": true,
+      "existingSignerRetained": true,
+      "debuggable": false,
+      "debugDemoComponentsAbsent": true,
+      "tests": {
+        "tests": 236,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "lint": {
+        "debug": {
+          "errors": 0,
+          "warnings": 96
+        },
+        "release": {
+          "errors": 0,
+          "warnings": 58
+        }
+      }
+    },
+    "watch": {
+      "file": "glance-0.32.0-watch.apk",
+      "sha256": "08a50edc47f8f711d510041695961e6daaae0cee45e395be982313a61fd89560",
+      "signatureVerified": true,
+      "existingSignerRetained": true,
+      "debuggable": false,
+      "debugDemoComponentsAbsent": true,
+      "tests": {
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "lint": {
+        "debug": {
+          "errors": 0,
+          "warnings": 0
+        },
+        "release": {
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    }
+  }
+}

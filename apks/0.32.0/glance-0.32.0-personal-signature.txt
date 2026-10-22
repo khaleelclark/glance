@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=Glance Personal Release, O=Personal, C=US
+Signer #1 certificate SHA-256 digest: 837148eaf9b9defab6617ed0eb2f62fa49e04a14f216c4cfd719b8d71778977e
+Signer #1 certificate SHA-1 digest: 6d7746e5b2824a5dcb6c4973f992fe95b0cb36e2
+Signer #1 certificate MD5 digest: 7d9ca2a807fc71ad34cc5b56384de789
+Signer #1 key algorithm: EC
+Signer #1 key size (bits): 256
+Signer #1 public key SHA-256 digest: 4c2e3d35194a553188b3dd0eeee54024a7f838dff3d655fc68bbaebe0e58fb3b
+Signer #1 public key SHA-1 digest: edeff69be7fc251f9157d3b74048cfc3e72db531
+Signer #1 public key MD5 digest: 1440b20c22cb40150a3856023d60608c

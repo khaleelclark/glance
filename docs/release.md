@@ -1,15 +1,35 @@
 # Build, signing, installation and upgrades
 
-Current phone/watch source version: **0.32.0 / code 37**. Both use application ID
+Current phone/watch version: **0.32.0 / code 37**. Both use application ID
 `com.khaleel.glance` on their respective devices and require matching certificates
 for Wear Data Layer sharing. Source repository: `khaleelclark/glance`.
 Release update: 22 October 2026. Version changes must update both modules.
 
-## 0.32 delivery status
+## Delivered 0.32 artifacts and qualification
 
-The themed Live Update and explicit restore changes are being verified; signed
-0.32 artifacts are not delivered yet. See [0.32 checks](notification-032-validation.md).
-The immutable previously delivered 0.31 artifacts and evidence follow.
+The phone/watch 0.32 APKs are signed from clean source
+`41fa21cc0d8c5c2419db7e963e3fb497a22a512a`, with the existing personal signer.
+236 phone and 15 watch tests pass; all four lints have zero errors (phone 96
+debug / 58 release warnings; watch zero). Static package/version, signature
+continuity and debug-component exclusion checks pass. The 47 current API36
+checks (20 framework, 23 alert, 4 restore UI) are separately pinned debug
+evidence, not runtime qualification of the signed APK or Samsung tint.
+
+The [independent review](review-032.md) has no production-source findings; its
+one documentation LOW is closed by the final build receipt. Updated Samsung
+tint/contrast/recovery, physical/API37 runtime and the reported low-alert icon
+remain unverified. No supported bypass for Samsung’s app admission is claimed.
+
+- [Signed phone APK](../apks/0.32.0/glance-0.32.0-personal.apk)
+- [Signed watch APK](../apks/0.32.0/glance-0.32.0-watch.apk)
+- [Checksums](../apks/0.32.0/SHA256SUMS)
+- [Delivery and signer manifest](../apks/0.32.0/glance-0.32.0-delivery-manifest.json)
+- [Static verification](../apks/0.32.0/glance-0.32.0-static-verification.json)
+- [Verification/install bundle](../apks/0.32.0/glance-0.32.0-verification-and-install.zip)
+
+See [0.32 checks](notification-032-validation.md). Later documentation/artifact
+commits do not change the signed app source. The immutable previously delivered
+0.31 artifacts and evidence follow.
 
 ## Previous 0.31 artifacts and qualification
 

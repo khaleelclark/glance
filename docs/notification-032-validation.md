@@ -43,8 +43,17 @@ paced too. The paced compatibility (20), alert (23) and actual recovery UI (4) c
 pass on the same debug APK, with installed-hash verification in the UI receipt.
 The UI driver collapses the previous shade and starts an isolated synthetic
 process before testing the new monitoring session, avoiding unfinished prior
-fixture teardown. Failed attempts are not counted as passes. Source review and
-clean signing are still pending. The legacy retention driver did not capture exact
+fixture teardown. Failed attempts are not counted as passes.
+
+Clean signed source `41fa21cc0d8c5c2419db7e963e3fb497a22a512a` has production
+source identical to review pin `d7b43ee`; the intervening commit changes only
+debug fixtures, scripts, docs and evidence. The signed build passes 236 phone /
+15 watch tests and all four lints with zero errors; phone lint has 96 debug /
+58 release warnings, watch zero. Static APK checks retain the existing signer
+and exclude debug/demo components. The signed APK has not been run on Samsung.
+The [pinned independent review](review-032.md) finds no production-source
+issues. Its documentation LOW is closed by the [final build receipt](evidence/release-build-0.32.0.json)
+and pinned post-guard debug/clean build logs. The legacy retention driver did not capture exact
 source/APK identity; that receipt is kept with this provenance limitation, not
 reported as exact-source qualification.
 A debug-only API36 getter needed an explicit version guard to satisfy lint; the

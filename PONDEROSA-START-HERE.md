@@ -2,6 +2,8 @@
 
 ## Resume the existing app
 
+Follow [AGENTS.md](AGENTS.md) for the project's Ponytail coding workflow.
+
 Glance is already implemented at `/home/phoenix/khaleel/glance`; do not bootstrap
 or rebuild its scope from scratch. Read [README](README.md), the
 [documentation index](docs/README.md), [current architecture](docs/architecture.md)

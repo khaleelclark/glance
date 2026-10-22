@@ -480,14 +480,15 @@ class MainActivity : ComponentActivity() {
         stopMonitoring()
         val logCleared = clearAlarmLog(showError = false)
         val nicknamesCleared = controller.signOut()
-        app.alertPreferences.clear()
+        val alertSettingsCleared = runCatching { app.alertPreferences.clear() }.isSuccess
         refreshSettings()
         setupPrefs.edit().clear().apply()
         accountState = AccountUiState(AccountStatus.SIGNED_OUT)
         setupState = setupState.copy(step = SetupStep.SIGN_IN)
-        if (!logCleared || !nicknamesCleared) {
+        if (!logCleared || !nicknamesCleared || !alertSettingsCleared) {
             val remaining = listOfNotNull(if (!logCleared) "alarm log" else null,
-                if (!nicknamesCleared) "encrypted nicknames" else null).joinToString(" and ")
+                if (!nicknamesCleared) "encrypted nicknames" else null,
+                if (!alertSettingsCleared) "alert settings/state" else null).joinToString(" and ")
             Toast.makeText(this, "Signed out, but the $remaining could not be erased. Please try again.",
                 Toast.LENGTH_LONG).show()
         }

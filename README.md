@@ -5,10 +5,11 @@ readings from LibreLinkUp and displays them in an ongoing notification. The phon
 connects directly to LibreLinkUp; there is no Glance backend or analytics.
 An optional Wear OS companion receives readings from the phone.
 
-Current app version: **0.31.0**, versionCode **36**, package
+Current app version: **0.32.0**, versionCode **37**, package
 `com.khaleel.glance`. The Studio launch configuration fix is included on `main`.
-The 0.31 notification update uses comparable numeric icons on Android 17+ and checks Live Update
-layout eligibility on the actual platform. See [notification checks](docs/notification-031-validation.md)
+The 0.32 notification update uses the selected theme accent and a droplet beside one
+Live Update value, with explicit dismissal recovery. Regular numeric icons retain
+the Android 17 content-comparison behavior and actual-framework eligibility checks. See [notification checks](docs/notification-032-validation.md)
 and [APK downloads](apks/README.md) for artifact identity and verification boundaries.
 
 The owner has reported using the app and updating through Studio. Recorded

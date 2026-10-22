@@ -15,6 +15,15 @@ Signed APKs, manifests and checksums are linked from the release guide. See
 [0.31 evidence and limits](notification-031-validation.md).
 The owner reports Android 17 / One UI 9; physical qualification is unverified.
 
+On 22 October, owner-supplied 0.31.0 / API37 screenshots after **Show notification**
+show requested/eligible/promoted=true, chip text supplied and no custom layout.
+The shade still places Glance below other notifications and a prominent status
+chip is not visible. This establishes the reported phone's framework promotion
+at that capture, while Samsung top placement, Now bar and lock-screen behavior
+remain unresolved. The installed APK hash was not collected; this is not a
+controlled device test. See the [redacted observation receipt](evidence/owner-api37-live-update-promotion-20261022.json)
+and [current troubleshooting](troubleshooting.md).
+
 The following 0.30 summary and historical ledger retain their original scope.
 
 Current status checked 11 October 2026 against 0.30 release records and the

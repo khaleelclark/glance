@@ -193,6 +193,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Closing the shade need not resume the Activity; refresh the explicit restore action.
+        if (hasFocus) refreshSettings()
+    }
+
     override fun onDestroy() {
         scope.cancel()
         super.onDestroy()
@@ -218,6 +224,8 @@ class MainActivity : ComponentActivity() {
             app.watchPublisher.syncStatus,
             nickname = controller.nickname,
             sourcePersonName = controller.sourcePersonName,
+            notificationRestoreAvailable = setupState.notificationPermission == PermissionStatus.GRANTED &&
+                (NotificationVisibility.isDismissed(this) || NotificationVisibility.regularAfterDismissal(this)),
         )
     }
 
@@ -348,6 +356,7 @@ class MainActivity : ComponentActivity() {
         },
         onRestoreNotification = {
             if (controller.display.value.monitoringEnabled) app.showCurrentNotification(restore = true)
+            refreshSettings()
         },
         onUnitChanged = { controller.settings.unit = it; renderSettingsChange() },
         onLockScreenVisibilityChanged = {
@@ -387,7 +396,7 @@ class MainActivity : ComponentActivity() {
             }
             refreshSettings()
         },
-        onAccentHexChanged = { controller.settings.accentHex = it; refreshSettings() },
+        onAccentHexChanged = { controller.settings.accentHex = it; renderSettingsChange() },
         onAlertRuleChanged = { kind, rule ->
             runCatching { app.alertPreferences.setRule(kind, rule) }
                 .onFailure {

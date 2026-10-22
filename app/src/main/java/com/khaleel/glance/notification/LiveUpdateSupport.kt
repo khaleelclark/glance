@@ -5,9 +5,14 @@ import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import com.khaleel.glance.R
+import com.khaleel.glance.core.AccentPresets
 
 /** API 36.0 understands the promotion extra; the platform builder setter arrived in 36.1. */
 object LiveUpdateSupport {
@@ -16,8 +21,12 @@ object LiveUpdateSupport {
 
     // The inlined extra is understood by Android 16.0 even though the public constant is 36.1.
     @SuppressLint("InlinedApi")
-    fun request(builder: Notification.Builder, text: String) {
+    fun request(builder: Notification.Builder, text: String, accentHex: String = AccentPresets.DEFAULT) {
         if (Build.VERSION.SDK_INT < 36) return
+        // The chip already supplies the value as text. Its required leading icon is our logo,
+        // avoiding a second, smaller glucose number beside that text.
+        builder.setSmallIcon(R.drawable.ic_glance_status)
+        builder.setColor(Color.parseColor(AccentPresets.selected(accentHex).hex))
         builder.setShortCriticalText(text)
         builder.addExtras(Bundle().apply { putBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
         // Early Android 16 requires colorization; newer builds require it off. Ask the actual
@@ -46,6 +55,30 @@ object LiveUpdateSupport {
         }
         val posted = record?.notification
         val channel = manager.getNotificationChannel(GlucoseNotificationRenderer.CHANNEL_ID)
+        // Android may create an automatic summary on an alert's channel. It is not
+        // another threshold alert, and its resource icon must not be counted as one.
+        val summaries = active.filter { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 }
+        val alerts = active.filter {
+            it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 &&
+                it.notification.channelId.startsWith("glucose_alert_")
+        }
+        fun iconTypes(records: List<android.service.notification.StatusBarNotification>) = records
+            .map { it.notification.smallIcon.type }.distinct().sorted().joinToString().ifEmpty { "none" }
+        // Compare only locally and report booleans: never export the icon bytes/pixels,
+        // text, hash or resource IDs (those could disclose the glucose value).
+        fun matchesMonitor(records: List<android.service.notification.StatusBarNotification>): String {
+            val numericTypes = listOf(Icon.TYPE_BITMAP, Icon.TYPE_DATA)
+            val reference = posted?.smallIcon?.takeIf { it.type in numericTypes }
+                ?.let { runCatching { (it.loadDrawable(context) as? BitmapDrawable)?.bitmap }.getOrNull() }
+            return records.map { record ->
+                if (reference == null) "unavailable"
+                else if (record.notification.smallIcon.type !in numericTypes) "false"
+                else runCatching {
+                    (record.notification.smallIcon.loadDrawable(context) as? BitmapDrawable)?.bitmap
+                        ?.let { reference.sameAs(it).toString() } ?: "unavailable"
+                }.getOrDefault("unavailable")
+            }.distinct().sorted().joinToString().ifEmpty { "none" }
+        }
         return listOf(
             "Monitoring card posted: ${posted != null}",
             "Ongoing flag: ${posted?.let { it.flags and Notification.FLAG_ONGOING_EVENT != 0 } ?: false}",
@@ -58,8 +91,12 @@ object LiveUpdateSupport {
             "Colorization requested: ${posted?.extras?.getBoolean(Notification.EXTRA_COLORIZED) ?: false}",
             "Monitoring icon type: ${posted?.smallIcon?.type ?: "absent"}",
             "Monitoring automatically grouped: ${record?.overrideGroupKey != null}",
-            "App group summaries: ${active.count { it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0 }}",
-            "Active alert icon types: ${active.filter { it.notification.channelId.startsWith("glucose_alert_") }.map { it.notification.smallIcon.type }.distinct().sorted().joinToString().ifEmpty { "none" }}",
+            "Posted group summaries (includes system): ${summaries.size}",
+            "Group summary icon types: ${iconTypes(summaries)}",
+            "Group summary icons match monitor: ${matchesMonitor(summaries)}",
+            "Individual alerts posted: ${alerts.size}",
+            "Individual alert icon types: ${iconTypes(alerts)}",
+            "Individual alert icons match monitor: ${matchesMonitor(alerts)}",
             "Chip text supplied: ${Build.VERSION.SDK_INT >= 36 && !posted?.shortCriticalText.isNullOrEmpty()}",
             "Custom layout supplied: ${posted?.let { it.contentView != null || it.bigContentView != null } ?: false}",
             "Monitoring channel importance: ${channel?.importance ?: "not created"}",
@@ -82,7 +119,7 @@ object LiveUpdateSupport {
             it.id == GlucoseNotificationRenderer.NOTIFICATION_ID
         }?.notification ?: return "Live Update is allowed. Start monitoring to request it; Samsung decides whether to show it."
         if (NotificationVisibility.regularAfterDismissal(context)) {
-            return "Keeping the regular card after dismissal. To try Live Update again, turn its switch off and on."
+            return "Live Update was dismissed. Tap Restore Live Update in Glance to request it again."
         }
         return if (posted.flags and Notification.FLAG_PROMOTED_ONGOING != 0) {
             "Android reports the monitoring notification as promoted. Samsung controls its Now bar appearance." +

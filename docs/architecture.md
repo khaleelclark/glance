@@ -1,6 +1,6 @@
 # Current architecture
 
-Applies to 0.31.0, including notification grouping/platform compatibility; checked 21 October 2026.
+Applies to 0.32.0, including themed Live Updates and explicit recovery; checked 22 October 2026.
 The phone connects directly to LibreLinkUp. Pine/Ponderosa build the app and
 are outside its runtime data path. The optional watch receives a credential-free
 projection from the phone, not its own account or polling worker.
@@ -58,6 +58,11 @@ separates shape eligibility, requested/actual promotion, grouping and icon types
 A shared publication gate orders final state/privacy checks and notify/cancel.
 The default-on retention choice restores the regular card on a delivered
 current-session dismissal callback; there is no automatic re-promotion loop.
+An explicit restore action is available on Now after dismissal and in Settings.
+Live requests use the droplet resource icon plus one short-critical-text value,
+and the same curated accent as the UI. Accent selection immediately republishes
+the card; the final publication gate also validates the captured accent so an
+older render cannot replace the newer theme. Samsung controls displayed tint.
 Explicit content intents target always-enabled `MainActivity`. See
 [notification notes](../app/src/main/java/com/khaleel/glance/notification/README.md).
 

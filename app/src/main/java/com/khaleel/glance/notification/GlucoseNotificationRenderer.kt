@@ -21,6 +21,7 @@ import com.khaleel.glance.core.ConnectionState
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.ReadingFreshness
 import com.khaleel.glance.core.RuntimeState
+import com.khaleel.glance.core.AccentPresets
 import java.time.ZoneId
 import java.util.Locale
 
@@ -40,6 +41,7 @@ class GlucoseNotificationRenderer(
     zoneId: ZoneId = ZoneId.systemDefault(),
     locale: Locale = Locale.getDefault(),
     private val numericStatusIcon: Boolean = true,
+    private val accentHex: String = AccentPresets.DEFAULT,
 ) {
     private val appContext = context.applicationContext
     private val notificationManager =
@@ -86,9 +88,11 @@ class GlucoseNotificationRenderer(
                 else Notification.VISIBILITY_PRIVATE,
             )
 
-        // Keep the fresh glucose number even when an alert or promoted chip takes the app's icon slot.
-        GlucoseStatusIcon.text(state, unit, numericStatusIcon, lockScreenVisible)?.let {
-            builder.setSmallIcon(GlucoseStatusIcon.create(it))
+        // A Live Update uses the logo; its value belongs in the separate chip text slot.
+        if (!promoted) {
+            GlucoseStatusIcon.text(state, unit, numericStatusIcon, lockScreenVisible)?.let {
+                builder.setSmallIcon(GlucoseStatusIcon.create(it))
+            }
         }
 
         state.reading?.let { builder.setWhen(it.measuredAt.toEpochMilli()) }
@@ -108,7 +112,8 @@ class GlucoseNotificationRenderer(
             // The promoted status chip can show a short current value without opening the shade.
             // Delayed or stale readings use a label instead of an apparently current number.
             // The original chip can appear outside the redacted public card on lock screen/AOD.
-            LiveUpdateSupport.request(builder, if (lockScreenVisible) content.statusChipText.orEmpty() else "")
+            LiveUpdateSupport.request(builder,
+                if (lockScreenVisible) content.statusChipText.orEmpty() else "", accentHex)
         } else {
             // Promoted Live Updates cannot use RemoteViews and Android makes them uncollapsible.
             // The regular card uses distinct compact and expanded views for readable numbers.

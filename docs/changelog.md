@@ -6,6 +6,16 @@ sections supersede earlier behavior; use [setup](setup.md),
 [release and upgrades](release.md), and the [documentation index](README.md) for
 current instructions. These notes do not extend the scope of any test receipt.
 
+## 0.32.0 themed Live Update and restore action
+
+Live Update supplies the chosen Glance theme accent and the droplet logo beside
+one value, removing the duplicate numeric icon. Theme changes immediately update
+the card. Samsung controls final tint and layout. Now offers **Restore Live Update**
+after dismissal; Settings uses the same explicit action. Automatic retention
+still restores the regular card without re-promotion. Clearer diagnostics separate
+individual alert icons from system summaries. The watch runtime is unchanged;
+both modules advance to code 37. See [0.32 verification](notification-032-validation.md).
+
 ## 0.31.0 alert group icon and Live Update compatibility
 
 Android 17+ low/high alert and monitoring icons now use deterministic encoded

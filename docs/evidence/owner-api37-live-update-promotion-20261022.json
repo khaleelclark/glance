@@ -1,0 +1,45 @@
+{
+  "evidenceKind": "owner-supplied screenshots, inspected by lead",
+  "captureDate": "2026-10-22",
+  "screenshotLabels": ["1062.jpg", "1064.jpg"],
+  "appVersionReported": "0.31.0",
+  "androidApiReported": 37,
+  "installedApkHash": "not collected",
+  "precedingActionReported": "Show notification with Live Update selected",
+  "subsequentOwnerResponse": "Glance is absent from Samsung Settings / Now bar / Live notifications app list",
+  "diagnostics": {
+    "monitoringRunning": true,
+    "notificationPermissionGranted": true,
+    "monitoringCardPosted": true,
+    "ongoingFlag": true,
+    "clearAllProtectionFlag": true,
+    "foregroundServiceFlag": true,
+    "promotionRequested": true,
+    "promotedFlag": true,
+    "platformLayoutEligible": true,
+    "colorizationRequested": false,
+    "monitoringIconType": 3,
+    "automaticallyGrouped": false,
+    "postedGroupSummaryCount": 0,
+    "activeAlertIconTypes": "none",
+    "chipTextSupplied": true,
+    "customLayoutSupplied": false,
+    "monitoringChannelImportance": 2,
+    "keepCardVisible": true,
+    "cardUpdatesSuppressed": false
+  },
+  "visibleObservations": {
+    "shade": "Glance uses a small standard card below a screenshot notification and another app's ongoing task card; no expand arrow visible on Glance",
+    "statusBar": "Numeric small icon visible in diagnostic screenshot; no prominent status chip visible",
+    "lockScreenOrNowBar": "not supplied"
+  },
+  "conclusion": "Owner-observed Android framework promotion succeeds. Samsung visual placement/status-chip/Now bar admission remains unresolved.",
+  "notEstablished": [
+    "Exact installed APK or signer identity",
+    "Why the earlier capture retained the dismissal fallback",
+    "A late same-session callback causing the owner's earlier symptom",
+    "Samsung developer-toggle state and visual result after changing it",
+    "Low-alert icon behavior or a permanent non-clearable pin"
+  ],
+  "privacy": "No glucose, person, account, source timestamp, notification contents, screenshot pixels, or group identifiers copied into this receipt."
+}

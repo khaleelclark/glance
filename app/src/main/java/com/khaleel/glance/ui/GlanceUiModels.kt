@@ -66,6 +66,7 @@ data class UserSettingsUi(
     val watchSyncStatus: String = "Waiting for watch sync",
     val nickname: String = "",
     val sourcePersonName: String? = null,
+    val notificationRestoreAvailable: Boolean = false,
 ) {
     init {
         require(intervalMinutes == 1 || intervalMinutes == 5)

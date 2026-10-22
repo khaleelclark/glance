@@ -152,6 +152,11 @@ internal fun MainReadingScreen(
     var selectedTime by rememberSaveable(state.person?.id) { mutableStateOf<Long?>(null) }
     val summary: @Composable ColumnScope.() -> Unit = {
         ReadingHeader(state, callbacks, text)
+        if (settings.notificationRestoreAvailable && state.monitoringEnabled && state.runtime == RuntimeState.RUNNING) {
+            OutlinedButton(callbacks.onRestoreNotification, Modifier.fillMaxWidth()) {
+                Text(if (settings.enhancedNotification) "Restore Live Update" else "Show notification")
+            }
+        }
         ReadingHero(state, settings, text, now, locale)
         ReadingStatus(state, text, callbacks)
     }
@@ -342,7 +347,9 @@ internal fun SettingsScreen(
             SwitchSettingRow("Keep notification visible", "Protected from Clear all; restored after swiping while monitoring.", settings.keepNotificationVisible, callbacks.onKeepNotificationVisibleChanged)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(callbacks.onRestoreNotification, Modifier.weight(1f),
-                    display.monitoringEnabled && setup.notificationPermission == PermissionStatus.GRANTED) { Text("Show notification") }
+                    display.monitoringEnabled && setup.notificationPermission == PermissionStatus.GRANTED) {
+                    Text(if (settings.enhancedNotification) "Restore Live Update" else "Show notification")
+                }
                 TextButton({ help = true }, Modifier.weight(1f).heightIn(min = 48.dp)) { Text("How it works") }
             }
             ActionSettingRow("Notification settings · ${permissionStatusShort(setup.notificationPermission)}", onClick = callbacks.onOpenNotificationSettings)

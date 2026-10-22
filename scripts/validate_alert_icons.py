@@ -18,7 +18,7 @@ run('shell','run-as','com.khaleel.glance','rm','-f','files/alert-icon-probe.json
 output=run('shell','am','instrument','-w','com.khaleel.glance/.debug.AlertIconInstrumentation')
 assert 'INSTRUMENTATION_CODE: -1' in output,output
 result=json.loads(run('shell','run-as','com.khaleel.glance','cat','files/alert-icon-probe.json'))
-assert result['allPassed'] and len(result['checks'])==19 and all(result['checks'].values())
+assert result['allPassed'] and len(result['checks'])==23 and all(result['checks'].values())
 result.update(device='API 36 emulator',fixtureApkSha256=hashlib.sha256((ROOT/'app/build/outputs/apk/debug/app-debug.apk').read_bytes()).hexdigest(),sourceCommitAtRun=head,sourceDirtyAtRun=dirty,liveAccount='not tested',SamsungOneUI='not tested',audibleAlerts='not tested')
 (ROOT/('docs/evidence/api36-alert-icons-0.27.0'+('-'+args.suffix if args.suffix else '')+'.json')).write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result['checks']))

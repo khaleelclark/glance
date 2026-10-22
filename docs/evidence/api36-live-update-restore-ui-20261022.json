@@ -1,0 +1,34 @@
+{
+  "synthetic": true,
+  "sdk": 36,
+  "checks": {
+    "selectLiveUpdatePersistsChoiceAndClearsDismissalFallback": true,
+    "deleteCallbackSetsRegularFallback": true,
+    "graphThenLiveUpdateClearsFallbackThroughActualUI": true,
+    "showNotificationClearsFallbackWithLiveUpdateSelected": true
+  },
+  "sourceCommitAtRun": "0b93cf2552eda7097d54d4c3f2f00da056447d80",
+  "sourceDirtyAtRun": true,
+  "fixtureApkSha256": "67d3e9915fdb0ad4b97750de80f2ff877a6e876ac653bfe44a5693f479a41d68",
+  "scope": "Actual main settings UI selection/restore after synthetic delete callback; API36 only, promotion disabled on this emulator. No Samsung/API37/template promotion/real swipe qualification.",
+  "frameworkFacts": {
+    "sdkFull": 3600000,
+    "promotionAllowed": false,
+    "promotableCharacteristics": true,
+    "customViewAbsent": true,
+    "requestExtra": true
+  },
+  "installedApkHashVerified": true,
+  "uiActions": [
+    "Open real MainActivity Settings; select Presentation / Live Update",
+    "Deliver synthetic current-session monitoring delete callback; verify regular fallback",
+    "Select Presentation / Graph, then Presentation / Live Update; verify choice persisted and dismissal reset",
+    "Deliver another synthetic delete callback; tap actual Show notification button with Live Update selected; verify dismissal reset"
+  ],
+  "notRun": [
+    "Actual Samsung or API37 retry",
+    "Real shade swipe in this fixture",
+    "Promoted flag or visible status chip",
+    "Actual low alert icon"
+  ]
+}

@@ -112,6 +112,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                 controller.settings.enhancedNotification,
                 presentation.actionGeneration.takeIf { it != 0L },
                 numericStatusIcon = controller.settings.numericStatusIcon,
+                accentHex = controller.settings.accentHex,
             )
 
         override fun startingNotification(service: Service, presentation: MonitoringPresentation): Notification =
@@ -125,10 +126,12 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
             val lockScreenVisible = controller.settings.showOnLockScreen
             val enhanced = controller.settings.enhancedNotification
             val numericIcon = controller.settings.numericStatusIcon
+            val accent = controller.settings.accentHex
             val regularAfterDismissal = NotificationVisibility.regularAfterDismissal(this@GlanceApplication)
             val output = GlucoseNotificationRenderer(
                 this@GlanceApplication, presentation.display, unit, lockScreenVisible, enhanced,
                 presentation.actionGeneration.takeIf { it != 0L }, numericStatusIcon = numericIcon,
+                accentHex = accent,
             )
             output.createChannel()
             val notification = output.build()
@@ -142,6 +145,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                     controller.settings.showOnLockScreen == lockScreenVisible &&
                     controller.settings.enhancedNotification == enhanced &&
                     controller.settings.numericStatusIcon == numericIcon &&
+                    controller.settings.accentHex == accent &&
                     NotificationVisibility.regularAfterDismissal(this@GlanceApplication) == regularAfterDismissal
             }) { output.post(notification) }
         }

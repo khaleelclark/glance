@@ -1,11 +1,17 @@
 # Build, signing, installation and upgrades
 
-Current phone/watch version: **0.31.0 / code 36**. Both use application ID
+Current phone/watch source version: **0.32.0 / code 37**. Both use application ID
 `com.khaleel.glance` on their respective devices and require matching certificates
 for Wear Data Layer sharing. Source repository: `khaleelclark/glance`.
-Release update: 21 October 2026. Version changes must update both modules.
+Release update: 22 October 2026. Version changes must update both modules.
 
-## Delivered artifacts and qualification
+## 0.32 delivery status
+
+The themed Live Update and explicit restore changes are being verified; signed
+0.32 artifacts are not delivered yet. See [0.32 checks](notification-032-validation.md).
+The immutable previously delivered 0.31 artifacts and evidence follow.
+
+## Previous 0.31 artifacts and qualification
 
 The 0.31 signed phone/watch APKs, immutable manifests, checksums and verification
 bundle are under `apks/0.31.0/`. Use the [APK download index](../apks/README.md):

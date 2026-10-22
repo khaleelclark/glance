@@ -13,6 +13,10 @@ Enhanced mode requests promotion on Android 16 (API 36.0) and newer when
 setter, which was added in API 36.1. Short critical text is available in API
 36.0. The supported standard BigText style avoids custom RemoteViews in
 promoted mode. Android and Samsung still decide whether to promote the card.
+From 0.32, a promoted request replaces the numeric small icon with the droplet
+logo and supplies the selected curated theme accent with `setColor`. The chip
+then contains one value. This does not force colorization: actual-framework
+eligibility still determines that flag. Samsung may adjust or ignore the tint.
 The running framework's `hasPromotableCharacteristics()` decides colorization:
 early Android 16 requires it, while newer platform documentation prohibits it.
 The default uncolorized template is retained when eligible; colorization is
@@ -29,8 +33,8 @@ versions always retain the ordinary icon. Android controls tint and icon size.
 Glucose alerts share this same number policy, including numeric-icon preference,
 privacy, source-person identity and freshness. A visible alert's icon follows the
 latest reading/unit silently (ONLY_ALERT_ONCE) while preserving its original
-category and triggering reading/time. Promoted requests retain eligible numbers
-too. Alert delete intents use an opaque per-post token and explicit non-exported
+category and triggering reading/time. Promoted requests use the logo and separate
+chip text instead. Alert delete intents use an opaque per-post token and explicit non-exported
 receiver; delayed callbacks cannot clear a later alarm. Missing/dismissed alerts
 are not republished by icon refresh. A new process discards an unscoped prior
 alarm card on first render, keeping its encrypted history record.

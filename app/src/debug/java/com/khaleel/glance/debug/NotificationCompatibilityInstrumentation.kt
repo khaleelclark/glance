@@ -6,6 +6,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
@@ -44,7 +45,7 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
                 Reading("synthetic-compatibility", now, value, value, GlucoseUnit.MG_DL, null,
                     Trend.STEADY, "synthetic", now), ReadingFreshness.FRESH, now, null)
         }
-        fun builder() = Notification.Builder(context, GlucoseNotificationRenderer.CHANNEL_ID)
+        fun builder(channel: String = GlucoseNotificationRenderer.CHANNEL_ID) = Notification.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_glance_status).setContentTitle("DEMO · Compatibility")
             .setContentText("Synthetic framework check").setOngoing(true).setOnlyAlertOnce(true)
             .setStyle(Notification.BigTextStyle().bigText("Synthetic framework check"))
@@ -92,6 +93,32 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
                 live.contentView == null && live.bigContentView == null &&
                     live.flags and Notification.FLAG_GROUP_SUMMARY == 0
             }
+            record("allSevenLiveAccentsKeepLogoSingleValueAndFrameworkEligibility") {
+                AccentPresets.all.all { accent ->
+                    val themedBuilder = builder().setSmallIcon(GlucoseStatusIcon.create("112"))
+                    LiveUpdateSupport.request(themedBuilder, "112", accent.hex)
+                    val themed = themedBuilder.build()
+                    themed.color == Color.parseColor(accent.hex) &&
+                        themed.smallIcon.type == Icon.TYPE_RESOURCE &&
+                        themed.smallIcon.resId == R.drawable.ic_glance_status &&
+                        themed.shortCriticalText == "112" && themed.hasPromotableCharacteristics() &&
+                        themed.contentView == null && themed.bigContentView == null
+                }
+            }
+            record("unknownLiveAccentUsesUiLilacFallback") {
+                val themedBuilder = builder()
+                LiveUpdateSupport.request(themedBuilder, "112", "legacy custom")
+                themedBuilder.build().color == Color.parseColor(AccentPresets.DEFAULT)
+            }
+            record("privateLiveRequestKeepsLogoAndNoGlucoseChipText") {
+                val privateBuilder = builder().setSmallIcon(GlucoseStatusIcon.create("112"))
+                LiveUpdateSupport.request(privateBuilder, "", AccentPresets.all[1].hex)
+                val privateLive = privateBuilder.build()
+                privateLive.shortCriticalText.isNullOrEmpty() &&
+                    privateLive.smallIcon.type == Icon.TYPE_RESOURCE &&
+                    privateLive.smallIcon.resId == R.drawable.ic_glance_status &&
+                    privateLive.hasPromotableCharacteristics()
+            }
             val invalidBuilder = builder().setContentTitle(null)
             LiveUpdateSupport.request(invalidBuilder, "")
             record("ineligibleLayoutDoesNotKeepUnhelpfulColorization") {
@@ -106,6 +133,27 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
             }
             await { summary() != null }
             record("oldSeparateBitmapIconsProduceNonNumericAutoSummary") { !matches(summary()!!.smallIcon, "112") }
+            manager.cancelAll()
+            await { manager.activeNotifications.isEmpty() }
+            notifier.ensureChannels()
+            val alertChannel = com.khaleel.glance.alerts.GlucoseAlertNotifier.channelId(AlertKind.LOW)
+            ids.forEach { id -> manager.notify(id,
+                builder(alertChannel).setSmallIcon(GlucoseStatusIcon.create(
+                    if (id == ids.first) "111" else "112", encoded = true)).build()) }
+            await { summary()?.smallIcon?.type == Icon.TYPE_RESOURCE }
+            GlucoseNotificationRenderer(context, state(112.0), GlucoseUnit.MG_DL, true).post()
+            await { manager.activeNotifications.any { it.id == GlucoseNotificationRenderer.NOTIFICATION_ID } }
+            record("diagnosticsSeparateSummaryResourceIconFromNumericAlerts") {
+                val report = LiveUpdateSupport.diagnostics(context)
+                report.lineSequence().toSet().containsAll(listOf(
+                    "Posted group summaries (includes system): 1",
+                    "Group summary icon types: 2",
+                    "Group summary icons match monitor: false",
+                    "Individual alerts posted: 4",
+                    "Individual alert icon types: 3",
+                    "Individual alert icons match monitor: false, true",
+                )) && !report.contains("111") && !report.contains("112")
+            }
             manager.cancelAll()
             await { manager.activeNotifications.isEmpty() }
             ids.forEach { id -> manager.notify(id,
@@ -172,6 +220,13 @@ class NotificationCompatibilityInstrumentation : Instrumentation() {
                 val current = monitoring()!!.notification
                 current.flags and Notification.FLAG_ONGOING_EVENT != 0 &&
                     current.flags and Notification.FLAG_GROUP_SUMMARY == 0 && matches(current.smallIcon, "248")
+            }
+            record("diagnosticsCompareAlertToMonitoringWithoutExportingPixels") {
+                val report = LiveUpdateSupport.diagnostics(context)
+                report.lineSequence().toSet().containsAll(listOf(
+                    "Individual alerts posted: 1",
+                    "Individual alert icons match monitor: true",
+                )) && !report.contains("240") && !report.contains("248") && !report.contains("DEMO")
             }
             alarm()!!.notification.deleteIntent.send()
             await { alarm() == null }

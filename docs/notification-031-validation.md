@@ -89,7 +89,7 @@ Reproduction uses a dedicated synthetic emulator and debug APK:
 ```sh
 ./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest :app:assembleDebug :app:lintDebug
 adb -s emulator-5556 install -r app/build/outputs/apk/debug/app-debug.apk
-python3 scripts/validate_notification_compatibility.py emulator-5556
+python3 scripts/validate_notification_compatibility.py emulator-5556 --suffix rerun-YYYYMMDD
 python3 scripts/validate_alert_icons.py emulator-5556 --suffix grouping-031
 python3 scripts/validate_notification_retention.py emulator-5556 --version 0.31.0
 ```
@@ -98,6 +98,20 @@ Never run these destructive synthetic fixtures on a real account/device.
 API36 construction/pixel tests and source inspection do not qualify physical
 Android 17 / One UI 9 grouping, audible/DND delivery, Samsung Now bar, actual
 promotion, live LibreLinkUp, watch bridging, overnight cadence or battery use.
+
+### Post-release owner observation — 22 October 2026
+
+After the explicit **Show notification** retry, the owner's reported 0.31.0 /
+API37 diagnostics show promotion requested=true, promoted=true, eligible=true,
+chip text supplied=true, custom layout=false and colorization=false, with no
+active alert or automatic group. This confirms framework promotion at the
+capture. The paired shade image still shows the standard Glance card below
+other notifications, and no prominent status chip is visible. Lock-screen/Now
+bar evidence was not supplied. The [redacted observation receipt](evidence/owner-api37-live-update-promotion-20261022.json)
+records the limited result; no installed APK hash was collected. Samsung visual
+admission and the low-alert icon issue remain open. No production patch or new
+APK follows from this observation; the next check is Samsung's available
+Live notifications/Now bar controls.
 
 Primary references inspected 21 October 2026:
 

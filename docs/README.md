@@ -1,7 +1,7 @@
 # Documentation index
 
-Current guides cover Glance **0.31.0 / code 36**, including the notification
-and watch-install update on **21 October 2026**. Phone/watch source lives in this repository;
+Current guides cover Glance **0.32.0 / code 37**, including the notification
+theme/recovery update on **22 October 2026**. Phone/watch source lives in this repository;
 signed APKs/manifests are included in versioned `apks/` folders
 and delivered artifacts; the APK index identifies the latest included version. Additional build-host outputs remain in ignored
 `release/`. See [APK downloads](../apks/README.md).
@@ -47,6 +47,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 - [Glance 0.16.0 reference layout](notification-0.16-validation.md)
 - [Glance 0.18.1 notification retention](notification-0.18-validation.md)
 - [Glance 0.27 glucose status icons and retention](notification-027-validation.md)
+- [Glance 0.32 themed Live Update and recovery](notification-032-validation.md)
 - [Glance 0.31 notification grouping and platform eligibility](notification-031-validation.md)
 - [Glance 0.29 taller range-filled reading card](reading-card-029-validation.md)
 - [Glance 0.30 richer green, smaller card and larger text](reading-card-030-validation.md)

@@ -52,11 +52,50 @@ silently. Privacy, freshness and the numeric-icon preference still apply.
 Android/Samsung control the final status-bar layout; physical One UI 9 behavior
 is unverified. Earlier Android versions keep their prior icon representation.
 
+Follow-up on 22 October 2026: the owner reports that high alerts now retain the
+number, but a low alert still replaces it with the app glyph. This remains open;
+the 0.31 change is not a verified fix for every Samsung alert. While reproducing,
+export **Account & support → Diagnostics**, including the app version, Android
+API, numeric/privacy settings, active alert icon types and automatic-grouping
+lines. A screenshot alone does not establish which small icons Android received.
+The [23-check synthetic follow-up](evidence/api36-alert-icons-0.27.0-low-follow-up-20261022.json)
+passes on API36, including low/urgent-low icon refresh to match the monitoring
+icon, unchanged triggering text/time, quiet updates and renewed expiry for a
+new sample with the same number. The receipt records the dirty debug-source run
+and installed APK hash. This does not reproduce Samsung's status bar or exercise
+the production API37 encoded-icon path. No production fix or new release is
+claimed from these checks.
+
+The owner's subsequent diagnostics confirm 0.31.0 / API37, fresh monitoring,
+numeric icons and lock-screen values enabled, a data-type monitoring icon, and
+automatic grouping. The old **Active alert icon types** row includes summaries
+that Android places on an alert channel; `2, 3` does not prove two real threshold
+alerts or prove that the threshold alert itself has a resource icon. Current
+source separates individual alerts from posted summaries and lists each set's
+icon types. It also compares icon pixels locally and reports only whether each
+set matches the monitoring icon; no pixels, hashes or values are exported.
+The summary count is labeled as including system summaries. Neither icon type
+alone proves equal current numeric contents or visible pixels. These clearer
+diagnostics are source changes, not yet included in the signed 0.31.0 APK.
+The [17-check API36 diagnostic follow-up](evidence/api36-notification-compatibility-0.31.0-diagnostics-20261022.json)
+passes, including a real automatic resource-icon summary on an alert channel
+alongside numeric child icons, separate counts/types, and local matching versus
+nonmatching pixel comparisons. Its debug build/lint pass with zero lint errors.
+This verifies diagnostic classification, not a fix for the owner's low-alert
+status bar; API37/Samsung runtime behavior still needs the explicit retry.
+
 Check Android notification permission and the **Glucose monitoring** channel.
 While monitoring is enabled, use **Settings → Notification → Show notification**.
 **Keep notification visible** restores a regular card after a delivered dismissal
 callback, but cannot override notification blocking or every OEM stop/dismissal.
 After system Stop/force-stop, reopen and explicitly start monitoring.
+
+**Keep notification visible** is recovery after dismissal, not a permanent pin.
+Glance already sets ongoing and Clear-all protection on its monitoring card.
+Android 14+ allows individual swipes of ordinary ongoing notifications while
+unlocked; an app cannot guarantee that this card is never clearable or always
+first. A promoted Live Update receives more prominent placement, but users can
+still dismiss/demote it and the system controls promotion and ordering.
 
 Select **Presentation → Live Update**, inspect its status and system-settings
 link. If offered on Samsung, also inspect Glance Live notifications and Now bar
@@ -64,6 +103,49 @@ controls. Menu labels/admission vary. A promotion flag does not prove a visible
 Now bar card. Choose **Graph** for the regular card/thumbnail. Hidden lock-screen
 values deliberately suppress numeric icon/chip/thumbnail; enable that privacy
 grant only if the resulting exposure is wanted. See [setup](setup.md).
+
+If status says **Keeping the regular card after dismissal**, Glance intentionally
+is not requesting promotion. Choose **Presentation → Graph**, then
+**Presentation → Live Update** to explicitly request it again. A restored Graph
+card having `Promotion requested: false` / `Platform layout eligible: false`
+does not establish that Samsung rejected a Live Update template. Export the
+status after the explicit retry to distinguish that case.
+
+The owner's subsequent 22 October screenshots still show the dismissal fallback:
+promotion not requested, a custom regular layout, no chip, and no active
+alerts/automatic groups. The owner reports trying the Presentation change, so
+the cause of the remaining fallback is unresolved; this is not evidence of
+Samsung rejecting an eligible request. With **Presentation → Live Update**
+selected, **Show notification** is a separate explicit restore action. Inspect
+Diagnostics immediately afterward without swiping the card. A low alert is not
+needed to check promotion. If the fallback persists, export the selected
+Presentation and status together before making further changes.
+
+The [four-check actual Settings UI probe](evidence/api36-live-update-restore-ui-20261022.json)
+passes on the dedicated API36 debug emulator: selecting Live Update persists the
+choice and clears dismissal; a synthetic current-session delete callback sets
+the regular fallback; Graph → Live Update clears it; and Show notification clears
+it while Live Update is selected. Promotion is disabled on that emulator, so
+these are reset/control checks, not promotion or Samsung/API37 qualification.
+The separately built standard request has eligible platform characteristics;
+the actual app correctly retains the regular template when promotion is denied.
+The receipt pins the dirty source and verified installed debug APK hash. No
+production behavior change or new APK release is claimed from this probe.
+
+The next owner capture, after **Show notification** at 11:48 on 22 October,
+confirms that the restore succeeded on the reported 0.31.0 / API37 phone:
+requested, promoted and platform-eligible are all true; chip text is supplied,
+colorization is false, and custom views/groups/alerts are absent. The accompanying
+shade still shows a small standard card below other notifications, and the
+status bar has no visible prominent chip. This is bounded evidence of framework
+promotion, not Samsung Now bar or top-placement qualification. The lock screen
+was not supplied. The [redacted owner-observation receipt](evidence/owner-api37-live-update-promotion-20261022.json)
+retains booleans and visual observations without health/person content; the
+installed APK hash was not collected. The earlier fallback's cause remains
+unestablished; a late-callback hypothesis is not a verified owner-device defect.
+The owner subsequently confirms that Glance is absent from Samsung's normal
+Now bar / Live notifications app list. The optional developer-switch test below
+is the next discriminator; it has not been performed or verified for Glance.
 
 For a missing Samsung Live Update, export **Account & support → Diagnostics**
 after reproducing it. The report now distinguishes requested promotion, actual
@@ -75,7 +157,21 @@ Samsung's documented path is **Settings → Lock screen and AOD → Now bar → 
 more**; enable Glance if offered. If it is absent, report that together with the
 redacted diagnostics and Android/One UI version. Do not assume a menu entry exists.
 
+If Android reports promoted=true but Samsung's presentation is still absent,
+first inspect Glance's available **Live notifications** app switch and the
+normal Now bar list. An independent BatteryBar developer reports that
+**Developer options → Live notifications for all apps** admits their app on
+Samsung ([first-hand forum report](https://forum.developer.samsung.com/), topic
+“Now Bar: let users manually enable Live Updates from other apps”). This is an
+optional diagnostic hypothesis, not an official Samsung requirement or a
+verified Glance fix. The switch affects other compatible apps too. If trying
+it, change only that switch, explicitly restore Glance, and compare the shade,
+status chip and lock screen without a swipe. Keep the before/after observations
+separate from the framework promoted flag.
+
 References: [Android Live Update requirements](https://developer.android.com/develop/ui/views/notifications/live-update),
+[Android ongoing-notification dismissal](https://developer.android.com/about/versions/14/behavior-changes-all),
+[Clear-all flag](https://developer.android.com/reference/android/app/Notification#FLAG_NO_CLEAR),
 [Samsung Now bar controls](https://www.samsung.com/us/support/answer/ANS10004605/).
 
 ## Watch or widget does not show values

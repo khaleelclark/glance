@@ -1,6 +1,6 @@
 # Phone setup and everyday use
 
-Applies to Glance 0.31.0. For installation/signing, start with
+Applies to Glance 0.32.0. For installation/signing, start with
 [release and upgrades](release.md). The app follows one explicitly selected
 LibreLinkUp connection; it does not connect directly to a sensor.
 
@@ -65,10 +65,14 @@ Routine updates are silent. **Presentation → Graph** uses the regular collapsi
 card and available three-hour source-history thumbnail. **Live Update** requests
 Android's promoted presentation where permitted; Android controls the layout,
 status chip and promotion, and Samsung controls Now bar admission.
-The number icon is eligible only for fresh numeric values with privacy enabled.
+Live Update supplies the selected Glance accent and uses the droplet logo before
+the chip's single value. The regular Graph card retains the fresh numeric icon;
+Samsung controls the final chip tint, contrast and size.
 **Keep notification visible** defaults on: a delivered current-session dismissal
 callback restores the regular card. Turn it off for manual restoration with
-**Show notification**. Stop/sign-out remove the card. OS blocking or a missing
+**Show notification**. With Live Update selected, use **Restore Live Update**
+in Settings or on Now after a dismissal. This is an explicit retry; a swipe
+does not trigger automatic re-promotion. Stop/sign-out remove the card. OS blocking or a missing
 dismissal callback can still prevent restoration.
 
 **Lock-screen values** starts off. Hidden mode supplies a redacted public

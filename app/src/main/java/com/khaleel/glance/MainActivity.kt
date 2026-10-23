@@ -275,7 +275,9 @@ class MainActivity : ComponentActivity() {
         refreshSystemState()
         if (setupState.notificationPermission != PermissionStatus.GRANTED) return
         setupState = setupState.copy(startingMonitoring = true, startFailed = false)
-        if (!MonitoringService.start(this, restoreNotification)) {
+        val started = MonitoringService.start(this, restoreNotification)
+        app.onMonitoringStart(started, explicit = restoreNotification)
+        if (!started) {
             setupState = setupState.copy(startingMonitoring = false, startFailed = true)
         }
     }

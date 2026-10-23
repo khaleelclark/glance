@@ -249,18 +249,30 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         }
     }
 
+    private val explicitSystemStop = ExplicitSystemStop()
+
+    private fun latestExplicitSystemStop(): Long? = getSystemService(ActivityManager::class.java)
+        .getHistoricalProcessExitReasons(packageName, 0, 1)
+        .firstOrNull()?.takeIf { it.reason == ApplicationExitInfo.REASON_USER_REQUESTED }?.timestamp
+
     /** A Task Manager Stop is an explicit stop, even if persisted intent was enabled. */
     fun honorExplicitSystemStop() {
-        val latest = getSystemService(ActivityManager::class.java)
-            .getHistoricalProcessExitReasons(packageName, 0, 1)
-            .firstOrNull() ?: return
-        if (latest.reason != ApplicationExitInfo.REASON_USER_REQUESTED) return
+        val timestamp = latestExplicitSystemStop() ?: return
         val prefs = getSharedPreferences("runtime_recovery", MODE_PRIVATE)
-        if (latest.timestamp <= prefs.getLong("last_handled_user_stop", 0L)) return
-        ExplicitSystemStop.handle(
+        explicitSystemStop.handle(
+            timestamp, prefs.getLong("last_handled_user_stop", 0L),
             disable = { controller.setMonitoringEnabled(false) },
             hide = { hideCurrentNotification() },
-            markHandled = { prefs.edit().putLong("last_handled_user_stop", latest.timestamp).commit() },
+            markHandled = { prefs.edit().putLong("last_handled_user_stop", timestamp).commit() },
         )
+    }
+
+    fun onMonitoringStart(started: Boolean, explicit: Boolean) {
+        val timestamp = latestExplicitSystemStop() ?: return
+        explicitSystemStop.afterStart(timestamp, explicit, saved = started) {
+            val saved = getSharedPreferences("runtime_recovery", MODE_PRIVATE).edit()
+                .putLong("last_handled_user_stop", timestamp).commit()
+            if (!saved) android.util.Log.w("GlanceMonitoring", "Could not save explicit Start recovery status")
+        }
     }
 }

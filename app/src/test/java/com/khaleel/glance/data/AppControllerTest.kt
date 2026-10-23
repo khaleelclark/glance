@@ -208,6 +208,34 @@ class AppControllerTest {
         assertEquals(1, source.latestCalls)
     }
 
+    @Test fun overlappingRateLimitsAlwaysEnforceAndReturnTheLaterDeadline() = runBlocking {
+        val existingDeadline = start.plusSeconds(900)
+        for (lateDeadline in listOf(start.plusSeconds(300), start.plusSeconds(1800), null)) {
+            val expected = maxOf(existingDeadline, lateDeadline ?: start.plusSeconds(900))
+            val pending = CompletableDeferred<SourceResult<Reading>>()
+            val source = FakeSource(
+                onConnections = { SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, existingDeadline)) },
+                onLatest = { _, _ -> pending.await() },
+            )
+            val settings = MemorySettings()
+            val controller = controller(source, MemoryPatient(), settings)
+            controller.selectPerson(patrick)
+            val poll = async { controller.poll() }
+            withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+            controller.connections()
+            pending.complete(SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, lateDeadline)))
+            val result = poll.await() as SourceResult.Failure
+
+            assertEquals(expected, result.error.retryAfter)
+            assertEquals(expected, settings.retryWindow?.until)
+            assertEquals(expected, controller.display.value.providerRetryAt)
+            val blocked = controller.poll(manual = true) as SourceResult.Failure
+            assertEquals(SourceErrorKind.RATE_LIMITED, blocked.error.kind)
+            assertEquals(expected, blocked.error.retryAfter)
+            assertEquals(1, source.latestCalls)
+        }
+    }
+
     @Test fun providerCooldownSurvivesClearingAndSelectingAPerson() = runBlocking {
         val retryAt = start.plusSeconds(900)
         val source = FakeSource { _, _ ->
@@ -426,6 +454,39 @@ class AppControllerTest {
         assertEquals(SourceErrorKind.AUTH_EXPIRED, obsolete.error.kind)
         assertEquals(accountB.accountId, auth.saved?.session?.accountId)
         assertNull(controller.display.value.person)
+    }
+
+    @Test fun supersededNoncancellableLoginDoesNotFetchItsConnections() = runBlocking {
+        for (signInAnotherAccount in listOf(false, true)) {
+            val entered = CompletableDeferred<Unit>()
+            val pending = CompletableDeferred<SourceResult<Session>>()
+            val credentialsB = Credentials("b@example.invalid", "synthetic-b")
+            val credentialsC = Credentials("c@example.invalid", "synthetic-c")
+            val sessionB = session.copy(accountId = "account-b", token = "token-b")
+            val sessionC = session.copy(accountId = "account-c", token = "token-c")
+            val source = FakeSource(
+                onConnections = { SourceResult.Success(listOf(other)) },
+                onLatest = { _, _ -> SourceResult.Success(reading(other)) },
+            ).apply {
+                onSignIn = { supplied ->
+                    if (supplied == credentialsB) {
+                        entered.complete(Unit)
+                        withContext(NonCancellable) { pending.await() }
+                    } else SourceResult.Success(sessionC)
+                }
+            }
+            val auth = MemoryAuth(SavedAuth(credentials, session))
+            val controller = AppController(source, auth, MemoryPatient(), MemorySettings(), FakeClock(start))
+            val obsoleteLogin = async { controller.signIn(credentialsB) }
+            entered.await()
+            controller.signOut()
+            if (signInAnotherAccount) assertTrue(controller.signIn(credentialsC) is SourceResult.Success)
+            pending.complete(SourceResult.Success(sessionB))
+
+            assertEquals(SourceErrorKind.AUTH_EXPIRED, (obsoleteLogin.await() as SourceResult.Failure).error.kind)
+            assertEquals(if (signInAnotherAccount) 1 else 0, source.connectionsCalls)
+            assertEquals(if (signInAnotherAccount) sessionC else null, auth.saved?.session)
+        }
     }
 
     @Test fun identityChangeResetsTransientBackoffWithoutClearingProviderCooldown() = runBlocking {
@@ -929,6 +990,7 @@ class AppControllerTest {
         @Volatile
         var connectionsCalls = 0
         var signInCalls = 0
+        var onSignIn: (suspend (Credentials) -> SourceResult<Session>)? = null
         var transportClears = 0
         override fun clearTransportSession() { transportClears++ }
         var signInResult: SourceResult<Session> = SourceResult.Success(
@@ -936,7 +998,7 @@ class AppControllerTest {
         )
         override suspend fun signIn(credentials: Credentials): SourceResult<Session> {
             signInCalls++
-            return signInResult
+            return onSignIn?.invoke(credentials) ?: signInResult
         }
         override suspend fun connections(session: Session): SourceResult<List<Connection>> {
             connectionsCalls++

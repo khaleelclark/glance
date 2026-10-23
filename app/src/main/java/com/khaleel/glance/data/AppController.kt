@@ -191,6 +191,9 @@ class AppController(
             return SourceResult.Failure(updateFailure(login.error, capturedGeneration))
         }
         val session = (login as SourceResult.Success).value
+        synchronized(this) {
+            if (generation != capturedGeneration) return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+        }
         providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         val connections = source.connections(session)
         if (connections is SourceResult.Failure) {
@@ -445,9 +448,14 @@ class AppController(
         diagnostics.sourceFailure(clock.now(), error)
         var effectiveError = error
         if (error.kind == SourceErrorKind.RATE_LIMITED) {
-            if (!persistRetryWindow(RetryWindow(
-                error.retryAfter ?: clock.now().plus(Duration.ofMinutes(15)), RetryReason.PROVIDER,
-            ))) effectiveError = SourceError(SourceErrorKind.STORAGE)
+            val deadline = maxOf(
+                error.retryAfter ?: clock.now().plus(Duration.ofMinutes(15)),
+                activeProviderCooldown()?.until ?: Instant.MIN,
+            )
+            effectiveError = if (error.retryAfter == deadline) error else error.copy(retryAfter = deadline)
+            if (!persistRetryWindow(RetryWindow(deadline, RetryReason.PROVIDER))) {
+                effectiveError = SourceError(SourceErrorKind.STORAGE)
+            }
         } else if (error.kind == SourceErrorKind.NETWORK ||
             error.kind == SourceErrorKind.SERVER || error.kind == SourceErrorKind.PROTOCOL
         ) {

@@ -186,6 +186,28 @@ class AppControllerTest {
         assertEquals(1, source.connectionsCalls)
     }
 
+    @Test fun pollAlreadyInFlightCannotEraseANewerConnectionListCooldown() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val pending = CompletableDeferred<SourceResult<Reading>>()
+        val source = FakeSource(
+            onConnections = { SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt)) },
+            onLatest = { _, _ -> pending.await() },
+        )
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        val poll = async { controller.poll() }
+        withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+        assertEquals(SourceErrorKind.RATE_LIMITED, (controller.connections() as SourceResult.Failure).error.kind)
+        pending.complete(SourceResult.Success(reading(patrick)))
+        assertTrue(poll.await() is SourceResult.Success)
+
+        assertEquals(retryAt, settings.retryWindow?.until)
+        assertEquals(retryAt, controller.display.value.providerRetryAt)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+        assertEquals(1, source.latestCalls)
+    }
+
     @Test fun providerCooldownSurvivesClearingAndSelectingAPerson() = runBlocking {
         val retryAt = start.plusSeconds(900)
         val source = FakeSource { _, _ ->

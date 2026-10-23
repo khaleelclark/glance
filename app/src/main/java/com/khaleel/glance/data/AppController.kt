@@ -152,7 +152,7 @@ class AppController(
         SourceError(SourceErrorKind.RATE_LIMITED, it.until)
     }
 
-    private fun clearRetryForIdentityBoundary(): Boolean =
+    private fun clearRetryPreservingProvider(): Boolean =
         if (activeProviderCooldown() != null) true else persistRetryWindow(null)
 
     /** Clears old-account data before contacting the new account. */
@@ -167,7 +167,7 @@ class AppController(
             authAttemptsStopped = false
             val monitoringStored = runCatching { settings.setMonitoringEnabled(false) }.getOrDefault(false)
             monitoringEnabled = false
-            val retryStored = clearRetryForIdentityBoundary()
+            val retryStored = clearRetryPreservingProvider()
             authStore.clear()
             patientStore.clear()
             auth = null
@@ -231,7 +231,7 @@ class AppController(
         generation++
         patient = next
         consecutiveFailures = 0
-        if (!clearRetryForIdentityBoundary()) {
+        if (!clearRetryPreservingProvider()) {
             val error = SourceError(SourceErrorKind.STORAGE)
             updateFailure(error, generation)
             return SourceResult.Failure(error)
@@ -249,7 +249,7 @@ class AppController(
         patient = StoredPatientState(null, null)
         patientStore.clear()
         consecutiveFailures = 0
-        if (!clearRetryForIdentityBoundary()) {
+        if (!clearRetryPreservingProvider()) {
             val error = SourceError(SourceErrorKind.STORAGE)
             updateFailure(error, generation)
             return
@@ -411,12 +411,14 @@ class AppController(
                     }
                     patient = next
                     consecutiveFailures = 0
-                    if (!persistRetryWindow(null)) {
+                    if (!clearRetryPreservingProvider()) {
                         val error = SourceError(SourceErrorKind.STORAGE)
                         updateFailure(error, capturedGeneration)
                         return SourceResult.Failure(error)
                     }
-                    mutableDisplay.value = snapshot(ConnectionState.READY).copy(lastSuccessfulFetch = clock.now())
+                    mutableDisplay.value = snapshot(
+                        if (activeProviderCooldown() == null) ConnectionState.READY else ConnectionState.BACKING_OFF,
+                    ).copy(lastSuccessfulFetch = clock.now())
                     diagnostics.pollSuccess(clock.now())
                 }
                 is SourceResult.Failure -> {

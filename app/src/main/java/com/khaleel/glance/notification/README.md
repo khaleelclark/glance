@@ -53,7 +53,11 @@ and layout eligibility, never glucose content or group/person identifiers.
 Ongoing and NO_CLEAR request protection from Clear all on both card variants.
 The owner reports Samsung clearing the card anyway. The explicit personal-build
 retention choice (default on in 0.18) restores the regular card on a valid current
-session delete intent. It checks generation, enabled state and RUNNING runtime.
+session delete intent. It checks session generation, presentation epoch, enabled
+state and RUNNING runtime. The unreleased audit fix persists dismissal and epoch
+together; explicit restore rotates the epoch under the publication lock, so an
+older callback cannot undo it. A failed restore does not clear suppression; a
+failed dismissal save suppresses promotion in-process and logs a storage warning.
 There is no new scheduler or fetch, and no automatic re-promotion after dismissal.
 Turning retention off restores the earlier persistent-suppression behavior.
 Stop/force-stop still stop the session; Samsung Now bar admission is unverified.

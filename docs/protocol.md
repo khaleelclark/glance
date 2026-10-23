@@ -453,8 +453,11 @@ the stricter policy above to avoid authentication storms and provider abuse.
 
 All automatic and manual fetches share one single-flight gate, local refresh
 debounce, backoff state, and persisted `RetryWindow` (`nextAllowedFetch` plus reason). Manual Refresh may
-coalesce with an active request but cannot bypass a provider cooldown. A
-successful response resets transient backoff but not source measurement age.
+coalesce with an active request but cannot bypass a provider cooldown. Unreleased
+audit fixes also gate explicit sign-in, connection discovery and session recovery.
+Active provider deadlines survive clear/select-person and repeated sign-in;
+explicit sign-out clears all settings. Transient failure counts reset across
+identity boundaries, independently of provider cooldowns. A successful response resets transient backoff but not source measurement age.
 
 The adapter bounds each HTTP call to at most 30 seconds; login with region/version
 replay may involve more than one call. Automatic polling wraps the controller

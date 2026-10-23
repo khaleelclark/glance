@@ -33,6 +33,9 @@ explains how to resume the existing app rather than start it again.
 
 ## Evidence and historical records
 
+The [22 October Ponytail audit fixes](ponytail-audit-20261022.md) describe the
+unreleased PR changes and their verification boundaries.
+
 [Release history](changelog.md) preserves earlier UI/defaults and migration notes.
 The records below describe their exact version/source/APK checkpoints. A passing
 debug fixture or bounded source review does not prove the final signed artifact,

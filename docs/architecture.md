@@ -36,8 +36,10 @@ preferences retain display/cadence/retry intent; dedicated checked grants govern
 notification/widget/watch exposure. Failed Start saves leave monitoring off;
 failed Stop saves still invalidate current-process work and report uncertain
 restart persistence. Retry-save failures retain the deadline in-process and
-publish a local-storage error. Stop recovery is marked handled only after a
-durable disable. Storage failures are reported explicitly.
+publish a local-storage error. A successful later explicit Start permits retry
+after local storage recovery. Stop recovery is retired after a durable disable
+or a successful later explicit Start; automatic starts do not retire it. Storage
+failures are reported explicitly.
 
 `ReadingHistory` filters by selected connection and age, sorts by source time
 and keeps at most 1,500 numeric points within 24 hours. Equal values at distinct

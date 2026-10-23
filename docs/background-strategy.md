@@ -26,7 +26,8 @@ qualification or battery measurement. See [device validation](device-validation.
 Stop/sign-out invalidate work and remove the card. `honorExplicitSystemStop`
 uses the latest `ApplicationExitInfo.REASON_USER_REQUESTED` record to clear
 monitoring intent; a stop is marked handled only after the disabled intent saves
-successfully. A failed save still stops current-process work and hides output,
+successfully, or a later explicit Start succeeds. Automatic recovery does not
+acknowledge a pending system Stop. A failed save still stops current-process work and hides output,
 while reporting that restart persistence is uncertain. Start/retry storage errors
 do not escape the control/scheduler handlers. Force-stop still requires an
 explicit app launch. Boot recovery

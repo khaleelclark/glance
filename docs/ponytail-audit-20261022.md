@@ -8,11 +8,11 @@ change notification grouping, or add automatic Live Update re-promotion.
 
 | Finding | Resolution and focused coverage |
 |---|---|
-| Failed settings writes could abort Stop/Start or escape retry handling | Checked settings writes and controller-owned accepted intent/retry state. Failed Start stays off; Stop invalidates late work and stops in-process even on save failure; retry deadlines remain enforced in-process. Failing-storage controller tests cover Start, Stop and provider cooldown. |
-| System Stop was marked handled before durable disable | `ExplicitSystemStop` hides output before recording success and leaves recovery pending on failure. Two ordering tests cover success/failure; a settings-cache regression requires a fresh commit on repeated Stop. |
+| Failed settings writes could abort Stop/Start or escape retry handling | Checked settings writes and controller-owned accepted intent/retry state. Failed Start stays off; Stop invalidates late work and stops in-process even on save failure; retry deadlines remain enforced in-process. Failing-storage controller tests cover Start, Stop and provider cooldown, plus a later successful Start/poll after storage recovery. |
+| System Stop was marked handled before durable disable | `ExplicitSystemStop` hides output before recording success and leaves recovery pending on failure. Ordering tests cover disable success/failure, failed-disable followed by explicit Start and Activity recreation (including failed acknowledgement save), and rejection of failed/automatic Start acknowledgements. A settings-cache regression requires a fresh commit on repeated Stop. |
 | Manual Refresh just before an automatic slot caused two sequential calls | Running-session UI refresh uses the service coordinator. Completed manual attempts move the next automatic slot one full interval later. A fake-clock scheduler test covers the near-due case. |
-| Provider cooldown was bypassed by sign-in, connection discovery and person changes | Every controller provider entry checks the active provider window. Person changes and repeated sign-in preserve it; explicit sign-out clears settings. Request-count regressions cover these paths; an overlapping successful poll also retains a newer connection-list cooldown. |
-| A delayed connection list could cross account boundaries | Controller captures generation/account before session recovery and checks again after I/O. Activity cancels superseded account/list jobs and token-gates completions, including failures. Controller deferred-response tests cover late account results; a cooldown-blocked account switch still clears the prior account/display before returning. |
+| Provider cooldown was bypassed by sign-in, connection discovery and person changes | Every controller provider entry checks the active provider window. Person changes and repeated sign-in preserve it; explicit sign-out clears settings. Request-count regressions cover these paths; an overlapping successful poll also retains a newer connection-list cooldown, and concurrent 429s enforce/return the longest active deadline. |
+| A delayed connection list could cross account boundaries | Controller captures generation/account before session recovery and checks again after I/O. Activity cancels superseded account/list jobs and token-gates completions, including failures. Controller deferred-response tests cover late account results; a cooldown-blocked account switch still clears the prior account/display before returning. Superseded non-cancellable logins cannot chain an obsolete discovery request. |
 | Transient failure count leaked across identities | Reset the exponent at successful account/person boundaries and sign-out; keep provider cooldown independent. Fake-clock tests cover escalation and identity reset. |
 | An old same-session delete intent could undo explicit restore | Persist dismissal plus a monotonic presentation epoch; include it in delete-intent identity/extras. Restore and final publication share the publication lock; callbacks require current session and epoch. Tests cover stale/current callbacks and both overlap orders. |
 | Dismiss/restore saves ignored failure | Failed restore retains prior accepted epoch/suppression. Failed dismissal conservatively suppresses promotion in-process and reports the save failure. Preference-cache mutation tests cover both. |
@@ -25,12 +25,12 @@ change notification grouping, or add automatic Live Update re-promotion.
 ## Verification
 
 Final source checks ran on 23 October 2026 against production/test source
-`4c311fd143db4b6dd7b7aa76691f491a56976f9d`. Documentation changes after this pin do not change tested code.
+`9508ad54c796792b24027dec16f81c8e30be1621`. Documentation changes after this pin do not change tested code.
 All tests use synthetic data; no live provider request is needed.
 
 | Check | Result |
 |---|---|
-| Phone JVM tests | 255 passed, zero failures/errors/skips |
+| Phone JVM tests | 261 passed, zero failures/errors/skips |
 | Watch JVM tests | 15 passed, zero failures/errors/skips |
 | Signing-script tests | 3 passed; synthetic tool runner/files, no key access |
 | Phone debug/release lint | Zero errors; 96 debug / 58 release warnings |
@@ -50,9 +50,14 @@ git diff --check
 ```
 
 The notification specialist independently reviewed integration at `b820372` and
-found no concrete notification/alert defect. Later source commits only change
-the controller and its tests. Account/storage/signing review is still pending;
-this PR remains a draft until that tracked result is integrated.
+found no concrete notification/alert defect. The account/storage/signing review
+at `b820372` found one medium system-Stop replay issue: a failed disable could
+be replayed after a later explicit Start. `b94e588` fixes it with three focused
+regressions; `f619272` also permits a successful Start to retry after local storage
+recovery. A subsequent controller review found two further races: a late 429 could shorten
+an active provider deadline, and a superseded login could chain old connection
+discovery. `9508ad5` fixes both, with deferred request-count/deadline regressions.
+Final review of these corrections and the completed controller changes is pending; the PR remains a draft until that tracked result is integrated.
 
 ## Coverage boundaries and remaining risk
 

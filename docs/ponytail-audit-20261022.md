@@ -8,7 +8,7 @@ change notification grouping, or add automatic Live Update re-promotion.
 
 | Finding | Resolution and focused coverage |
 |---|---|
-| Failed settings writes could abort Stop/Start or escape retry handling | Checked settings writes and controller-owned accepted intent/retry state. Failed Start stays off; Stop invalidates late work and stops in-process even on save failure; retry deadlines remain enforced in-process. Failing-storage controller tests cover Start, Stop and provider cooldown, plus a later successful Start/poll after storage recovery. |
+| Failed settings writes could abort Stop/Start or escape retry handling | Checked settings writes and controller-owned accepted intent/retry state. Failed Start stays off; Stop invalidates late work and stops in-process even on save failure; retry deadlines remain enforced in-process. Failing-storage controller tests cover Start, Stop and provider cooldown, plus a later successful Start/poll after monitoring-intent storage recovery; unrelated patient/auth/retry errors remain blocked. |
 | System Stop was marked handled before durable disable | `ExplicitSystemStop` hides output before recording success and leaves recovery pending on failure. Ordering tests cover disable success/failure, failed-disable followed by explicit Start and Activity recreation (including failed acknowledgement save), and rejection of failed/automatic Start acknowledgements. A settings-cache regression requires a fresh commit on repeated Stop. |
 | Manual Refresh just before an automatic slot caused two sequential calls | Running-session UI refresh uses the service coordinator. Completed manual attempts move the next automatic slot one full interval later. A fake-clock scheduler test covers the near-due case. |
 | Provider cooldown was bypassed by sign-in, connection discovery and person changes | Every controller provider entry checks the active provider window. Person changes and repeated sign-in preserve it; explicit sign-out clears settings. Request-count regressions cover these paths; an overlapping successful poll also retains a newer connection-list cooldown, and concurrent 429s enforce/return the longest active deadline. |
@@ -25,12 +25,12 @@ change notification grouping, or add automatic Live Update re-promotion.
 ## Verification
 
 Final source checks ran on 23 October 2026 against production/test source
-`9508ad54c796792b24027dec16f81c8e30be1621`. Documentation changes after this pin do not change tested code.
+`303a9c486d3af864a2eefa17b64d847a3af8ef74`. Documentation changes after this pin do not change tested code.
 All tests use synthetic data; no live provider request is needed.
 
 | Check | Result |
 |---|---|
-| Phone JVM tests | 261 passed, zero failures/errors/skips |
+| Phone JVM tests | 263 passed, zero failures/errors/skips |
 | Watch JVM tests | 15 passed, zero failures/errors/skips |
 | Signing-script tests | 3 passed; synthetic tool runner/files, no key access |
 | Phone debug/release lint | Zero errors; 96 debug / 58 release warnings |
@@ -51,13 +51,23 @@ git diff --check
 
 The notification specialist independently reviewed integration at `b820372` and
 found no concrete notification/alert defect. The account/storage/signing review
-at `b820372` found one medium system-Stop replay issue: a failed disable could
-be replayed after a later explicit Start. `b94e588` fixes it with three focused
-regressions; `f619272` also permits a successful Start to retry after local storage
-recovery. A subsequent controller review found two further races: a late 429 could shorten
-an active provider deadline, and a superseded login could chain old connection
-discovery. `9508ad5` fixes both, with deferred request-count/deadline regressions.
-Final review of these corrections and the completed controller changes is pending; the PR remains a draft until that tracked result is integrated.
+at `b820372` found one medium system-Stop replay issue. `b94e588` fixes it with
+three focused regressions, including failed acknowledgement persistence.
+
+Controller review found two races: a late 429 could shorten an active provider
+deadline, and a superseded login could chain old connection discovery.
+`9508ad5` fixes both with deferred regressions; the specialist independently
+checked that exact commit and found no new issues in those changes.
+
+Review of `f619272` found that monitoring Start cleared unrelated local-storage
+errors too broadly. `303a9c4` records monitoring-write failure provenance and
+clears only that error after a successful enable. Patient/auth/retry failures
+retain the polling guard. Two added regressions cover a failed patient write
+followed by successful enable (also with an intervening failed Stop), and a new
+patient failure superseding an earlier monitoring-write error. This final narrow
+correction was verified by the lead with the full suite/source inspection; it
+has no separate independent re-review receipt. All reported findings have been
+addressed. No outstanding device qualification is marked passed.
 
 ## Coverage boundaries and remaining risk
 

@@ -37,7 +37,8 @@ notification/widget/watch exposure. Failed Start saves leave monitoring off;
 failed Stop saves still invalidate current-process work and report uncertain
 restart persistence. Retry-save failures retain the deadline in-process and
 publish a local-storage error. A successful later explicit Start permits retry
-after local storage recovery. Stop recovery is retired after a durable disable
+after its own monitoring-intent write recovers; it does not clear unrelated
+patient/auth/retry storage errors. Stop recovery is retired after a durable disable
 or a successful later explicit Start; automatic starts do not retire it. Storage
 failures are reported explicitly.
 

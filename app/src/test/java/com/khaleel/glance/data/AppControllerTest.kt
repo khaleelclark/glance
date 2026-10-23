@@ -599,6 +599,44 @@ class AppControllerTest {
         assertEquals(ConnectionState.READY, controller.display.value.connection)
     }
 
+    @Test fun successfulMonitoringSaveDoesNotClearAnUnresolvedPatientStorageError() = runBlocking {
+        for (failStopWrite in listOf(false, true)) {
+            val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+            val patient = MemoryPatient()
+            val settings = MemorySettings()
+            val controller = controller(source, patient, settings)
+            controller.selectPerson(patrick)
+            patient.failSave = true
+            assertEquals(SourceErrorKind.STORAGE, (controller.poll() as SourceResult.Failure).error.kind)
+            settings.failMonitoringWrites = failStopWrite
+            controller.setMonitoringEnabled(false)
+            settings.failMonitoringWrites = false
+
+            assertTrue(controller.setMonitoringEnabled(true))
+            assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+            assertEquals(SourceErrorKind.STORAGE, (controller.poll() as SourceResult.Failure).error.kind)
+            assertEquals(1, source.latestCalls)
+        }
+    }
+
+    @Test fun aNewPatientStorageFailureSupersedesAMonitoringWriteFailure() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val patient = MemoryPatient()
+        val settings = MemorySettings()
+        val controller = controller(source, patient, settings)
+        controller.selectPerson(patrick)
+        settings.failMonitoringWrites = true
+        assertFalse(controller.setMonitoringEnabled(true))
+        patient.failSave = true
+        assertTrue(controller.selectPerson(other) is SourceResult.Failure)
+        settings.failMonitoringWrites = false
+
+        assertTrue(controller.setMonitoringEnabled(true))
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertTrue(controller.poll() is SourceResult.Failure)
+        assertEquals(0, source.latestCalls)
+    }
+
     @Test fun failedStopIntentPersistenceStillStopsAndRejectsLateReading() = runBlocking {
         val pending = CompletableDeferred<SourceResult<Reading>>()
         val source = FakeSource { _, _ -> pending.await() }

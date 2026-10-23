@@ -52,6 +52,7 @@ class AppController(
     private var consecutiveFailures = 0
     private var lastManualRefreshElapsed: Long? = null
     private var authAttemptsStopped = false
+    private var monitoringWriteFailed = false
     private var monitoringEnabled = settings.monitoringEnabled
     private var retryWindow = settings.retryWindow
     private var auth: SavedAuth? = try { authStore.load() } catch (_: Exception) {
@@ -123,12 +124,16 @@ class AppController(
         val stored = runCatching { settings.setMonitoringEnabled(enabled) }.getOrDefault(false)
         monitoringEnabled = enabled && stored
         if (!enabled) generation++
+        if (!stored && mutableDisplay.value.connection != ConnectionState.LOCAL_ERROR) {
+            monitoringWriteFailed = true
+        }
         val connection = when {
             !stored -> ConnectionState.LOCAL_ERROR
-            enabled && mutableDisplay.value.connection == ConnectionState.LOCAL_ERROR ->
+            enabled && monitoringWriteFailed && mutableDisplay.value.connection == ConnectionState.LOCAL_ERROR ->
                 if (activeProviderCooldown() != null) ConnectionState.BACKING_OFF else ConnectionState.READY
             else -> mutableDisplay.value.connection
         }
+        if (stored && enabled) monitoringWriteFailed = false
         mutableDisplay.value = snapshot(
             connection,
             if (monitoringEnabled) mutableDisplay.value.runtime else RuntimeState.STOPPED,
@@ -166,6 +171,7 @@ class AppController(
         val previousAccountId: String?
         synchronized(this) {
             generation++
+            monitoringWriteFailed = false
             capturedGeneration = generation
             previousAccountId = auth?.session?.accountId
             source.clearTransportSession()
@@ -283,6 +289,7 @@ class AppController(
         try {
             nicknameStore.save(accountId, next)
         } catch (_: Exception) {
+            monitoringWriteFailed = false
             diagnostics.sourceFailure(clock.now(), SourceError(SourceErrorKind.STORAGE))
             return SourceResult.Failure(SourceError(SourceErrorKind.STORAGE))
         }
@@ -445,6 +452,7 @@ class AppController(
     @Synchronized
     private fun updateFailure(error: SourceError, capturedGeneration: Long): SourceError {
         if (generation != capturedGeneration) return error
+        monitoringWriteFailed = false
         diagnostics.sourceFailure(clock.now(), error)
         var effectiveError = error
         if (error.kind == SourceErrorKind.RATE_LIMITED) {
@@ -550,6 +558,7 @@ class AppController(
         authAttemptsStopped = true
         settings.clear()
         monitoringEnabled = false
+        monitoringWriteFailed = false
         retryWindow = null
         consecutiveFailures = 0
         authStore.clear()

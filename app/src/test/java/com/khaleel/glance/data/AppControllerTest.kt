@@ -520,6 +520,24 @@ class AppControllerTest {
         assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
     }
 
+    @Test fun successfulExplicitStartAfterStorageRecoveryCanPollAgain() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        settings.failMonitoringWrites = true
+        assertFalse(controller.setMonitoringEnabled(true))
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+
+        settings.failMonitoringWrites = false
+        assertTrue(controller.setMonitoringEnabled(true))
+        controller.setRuntime(RuntimeState.RUNNING)
+
+        assertTrue(controller.poll() is SourceResult.Success)
+        assertEquals(1, source.latestCalls)
+        assertEquals(ConnectionState.READY, controller.display.value.connection)
+    }
+
     @Test fun failedStopIntentPersistenceStillStopsAndRejectsLateReading() = runBlocking {
         val pending = CompletableDeferred<SourceResult<Reading>>()
         val source = FakeSource { _, _ -> pending.await() }

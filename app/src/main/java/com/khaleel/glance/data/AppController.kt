@@ -123,7 +123,12 @@ class AppController(
         val stored = runCatching { settings.setMonitoringEnabled(enabled) }.getOrDefault(false)
         monitoringEnabled = enabled && stored
         if (!enabled) generation++
-        val connection = if (stored) mutableDisplay.value.connection else ConnectionState.LOCAL_ERROR
+        val connection = when {
+            !stored -> ConnectionState.LOCAL_ERROR
+            enabled && mutableDisplay.value.connection == ConnectionState.LOCAL_ERROR ->
+                if (activeProviderCooldown() != null) ConnectionState.BACKING_OFF else ConnectionState.READY
+            else -> mutableDisplay.value.connection
+        }
         mutableDisplay.value = snapshot(
             connection,
             if (monitoringEnabled) mutableDisplay.value.runtime else RuntimeState.STOPPED,

@@ -6,6 +6,7 @@ import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.Trend
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -43,6 +44,17 @@ class AlertHistoryRetentionTest {
         assertFalse(AlertHistoryRetention.valid(entry("future-source", now, person).let {
             it.copy(reading = it.reading.copy(measuredAt = now.plusSeconds(1)))
         }))
+    }
+
+    @Test fun rejectsEntireAuthenticatedPayloadWhenAnyRowIsMalformed() {
+        val rows = listOf(entry("valid", now, person), null)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            AlertHistoryLoad.decode(rows.size) { rows[it] }
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            AlertHistoryLoad.decode(AlertHistoryLoad.MAX_PARSE_COUNT + 1) { entry("unused", now, person) }
+        }
     }
 
     private fun entry(id: String, firedAt: Instant, owner: Connection) = AlertHistoryEntry(

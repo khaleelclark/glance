@@ -19,6 +19,7 @@ import com.khaleel.glance.monitoring.MonitoringDependencyProvider
 import com.khaleel.glance.monitoring.MonitoringNotifications
 import com.khaleel.glance.monitoring.MonitoringPresentation
 import com.khaleel.glance.monitoring.MonitoringService
+import com.khaleel.glance.monitoring.ExplicitSystemStop
 import com.khaleel.glance.notification.GlucoseNotificationRenderer
 import com.khaleel.glance.notification.NotificationVisibility
 import com.khaleel.glance.notification.NotificationPublication
@@ -118,10 +119,15 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
         override fun startingNotification(service: Service, presentation: MonitoringPresentation): Notification =
             renderer(presentation).apply { createChannel() }.build()
 
+        override fun restore() {
+            restoreNotificationPresentation()
+        }
+
         override fun render(presentation: MonitoringPresentation) {
             alertEngine.refreshIcons(presentation.display, controller.settings.unit, controller.settings.showOnLockScreen)
             watchPublisher.refresh()
             val generation = notificationPublication.generation()
+            val presentationEpoch = NotificationVisibility.epoch(this@GlanceApplication)
             val unit = controller.settings.unit
             val lockScreenVisible = controller.settings.showOnLockScreen
             val enhanced = controller.settings.enhancedNotification
@@ -146,6 +152,7 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                     controller.settings.enhancedNotification == enhanced &&
                     controller.settings.numericStatusIcon == numericIcon &&
                     controller.settings.accentHex == accent &&
+                    NotificationVisibility.current(this@GlanceApplication, presentationEpoch) &&
                     NotificationVisibility.regularAfterDismissal(this@GlanceApplication) == regularAfterDismissal
             }) { output.post(notification) }
         }
@@ -175,8 +182,12 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     }
 
     fun showCurrentNotification(restore: Boolean = false) {
-        if (restore) NotificationVisibility.restore(this)
+        if (restore) restoreNotificationPresentation()
         notifications.render(MonitoringPresentation(controller.display.value, MonitoringService.currentActionGeneration ?: 0L))
+    }
+
+    private fun restoreNotificationPresentation() {
+        notificationPublication.clear { NotificationVisibility.restore(this) }
     }
 
     fun hideCurrentNotification() = notifications.hide()
@@ -196,11 +207,12 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
     }
 
     /** A delayed delete callback cannot republish across a cancellation or a new session. */
-    fun onNotificationDismissed(actionGeneration: Long) {
+    fun onNotificationDismissed(actionGeneration: Long, presentationEpoch: Long) {
         val generation = notificationPublication.generation()
         val state = controller.display.value
         val keepVisible = NotificationVisibility.keepVisible(this)
-        fun action() = NotificationDismissal.action(
+        fun action() = if (!NotificationVisibility.current(this, presentationEpoch)) DismissalAction.IGNORE
+        else NotificationDismissal.action(
             actionGeneration, MonitoringService.currentActionGeneration,
             controller.display.value.monitoringEnabled,
             controller.display.value.runtime == RuntimeState.RUNNING,
@@ -226,21 +238,41 @@ class GlanceApplication : Application(), MonitoringDependencyProvider {
                 controller.settings.showOnLockScreen == lockScreenVisible &&
                 controller.settings.numericStatusIcon == numericIcon
         }, invalidatePending = true) {
-            NotificationVisibility.dismiss(this)
-            if (notification != null) output.post(notification)
+            val dismissed = try {
+                NotificationVisibility.dismiss(this, presentationEpoch)
+            } catch (_: java.io.IOException) {
+                android.util.Log.w("GlanceNotification", "Notification dismissal could not be saved")
+                // Dismissal remains suppressed in this process even when its save fails.
+                true
+            }
+            if (dismissed && notification != null) output.post(notification)
         }
     }
 
+    private val explicitSystemStop = ExplicitSystemStop()
+
+    private fun latestExplicitSystemStop(): Long? = getSystemService(ActivityManager::class.java)
+        .getHistoricalProcessExitReasons(packageName, 0, 1)
+        .firstOrNull()?.takeIf { it.reason == ApplicationExitInfo.REASON_USER_REQUESTED }?.timestamp
+
     /** A Task Manager Stop is an explicit stop, even if persisted intent was enabled. */
     fun honorExplicitSystemStop() {
-        val latest = getSystemService(ActivityManager::class.java)
-            .getHistoricalProcessExitReasons(packageName, 0, 1)
-            .firstOrNull() ?: return
-        if (latest.reason != ApplicationExitInfo.REASON_USER_REQUESTED) return
+        val timestamp = latestExplicitSystemStop() ?: return
         val prefs = getSharedPreferences("runtime_recovery", MODE_PRIVATE)
-        if (latest.timestamp <= prefs.getLong("last_handled_user_stop", 0L)) return
-        prefs.edit().putLong("last_handled_user_stop", latest.timestamp).apply()
-        controller.setMonitoringEnabled(false)
-        hideCurrentNotification()
+        explicitSystemStop.handle(
+            timestamp, prefs.getLong("last_handled_user_stop", 0L),
+            disable = { controller.setMonitoringEnabled(false) },
+            hide = { hideCurrentNotification() },
+            markHandled = { prefs.edit().putLong("last_handled_user_stop", timestamp).commit() },
+        )
+    }
+
+    fun onMonitoringStart(started: Boolean, explicit: Boolean) {
+        val timestamp = latestExplicitSystemStop() ?: return
+        explicitSystemStop.afterStart(timestamp, explicit, saved = started) {
+            val saved = getSharedPreferences("runtime_recovery", MODE_PRIVATE).edit()
+                .putLong("last_handled_user_stop", timestamp).commit()
+            if (!saved) android.util.Log.w("GlanceMonitoring", "Could not save explicit Start recovery status")
+        }
     }
 }

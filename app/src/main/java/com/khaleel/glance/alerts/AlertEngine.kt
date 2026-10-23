@@ -4,6 +4,8 @@ import com.khaleel.glance.core.Clock
 import com.khaleel.glance.core.DisplayState
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
+import com.khaleel.glance.core.ReadingFreshness
+import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.SourceResult
 import java.util.UUID
 
@@ -48,14 +50,20 @@ class AlertEngine(
             current.specialValue != returned.specialValue
         ) return
         val live = currentDisplay()
-        if (!live.monitoringEnabled || live.person?.id != returned.connectionId ||
-            live.reading?.measuredAt != current.measuredAt ||
-            live.reading?.valueMgDl != current.valueMgDl
+        val livePerson = live.person ?: return
+        val liveReading = live.reading ?: return
+        if (!live.monitoringEnabled || live.runtime != RuntimeState.RUNNING ||
+            live.freshness != ReadingFreshness.FRESH ||
+            livePerson.id != returned.connectionId ||
+            liveReading.connectionId != returned.connectionId ||
+            liveReading.measuredAt != current.measuredAt ||
+            liveReading.valueMgDl != current.valueMgDl ||
+            liveReading.specialValue != current.specialValue
         ) return
 
         val prior = preferences.snapshot()
         val firedAt = clock.now()
-        val evaluation = AlertPolicy.evaluate(preferences.config(), prior, display, firedAt)
+        val evaluation = AlertPolicy.evaluate(preferences.config(), prior, live, firedAt)
         if (evaluation.snapshot == prior) return
         val kind = evaluation.kind
         if (kind != null) notifier.ensureChannels()
@@ -66,13 +74,13 @@ class AlertEngine(
         } else evaluation.snapshot
         preferences.saveSnapshot(toSave)
         if (kind != null && deliver) {
-            notifier.post(kind, display, unit, showOnLockScreen && currentPrivacy())
+            notifier.post(kind, live, unit, showOnLockScreen && currentPrivacy())
             history.append(
                 AlertHistoryEntry(
                     id = UUID.randomUUID().toString(),
-                    person = person,
+                    person = livePerson,
                     kind = kind,
-                    reading = current,
+                    reading = liveReading,
                     firedAt = clock.now(),
                 ),
             )

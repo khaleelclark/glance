@@ -191,8 +191,12 @@ class MonitoringService : Service() {
         /** Call only from a visible, explicit user Start/Resume action. */
         fun start(context: Context, restoreNotification: Boolean = true): Boolean {
             val deps = resolveDependencies(context) ?: return false
-            if (restoreNotification) NotificationVisibility.restore(context)
-            deps.controller.setMonitoringEnabled(true)
+            try {
+                if (restoreNotification) deps.notifications.restore()
+            } catch (_: java.io.IOException) {
+                return false
+            }
+            if (!deps.controller.setMonitoringEnabled(true)) return false
             deps.controller.setRuntime(RuntimeState.STARTING)
             val actionGeneration = nextActionGeneration()
             val intent = serviceIntent(context, ACTION_START, actionGeneration)
@@ -212,6 +216,19 @@ class MonitoringService : Service() {
                 }
                 false
             }
+        }
+
+        /** Route an in-app refresh through the live service scheduler. */
+        fun requestRefresh(context: Context): Boolean {
+            val actionGeneration = currentActionGeneration ?: return false
+            val display = resolveDependencies(context)?.controller?.display?.value ?: return false
+            if (!display.monitoringEnabled || display.runtime != RuntimeState.RUNNING) return false
+            return runCatching {
+                ContextCompat.startForegroundService(
+                    context,
+                    serviceIntent(context, ACTION_REFRESH, actionGeneration),
+                )
+            }.isSuccess
         }
 
         fun refreshPendingIntent(context: Context, actionGeneration: Long): PendingIntent =

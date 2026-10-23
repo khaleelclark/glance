@@ -1,6 +1,9 @@
 # Background monitoring strategy
 
-## Current implementation — checked 11 October 2026
+## Current source — checked 22 October 2026
+
+Includes unreleased [audit fixes](ponytail-audit-20261022.md); the previously
+delivered APKs retain their own source/evidence boundaries.
 
 The service is integrated through `GlanceApplication`'s
 `MonitoringDependencyProvider`, controller and notification adapters. The
@@ -9,7 +12,9 @@ user-started foreground session uses `specialUse` on API34+, a monotonic
 30-second freshness ticks while execution is available. Single-flight work,
 skipped missed slots and persisted cooldowns prevent catch-up bursts.
 Manual Refresh on Now can bypass transient delay with a three-second debounce;
-provider cooldowns remain enforced. Old notification actions are legacy-only.
+provider cooldowns remain enforced. Running-session Refresh goes through the
+service coordinator; after a completed manual attempt the next nominal automatic
+slot is one full interval later. Old notification actions are legacy-only.
 
 There is no application wake-lock acquisition or alarm/push/WorkManager loop
 in the shipped scheduler. A coroutine cadence is not a guarantee of waking a
@@ -20,7 +25,12 @@ qualification or battery measurement. See [device validation](device-validation.
 
 Stop/sign-out invalidate work and remove the card. `honorExplicitSystemStop`
 uses the latest `ApplicationExitInfo.REASON_USER_REQUESTED` record to clear
-monitoring intent; force-stop still requires an explicit app launch. Boot recovery
+monitoring intent; a stop is marked handled only after the disabled intent saves
+successfully, or a later explicit Start succeeds. Automatic recovery does not
+acknowledge a pending system Stop. A failed save still stops current-process work and hides output,
+while reporting that restart persistence is uncertain. Start/retry storage errors
+do not escape the control/scheduler handlers. Force-stop still requires an
+explicit app launch. Boot recovery
 waits for `BOOT_COMPLETED` after unlock, stored intent, resume preference,
 notification permission and a selected authenticated connection. A previously
 suppressed card with retention off also prevents automatic boot recovery. Glance

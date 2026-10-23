@@ -60,8 +60,8 @@ class EncryptedAlertHistoryStore(
             "Unsupported alarm history"
         }
         val items = root.getJSONArray("events")
-        val parsed = (0 until minOf(items.length(), MAX_PARSE_COUNT)).mapNotNull { index ->
-            items.optJSONObject(index)?.let { runCatching { fromJson(it) }.getOrNull() }
+        val parsed = AlertHistoryLoad.decode(items.length()) { index ->
+            items.optJSONObject(index)?.let(::fromJson)
         }
         return AlertHistoryRetention.retain(parsed, clock.now())
     }
@@ -120,7 +120,18 @@ class EncryptedAlertHistoryStore(
     private companion object {
         const val FILE_NAME = "alert_history"
         const val CURRENT_VERSION = 1
-        const val MAX_PARSE_COUNT = 2_000
+    }
+}
+
+/** Every authenticated row must decode; partial history is never silently rewritten. */
+internal object AlertHistoryLoad {
+    const val MAX_PARSE_COUNT = 2_000
+
+    fun <T : Any> decode(rowCount: Int, rowAt: (Int) -> T?): List<T> {
+        require(rowCount <= MAX_PARSE_COUNT) { "Alarm history is too large" }
+        return (0 until rowCount).map { index ->
+            rowAt(index) ?: throw IllegalArgumentException("Malformed alarm history")
+        }
     }
 }
 

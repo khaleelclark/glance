@@ -33,6 +33,9 @@ explains how to resume the existing app rather than start it again.
 
 ## Evidence and historical records
 
+The [22 October Ponytail audit fixes](ponytail-audit-20261022.md) describe the
+unreleased PR changes and their verification boundaries.
+
 [Release history](changelog.md) preserves earlier UI/defaults and migration notes.
 The records below describe their exact version/source/APK checkpoints. A passing
 debug fixture or bounded source review does not prove the final signed artifact,
@@ -73,7 +76,7 @@ changed. Never run synthetic fixtures on the owner's account/device.
 Raw receipts and synthetic screenshots are under `evidence/`, linked from each
 report. Do not overwrite a prior receipt when collecting a newer run; record the
 actual source, dirty state and installed APK hash. Signer/checksum verification
-belongs to each immutable release manifest. Current signed 0.31 checks are
+belongs to each immutable release manifest. Current signed 0.32 checks are
 summarized in [release](release.md); open physical/account tests are in
 [device validation](device-validation.md) and [watch validation](watch-validation.md).
 

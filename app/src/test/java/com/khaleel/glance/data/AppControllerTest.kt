@@ -10,6 +10,7 @@ import com.khaleel.glance.core.GlucoseSource
 import com.khaleel.glance.core.GlucoseUnit
 import com.khaleel.glance.core.Reading
 import com.khaleel.glance.core.ReadingFreshness
+import com.khaleel.glance.core.RuntimeState
 import com.khaleel.glance.core.Session
 import com.khaleel.glance.core.SourceError
 import com.khaleel.glance.core.SourceErrorKind
@@ -124,6 +125,133 @@ class AppControllerTest {
         val afterRestart = AppController(source, auth, patient, settings, FakeClock(start.plusSeconds(30)))
         val result = afterRestart.poll(manual = true)
         assertEquals(SourceErrorKind.RATE_LIMITED, (result as SourceResult.Failure).error.kind)
+        assertEquals(1, source.latestCalls)
+    }
+
+    @Test fun providerCooldownBlocksRepeatedSignInWithoutAnotherRequest() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }.apply {
+            signInResult = SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val controller = AppController(
+            source, MemoryAuth(null), MemoryPatient(), MemorySettings(), FakeClock(start),
+        )
+
+        val first = controller.signIn(credentials)
+        val repeated = controller.signIn(credentials)
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (first as SourceResult.Failure).error.kind)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (repeated as SourceResult.Failure).error.kind)
+        assertEquals(retryAt, repeated.error.retryAfter)
+        assertEquals(1, source.signInCalls)
+    }
+
+    @Test fun cooldownBlockedAccountSwitchStillClearsPriorAccountAndReadings() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val previous = reading(patrick)
+        val source = FakeSource { _, _ -> SourceResult.Success(previous) }
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val patient = MemoryPatient().apply { state = StoredPatientState(patrick, previous) }
+        val settings = MemorySettings().apply {
+            setRetryWindow(RetryWindow(retryAt, RetryReason.PROVIDER))
+        }
+        val controller = AppController(source, auth, patient, settings, FakeClock(start))
+
+        val result = controller.signIn(Credentials("new@example.invalid", "synthetic-new-password"))
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (result as SourceResult.Failure).error.kind)
+        assertFalse(controller.hasAccount)
+        assertNull(auth.saved)
+        assertNull(controller.display.value.person)
+        assertNull(controller.display.value.reading)
+        assertNull(patient.state.selected)
+        assertEquals(retryAt, settings.retryWindow?.until)
+        assertEquals(0, source.signInCalls)
+        assertEquals(0, source.connectionsCalls)
+    }
+
+    @Test fun providerCooldownBlocksRepeatedConnectionListsWithoutAnotherRequest() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource(
+            onConnections = { SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt)) },
+            onLatest = { _, _ -> SourceResult.Success(reading(patrick)) },
+        )
+        val controller = controller(source, MemoryPatient())
+
+        val first = controller.connections()
+        val repeated = controller.connections()
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (first as SourceResult.Failure).error.kind)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (repeated as SourceResult.Failure).error.kind)
+        assertEquals(1, source.connectionsCalls)
+    }
+
+    @Test fun pollAlreadyInFlightCannotEraseANewerConnectionListCooldown() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val pending = CompletableDeferred<SourceResult<Reading>>()
+        val source = FakeSource(
+            onConnections = { SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt)) },
+            onLatest = { _, _ -> pending.await() },
+        )
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        val poll = async { controller.poll() }
+        withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+        assertEquals(SourceErrorKind.RATE_LIMITED, (controller.connections() as SourceResult.Failure).error.kind)
+        pending.complete(SourceResult.Success(reading(patrick)))
+        assertTrue(poll.await() is SourceResult.Success)
+
+        assertEquals(retryAt, settings.retryWindow?.until)
+        assertEquals(retryAt, controller.display.value.providerRetryAt)
+        assertEquals(SourceErrorKind.RATE_LIMITED, (controller.poll(manual = true) as SourceResult.Failure).error.kind)
+        assertEquals(1, source.latestCalls)
+    }
+
+    @Test fun overlappingRateLimitsAlwaysEnforceAndReturnTheLaterDeadline() = runBlocking {
+        val existingDeadline = start.plusSeconds(900)
+        for (lateDeadline in listOf(start.plusSeconds(300), start.plusSeconds(1800), null)) {
+            val expected = maxOf(existingDeadline, lateDeadline ?: start.plusSeconds(900))
+            val pending = CompletableDeferred<SourceResult<Reading>>()
+            val source = FakeSource(
+                onConnections = { SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, existingDeadline)) },
+                onLatest = { _, _ -> pending.await() },
+            )
+            val settings = MemorySettings()
+            val controller = controller(source, MemoryPatient(), settings)
+            controller.selectPerson(patrick)
+            val poll = async { controller.poll() }
+            withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+            controller.connections()
+            pending.complete(SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, lateDeadline)))
+            val result = poll.await() as SourceResult.Failure
+
+            assertEquals(expected, result.error.retryAfter)
+            assertEquals(expected, settings.retryWindow?.until)
+            assertEquals(expected, controller.display.value.providerRetryAt)
+            val blocked = controller.poll(manual = true) as SourceResult.Failure
+            assertEquals(SourceErrorKind.RATE_LIMITED, blocked.error.kind)
+            assertEquals(expected, blocked.error.retryAfter)
+            assertEquals(1, source.latestCalls)
+        }
+    }
+
+    @Test fun providerCooldownSurvivesClearingAndSelectingAPerson() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource { _, _ ->
+            SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        controller.poll()
+
+        controller.clearSelectedPerson()
+        controller.selectPerson(other)
+        val repeated = controller.poll(manual = true)
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (repeated as SourceResult.Failure).error.kind)
+        assertEquals(retryAt, settings.retryWindow?.until)
         assertEquals(1, source.latestCalls)
     }
 
@@ -253,6 +381,7 @@ class AppControllerTest {
         val restarted = AppController(source, auth, patient, settings, clock)
         assertEquals(SourceErrorKind.RATE_LIMITED, (restarted.poll(manual = true) as SourceResult.Failure).error.kind)
         assertEquals(retryAt, settings.nextAllowedFetch)
+        assertEquals(1, source.signInCalls)
         assertEquals(0, source.latestCalls)
     }
 
@@ -291,6 +420,99 @@ class AppControllerTest {
         val controller = controller(source, MemoryPatient())
         assertEquals(listOf(patrick), (controller.connections() as SourceResult.Success).value)
         assertEquals(2, calls)
+    }
+
+    @Test fun obsoleteConnectionListCannotCrossAccountBoundary() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val pending = CompletableDeferred<SourceResult<List<Connection>>>()
+        val accountB = session.copy(accountId = "account-b", token = "token-b")
+        val credentialsB = Credentials("other@example.invalid", "other-password")
+        val source = FakeSource(
+            onConnections = { requestedSession ->
+                if (requestedSession.accountId == session.accountId) {
+                    entered.complete(Unit)
+                    withContext(NonCancellable) { pending.await() }
+                } else {
+                    SourceResult.Success(listOf(other))
+                }
+            },
+            onLatest = { _, _ -> SourceResult.Success(reading(patrick)) },
+        )
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val controller = AppController(
+            source, auth, MemoryPatient(), MemorySettings(), FakeClock(start),
+        )
+
+        val oldList = async { controller.connections() }
+        entered.await()
+        controller.signOut()
+        source.signInResult = SourceResult.Success(accountB)
+        assertTrue(controller.signIn(credentialsB) is SourceResult.Success)
+        pending.complete(SourceResult.Success(listOf(patrick)))
+
+        val obsolete = oldList.await() as SourceResult.Failure
+        assertEquals(SourceErrorKind.AUTH_EXPIRED, obsolete.error.kind)
+        assertEquals(accountB.accountId, auth.saved?.session?.accountId)
+        assertNull(controller.display.value.person)
+    }
+
+    @Test fun supersededNoncancellableLoginDoesNotFetchItsConnections() = runBlocking {
+        for (signInAnotherAccount in listOf(false, true)) {
+            val entered = CompletableDeferred<Unit>()
+            val pending = CompletableDeferred<SourceResult<Session>>()
+            val credentialsB = Credentials("b@example.invalid", "synthetic-b")
+            val credentialsC = Credentials("c@example.invalid", "synthetic-c")
+            val sessionB = session.copy(accountId = "account-b", token = "token-b")
+            val sessionC = session.copy(accountId = "account-c", token = "token-c")
+            val source = FakeSource(
+                onConnections = { SourceResult.Success(listOf(other)) },
+                onLatest = { _, _ -> SourceResult.Success(reading(other)) },
+            ).apply {
+                onSignIn = { supplied ->
+                    if (supplied == credentialsB) {
+                        entered.complete(Unit)
+                        withContext(NonCancellable) { pending.await() }
+                    } else SourceResult.Success(sessionC)
+                }
+            }
+            val auth = MemoryAuth(SavedAuth(credentials, session))
+            val controller = AppController(source, auth, MemoryPatient(), MemorySettings(), FakeClock(start))
+            val obsoleteLogin = async { controller.signIn(credentialsB) }
+            entered.await()
+            controller.signOut()
+            if (signInAnotherAccount) assertTrue(controller.signIn(credentialsC) is SourceResult.Success)
+            pending.complete(SourceResult.Success(sessionB))
+
+            assertEquals(SourceErrorKind.AUTH_EXPIRED, (obsoleteLogin.await() as SourceResult.Failure).error.kind)
+            assertEquals(if (signInAnotherAccount) 1 else 0, source.connectionsCalls)
+            assertEquals(if (signInAnotherAccount) sessionC else null, auth.saved?.session)
+        }
+    }
+
+    @Test fun identityChangeResetsTransientBackoffWithoutClearingProviderCooldown() = runBlocking {
+        val clock = FakeClock(start)
+        val retryAt = start.plusSeconds(906)
+        var error = SourceError(SourceErrorKind.NETWORK)
+        val source = FakeSource { _, _ -> SourceResult.Failure(error) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings, clock)
+        controller.selectPerson(patrick)
+        repeat(2) {
+            controller.poll(manual = true)
+            clock.advanceMillis(3_000)
+        }
+        error = SourceError(SourceErrorKind.RATE_LIMITED, retryAt)
+        controller.poll(manual = true)
+
+        controller.selectPerson(other)
+        assertEquals(retryAt, settings.retryWindow?.until)
+        clock.advanceMillis(901_000)
+        error = SourceError(SourceErrorKind.NETWORK)
+        controller.poll(manual = true)
+
+        assertEquals(RetryReason.TRANSIENT, settings.retryWindow?.reason)
+        assertTrue(settings.nextAllowedFetch!! >= clock.now().plusSeconds(60))
+        assertTrue(settings.nextAllowedFetch!! <= clock.now().plusSeconds(75))
     }
 
     @Test fun timeoutInvalidatesLateSourceResultAndPublishesBackoff() = runBlocking {
@@ -340,6 +562,124 @@ class AppControllerTest {
         assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
         assertNull(controller.display.value.reading)
         assertNull(patient.state.lastReading)
+        assertEquals(1, source.latestCalls)
+    }
+
+    @Test fun failedStartIntentPersistenceLeavesMonitoringStoppedWithStorageError() {
+        val settings = MemorySettings().apply { failMonitoringWrites = true }
+        val controller = controller(
+            FakeSource { _, _ -> SourceResult.Success(reading(patrick)) },
+            MemoryPatient(),
+            settings,
+        )
+
+        val result = controller.setMonitoringEnabled(true)
+
+        assertFalse(result)
+        assertFalse(controller.display.value.monitoringEnabled)
+        assertEquals(RuntimeState.STOPPED, controller.display.value.runtime)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+    }
+
+    @Test fun successfulExplicitStartAfterStorageRecoveryCanPollAgain() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        settings.failMonitoringWrites = true
+        assertFalse(controller.setMonitoringEnabled(true))
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+
+        settings.failMonitoringWrites = false
+        assertTrue(controller.setMonitoringEnabled(true))
+        controller.setRuntime(RuntimeState.RUNNING)
+
+        assertTrue(controller.poll() is SourceResult.Success)
+        assertEquals(1, source.latestCalls)
+        assertEquals(ConnectionState.READY, controller.display.value.connection)
+    }
+
+    @Test fun successfulMonitoringSaveDoesNotClearAnUnresolvedPatientStorageError() = runBlocking {
+        for (failStopWrite in listOf(false, true)) {
+            val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+            val patient = MemoryPatient()
+            val settings = MemorySettings()
+            val controller = controller(source, patient, settings)
+            controller.selectPerson(patrick)
+            patient.failSave = true
+            assertEquals(SourceErrorKind.STORAGE, (controller.poll() as SourceResult.Failure).error.kind)
+            settings.failMonitoringWrites = failStopWrite
+            controller.setMonitoringEnabled(false)
+            settings.failMonitoringWrites = false
+
+            assertTrue(controller.setMonitoringEnabled(true))
+            assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+            assertEquals(SourceErrorKind.STORAGE, (controller.poll() as SourceResult.Failure).error.kind)
+            assertEquals(1, source.latestCalls)
+        }
+    }
+
+    @Test fun aNewPatientStorageFailureSupersedesAMonitoringWriteFailure() = runBlocking {
+        val source = FakeSource { _, _ -> SourceResult.Success(reading(patrick)) }
+        val patient = MemoryPatient()
+        val settings = MemorySettings()
+        val controller = controller(source, patient, settings)
+        controller.selectPerson(patrick)
+        settings.failMonitoringWrites = true
+        assertFalse(controller.setMonitoringEnabled(true))
+        patient.failSave = true
+        assertTrue(controller.selectPerson(other) is SourceResult.Failure)
+        settings.failMonitoringWrites = false
+
+        assertTrue(controller.setMonitoringEnabled(true))
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertTrue(controller.poll() is SourceResult.Failure)
+        assertEquals(0, source.latestCalls)
+    }
+
+    @Test fun failedStopIntentPersistenceStillStopsAndRejectsLateReading() = runBlocking {
+        val pending = CompletableDeferred<SourceResult<Reading>>()
+        val source = FakeSource { _, _ -> pending.await() }
+        val patient = MemoryPatient()
+        val settings = MemorySettings().apply { setMonitoringEnabled(true) }
+        val controller = controller(source, patient, settings)
+        controller.selectPerson(patrick)
+        val poll = async { controller.poll() }
+        withTimeout(5_000) { while (source.latestCalls == 0) kotlinx.coroutines.yield() }
+        settings.failMonitoringWrites = true
+
+        val result = controller.setMonitoringEnabled(false)
+        pending.complete(SourceResult.Success(reading(patrick)))
+        poll.await()
+
+        assertFalse(result)
+        assertFalse(controller.display.value.monitoringEnabled)
+        assertEquals(RuntimeState.STOPPED, controller.display.value.runtime)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertNull(controller.display.value.reading)
+        assertNull(patient.state.lastReading)
+        assertFalse(settings.monitoringEnabled)
+    }
+
+    @Test fun failedProviderCooldownPersistenceReportsStorageAndFailsClosedInProcess() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val source = FakeSource { _, _ ->
+            SourceResult.Failure(SourceError(SourceErrorKind.RATE_LIMITED, retryAt))
+        }
+        val settings = MemorySettings()
+        val controller = controller(source, MemoryPatient(), settings)
+        controller.selectPerson(patrick)
+        settings.failRetryWrites = true
+
+        val result = controller.poll()
+        val blocked = controller.poll(manual = true)
+
+        assertEquals(SourceErrorKind.STORAGE, (result as SourceResult.Failure).error.kind)
+        assertEquals(SourceErrorKind.STORAGE, (blocked as SourceResult.Failure).error.kind)
+        assertEquals(ConnectionState.LOCAL_ERROR, controller.display.value.connection)
+        assertEquals(retryAt, controller.display.value.providerRetryAt)
+        assertEquals(retryAt, controller.display.value.nextAllowedFetch)
+        assertNull(settings.retryWindow)
         assertEquals(1, source.latestCalls)
     }
 
@@ -657,9 +997,26 @@ class AppControllerTest {
         override var accentHex = "#087E82"
         override var intervalMinutes = 1
         override var resumeAfterBoot = true
-        override var monitoringEnabled = false
-        override var retryWindow: com.khaleel.glance.data.RetryWindow? = null
-        override fun clear() { monitoringEnabled = false; retryWindow = null }
+        private var monitoring = false
+        private var retry: com.khaleel.glance.data.RetryWindow? = null
+        var failMonitoringWrites = false
+        var failRetryWrites = false
+        override val monitoringEnabled: Boolean get() = monitoring
+        override val retryWindow: com.khaleel.glance.data.RetryWindow? get() = retry
+        override fun setMonitoringEnabled(value: Boolean): Boolean {
+            if (failMonitoringWrites) {
+                if (!value) monitoring = false
+                return false
+            }
+            monitoring = value
+            return true
+        }
+        override fun setRetryWindow(value: com.khaleel.glance.data.RetryWindow?): Boolean {
+            if (failRetryWrites) return false
+            retry = value
+            return true
+        }
+        override fun clear() { monitoring = false; retry = null }
     }
     private class FakeSource(
         val onConnections: suspend (Session) -> SourceResult<List<Connection>> = { SourceResult.Success(emptyList()) },
@@ -668,7 +1025,10 @@ class AppControllerTest {
         var snapshotHistory: List<Reading> = emptyList()
         @Volatile
         var latestCalls = 0
+        @Volatile
+        var connectionsCalls = 0
         var signInCalls = 0
+        var onSignIn: (suspend (Credentials) -> SourceResult<Session>)? = null
         var transportClears = 0
         override fun clearTransportSession() { transportClears++ }
         var signInResult: SourceResult<Session> = SourceResult.Success(
@@ -676,9 +1036,12 @@ class AppControllerTest {
         )
         override suspend fun signIn(credentials: Credentials): SourceResult<Session> {
             signInCalls++
-            return signInResult
+            return onSignIn?.invoke(credentials) ?: signInResult
         }
-        override suspend fun connections(session: Session) = onConnections(session)
+        override suspend fun connections(session: Session): SourceResult<List<Connection>> {
+            connectionsCalls++
+            return onConnections(session)
+        }
         override suspend fun latest(session: Session, connectionId: String): SourceResult<Reading> {
             latestCalls++
             return onLatest(session, connectionId)

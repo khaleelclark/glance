@@ -146,6 +146,30 @@ class AppControllerTest {
         assertEquals(1, source.signInCalls)
     }
 
+    @Test fun cooldownBlockedAccountSwitchStillClearsPriorAccountAndReadings() = runBlocking {
+        val retryAt = start.plusSeconds(900)
+        val previous = reading(patrick)
+        val source = FakeSource { _, _ -> SourceResult.Success(previous) }
+        val auth = MemoryAuth(SavedAuth(credentials, session))
+        val patient = MemoryPatient().apply { state = StoredPatientState(patrick, previous) }
+        val settings = MemorySettings().apply {
+            setRetryWindow(RetryWindow(retryAt, RetryReason.PROVIDER))
+        }
+        val controller = AppController(source, auth, patient, settings, FakeClock(start))
+
+        val result = controller.signIn(Credentials("new@example.invalid", "synthetic-new-password"))
+
+        assertEquals(SourceErrorKind.RATE_LIMITED, (result as SourceResult.Failure).error.kind)
+        assertFalse(controller.hasAccount)
+        assertNull(auth.saved)
+        assertNull(controller.display.value.person)
+        assertNull(controller.display.value.reading)
+        assertNull(patient.state.selected)
+        assertEquals(retryAt, settings.retryWindow?.until)
+        assertEquals(0, source.signInCalls)
+        assertEquals(0, source.connectionsCalls)
+    }
+
     @Test fun providerCooldownBlocksRepeatedConnectionListsWithoutAnotherRequest() = runBlocking {
         val retryAt = start.plusSeconds(900)
         val source = FakeSource(

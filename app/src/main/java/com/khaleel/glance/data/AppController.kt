@@ -157,7 +157,6 @@ class AppController(
 
     /** Clears old-account data before contacting the new account. */
     suspend fun signIn(credentials: Credentials): SourceResult<List<Connection>> {
-        providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         val capturedGeneration: Long
         val previousAccountId: String?
         synchronized(this) {
@@ -180,6 +179,7 @@ class AppController(
                 return SourceResult.Failure(error)
             }
             mutableDisplay.value = snapshot(ConnectionState.SIGN_IN_REQUIRED, RuntimeState.STOPPED)
+            providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         }
         val login = source.signIn(credentials)
         if (login is SourceResult.Failure) {
@@ -289,11 +289,21 @@ class AppController(
         }
         providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         val session = sessionOrRecover() ?: return SourceResult.Failure(currentAuthError())
+        synchronized(this) {
+            if (generation != capturedGeneration || auth?.session?.accountId != capturedAccountId ||
+                session.accountId != capturedAccountId
+            ) return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+        }
         providerCooldownFailure()?.let { return SourceResult.Failure(it) }
         var result = source.connections(session)
         if (result is SourceResult.Failure && result.error.kind == SourceErrorKind.AUTH_EXPIRED) {
             val recovered = recoverSession(session.token)
             if (recovered == null) return SourceResult.Failure(currentAuthError())
+            synchronized(this) {
+                if (generation != capturedGeneration || auth?.session?.accountId != capturedAccountId ||
+                    recovered.accountId != capturedAccountId
+                ) return SourceResult.Failure(SourceError(SourceErrorKind.AUTH_EXPIRED))
+            }
             providerCooldownFailure()?.let { return SourceResult.Failure(it) }
             result = source.connections(recovered)
         }
